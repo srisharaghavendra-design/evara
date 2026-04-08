@@ -868,6 +868,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   }, [activeEvent, profile]);
 
   const rows = filt === "all" ? contacts : contacts.filter(c => c.status === filt);
+  const noContactsYet = contacts.length === 0 && !loading;
   const METRICS = [
     { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue },
     { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "%" : null },
