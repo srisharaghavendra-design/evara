@@ -714,6 +714,31 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <span style={{ color: C.muted }}>●Cold</span>
           </div>
           <button onClick={async () => {
+            const pending = contacts.filter(c => c.status === "pending");
+            if (!pending.length) { fire("No pending contacts", "err"); return; }
+            if (!window.confirm(`Send reminder to ${pending.length} pending contacts?`)) return;
+            for (const ec of pending.slice(0, 50)) {
+              const c = ec.contacts || {};
+              if (!c.email || c.unsubscribed) continue;
+              await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  contacts: [{ email: c.email, first_name: c.first_name || "", last_name: c.last_name || "", unsubscribed: false }],
+                  triggerType: "reminder",
+                  eventName: activeEvent.name,
+                  eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "",
+                  eventTime: activeEvent.event_time || "",
+                  location: activeEvent.location || "",
+                  orgName: profile?.companies?.name || "",
+                })
+              });
+            }
+            fire(`✅ Reminder sent to ${pending.length} pending contacts!`);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.amber + "14", border: `1px solid ${C.amber}30`, borderRadius: 6, padding: "5px 11px", color: C.amber, cursor: "pointer" }}>
+            ⏰ Remind All Pending
+          </button>
+          <button onClick={async () => {
             const email = window.prompt("Contact email address:");
             if (!email || !profile || !activeEvent) return;
             const trimmed = email.trim().toLowerCase();
@@ -1607,7 +1632,11 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
   const toggleReq = id => setFields(p => p.map(f => f.id === id ? { ...f, required: !f.required } : f));
   const moveUp = i => { if (i === 0) return; const a = [...fields]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; setFields(a); };
   const moveDown = i => { if (i === fields.length - 1) return; const a = [...fields]; [a[i], a[i + 1]] = [a[i + 1], a[i]]; setFields(a); };
-  const shareLink = activeForm ? `${window.location.origin}/form/${activeForm.share_token}` : "Save form first";
+  const shareLink = activeForm 
+    ? (window.location.hostname === 'localhost' 
+        ? `${window.location.origin}/form/${activeForm.share_token}`
+        : `https://evara-srisharaghavendra-8908s-projects.vercel.app/form/${activeForm.share_token}`)
+    : "Save form first";
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", gap: 10, color: C.muted }}><Spin />Loading…</div>;
   return (
     <div style={{ animation: "fadeUp .2s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 110px)" }}>
@@ -1922,6 +1951,13 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
               {m === "host" ? "👤 Host Mode" : "🖥 Kiosk Mode"}
             </button>
           ))}
+          <button onClick={() => {
+            const url = `${window.location.origin}/checkin/${activeEvent?.id}`;
+            navigator.clipboard?.writeText(url);
+            fire("Check-in kiosk URL copied! Open on a tablet at the door.");
+          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            📋 Copy Kiosk URL
+          </button>
           <button onClick={() => setShowWalkin(true)}
             style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 500 }}>
             + Walk-in
