@@ -887,6 +887,31 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.amber + "14", border: `1px solid ${C.amber}30`, borderRadius: 6, padding: "5px 11px", color: C.amber, cursor: "pointer" }}>
             ⏰ Remind All Pending
           </button>
+          <button onClick={() => {
+            const fmt = window.prompt("Export format:\n1 = Standard CSV\n2 = Salesforce CSV\n3 = Attended only", "1");
+            if (!fmt) return;
+            const rows_data = fmt === "3" ? contacts.filter(c => c.status === "attended") : contacts;
+            const sfdc = fmt === "2";
+            const headers = sfdc
+              ? ["FirstName","LastName","Email","Company","Phone","LeadSource","Status","Event"]
+              : ["First Name","Last Name","Email","Company","Phone","Status","Event"];
+            const rows = rows_data.map(ec => {
+              const c = ec.contacts || {};
+              return sfdc
+                ? [c.first_name||"", c.last_name||"", c.email||"", c.company_name||"", c.phone||"", "Event", ec.status||"", activeEvent.name]
+                : [c.first_name||"", c.last_name||"", c.email||"", c.company_name||"", c.phone||"", ec.status||"", activeEvent.name];
+            });
+            const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `${(activeEvent.name||"event").replace(/[^a-z0-9]/gi,"-")}-${fmt==="3"?"attended":"all"}${sfdc?"-salesforce":""}.csv`;
+            a.click(); URL.revokeObjectURL(url);
+            fire(`✅ Exported ${rows_data.length} contacts`);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
+            <Download size={11}/>Export
+          </button>
           <button onClick={async () => {
             const email = window.prompt("Contact email address:");
             if (!email || !profile || !activeEvent) return;
