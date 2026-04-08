@@ -4251,8 +4251,19 @@ function PublicFormPage({ token }) {
 
       {/* Form */}
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 20px 60px" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 6, letterSpacing: "-0.3px" }}>{form.name}</h1>
-        <p style={{ fontSize: 14, color: "#666", marginBottom: 28 }}>Fill in your details to register your place.</p>
+        {event && (
+          <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid #E5E5E5" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#0A84FF", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>Registration</div>
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111", marginBottom: 8, letterSpacing: "-0.5px" }}>{event.name}</h1>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {event.event_date && <div style={{ fontSize: 13, color: "#555" }}>📅 {new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>}
+              {event.event_time && <div style={{ fontSize: 13, color: "#555" }}>🕐 {event.event_time}</div>}
+              {event.location && <div style={{ fontSize: 13, color: "#555" }}>📍 {event.location}</div>}
+            </div>
+          </div>
+        )}
+        <h2 style={{ fontSize: 17, fontWeight: 600, color: "#111", marginBottom: 4, letterSpacing: "-0.3px" }}>{form.name}</h2>
+        <p style={{ fontSize: 13, color: "#666", marginBottom: 24 }}>Fill in your details to register your place.</p>
 
         {form.fields?.map(field => (
           <div key={field.id} style={{ marginBottom: 20 }}>
