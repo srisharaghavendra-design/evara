@@ -1063,7 +1063,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
   useEffect(() => {
     if (activeEvent) {
-      setInfo(p => ({ ...p, eventName: activeEvent.name || "", eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", description: activeEvent.description || "" }));
+      setInfo(p => ({ ...p, 
+          eventName: activeEvent.name || "", 
+          eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "",
+          eventTime: activeEvent.event_time || p.eventTime || "",
+          location: activeEvent.location || p.location || "", 
+          description: activeEvent.description || p.description || "",
+          orgName: p.orgName || ""
+        }));
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormLink(`${window.location.origin}/form/${data.share_token}`); });
     }
