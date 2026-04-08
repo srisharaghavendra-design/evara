@@ -429,7 +429,31 @@ function MainApp({ session }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data: prof } = await supabase.from("profiles").select("*,companies(*)").eq("id", session.user.id).single();
+      let { data: prof } = await supabase.from("profiles").select("*,companies(*)").eq("id", session.user.id).single();
+      
+      // Auto-setup on first login - create company + profile if missing
+      if (!prof?.company_id) {
+        // Create company
+        const { data: company } = await supabase.from("companies").insert({
+          name: session.user.email?.split("@")[1]?.split(".")[0] || "My Company",
+          from_email: session.user.email,
+        }).select().single();
+        
+        // Create or update profile
+        if (company) {
+          await supabase.from("profiles").upsert({
+            id: session.user.id,
+            company_id: company.id,
+            email: session.user.email,
+            full_name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "User",
+            role: "admin",
+          });
+          // Reload profile
+          const { data: newProf } = await supabase.from("profiles").select("*,companies(*)").eq("id", session.user.id).single();
+          prof = newProf;
+        }
+      }
+      
       setProfile(prof);
       const { data: evts } = await supabase.from("events").select("*").eq("company_id", prof?.company_id).order("event_date", { ascending: true });
       setEvents(evts || []);
