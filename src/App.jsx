@@ -4869,6 +4869,7 @@ function QAView({ supabase, profile, activeEvent, fire }) {
 function PublicDashboardPage({ token }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [campaigns, setCampaigns] = useState([]);
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
