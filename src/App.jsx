@@ -1305,6 +1305,41 @@ function ScheduleView({ supabase, profile, activeEvent, fire }) {
           }} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             Quick Send Latest →
           </button>
+          <button onClick={async () => {
+            // Auto-schedule all draft campaigns with intelligent timing
+            const drafts = campaigns.filter(c => c.status === "draft" && !c.send_at);
+            if (drafts.length === 0) { fire("No unscheduled drafts found — generate a campaign first", "err"); return; }
+            const now = new Date();
+            const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date) : null;
+            const SCHEDULE_MAP = {
+              save_the_date: -56, invitation: -42, reminder: -14,
+              byo: -3, day_of: 0, thank_you: 1, confirmation: 7,
+            };
+            let scheduled = 0;
+            for (const draft of drafts) {
+              const dayOffset = SCHEDULE_MAP[draft.email_type] ?? -7;
+              let sendAt;
+              if (eventDate) {
+                sendAt = new Date(eventDate);
+                sendAt.setDate(sendAt.getDate() + dayOffset);
+                sendAt.setHours(9, 0, 0, 0); // 9am
+              } else {
+                sendAt = new Date(now);
+                sendAt.setDate(sendAt.getDate() + scheduled);
+              }
+              if (sendAt < now) sendAt = new Date(now.getTime() + 300000 * (scheduled + 1));
+              await supabase.from("email_campaigns")
+                .update({ send_at: sendAt.toISOString() })
+                .eq("id", draft.id);
+              scheduled++;
+            }
+            const { data } = await supabase.from("email_campaigns").select("*")
+              .eq("event_id", activeEvent.id).order("created_at", { ascending: false });
+            setCampaigns(data || []);
+            fire(`✅ ${scheduled} campaigns auto-scheduled based on event date!`);
+          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            📅 Auto-Schedule
+          </button>
           <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
         </div>
       </div>
