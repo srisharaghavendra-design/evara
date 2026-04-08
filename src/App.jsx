@@ -1234,9 +1234,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   }}
                   style={{ padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.border}`, marginBottom: 6, cursor: cam.html_content ? "pointer" : "default", transition: "border-color .12s", background: C.bg }}
                   onMouseEnter={e => cam.html_content && (e.currentTarget.style.borderColor = C.blue)} onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
-                  <div style={{ fontSize: 12.5, color: C.text, marginBottom: 3 }}>{cam.name}</div>
+                  <div style={{ fontSize: 12.5, fontWeight: 500, color: C.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.subject || cam.name}</div>
+                  {cam.subject && cam.name !== cam.subject && <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</div>}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 10.5, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}</span>
+                    <span style={{ fontSize: 10.5, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}{cam.total_sent > 0 ? ` · ${cam.total_sent} sent` : ""}</span>
                     <span style={{ fontSize: 10.5, background: cam.status === "sent" ? C.green + "15" : C.blue + "15", color: cam.status === "sent" ? C.green : C.blue, padding: "2px 7px", borderRadius: 4 }}>{cam.status}</span>
                   </div>
                 </div>
@@ -1420,6 +1421,16 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 )}
                 {cam.status === "draft" && !cam.html_content && (
                   <span style={{ fontSize: 11, color: C.muted, fontStyle: "italic" }}>Generate email first in eDM Builder</span>
+                )}
+                {cam.status !== "sent" && (
+                  <button onClick={async () => {
+                    if (!window.confirm("Delete this campaign?")) return;
+                    await supabase.from("email_campaigns").delete().eq("id", cam.id);
+                    setCampaigns(p => p.filter(c => c.id !== cam.id));
+                    fire("Campaign deleted");
+                  }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+                    Delete
+                  </button>
                 )}
                 {cam.status !== "sent" && (
                   <button onClick={async () => { if (!confirm("Delete?")) return; await supabase.from("email_campaigns").delete().eq("id", cam.id); setCampaigns(p => p.filter(c => c.id !== cam.id)); fire("Deleted"); }}
