@@ -989,6 +989,17 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.amber + "14", border: `1px solid ${C.amber}30`, borderRadius: 6, padding: "5px 11px", color: C.amber, cursor: "pointer" }}>
             ⏰ Remind All Pending
           </button>
+          <button onClick={async () => {
+            const confirmed = contacts.filter(c => c.status === "confirmed");
+            if (!confirmed.length) { fire("No confirmed contacts to mark as attended", "err"); return; }
+            if (!window.confirm(`Mark all ${confirmed.length} confirmed contacts as attended?`)) return;
+            await supabase.from("event_contacts").update({ status: "attended", attended_at: new Date().toISOString() })
+              .eq("event_id", activeEvent.id).eq("status", "confirmed");
+            setContacts(p => p.map(ec => ec.status === "confirmed" ? { ...ec, status: "attended" } : ec));
+            fire(`✅ ${confirmed.length} contacts marked as attended`);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.blue + "12", border: `1px solid ${C.blue}30`, borderRadius: 6, padding: "5px 11px", color: C.blue, cursor: "pointer" }}>
+            ✅ Mark All Attended
+          </button>
           <button onClick={() => {
             const fmt = window.prompt("Export format:\n1 = Standard CSV\n2 = Salesforce CSV\n3 = Attended only", "1");
             if (!fmt) return;
@@ -2394,8 +2405,12 @@ function SettingsView({ supabase, profile, fire }) {
   const save = async () => {
     setSaving(true);
     await supabase.from("profiles").update({ full_name: name }).eq("id", profile.id);
-    await supabase.from("companies").update({ name: company }).eq("id", profile.company_id);
-    setSaving(false); fire("Settings saved!");
+    await supabase.from("companies").update({ 
+      name: company, 
+      from_email: fromEmail, 
+      brand_color: brandColor 
+    }).eq("id", profile.company_id);
+    setSaving(false); fire("✅ Settings saved!");
   };
   const [fromEmail, setFromEmail] = useState(profile?.companies?.from_email || "hello@evarahq.com");
   const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
