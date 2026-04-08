@@ -2021,6 +2021,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [showNew, setShowNew] = useState(false);
   const [sendModal, setSendModal] = useState(null);
   const [previewCam, setPreviewCam] = useState(null); // ← NEW: email preview
+  const [autoScheduling, setAutoScheduling] = useState(false);
   const [contactCount, setContactCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
@@ -2072,7 +2073,43 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
     <div style={{ animation: "fadeUp .2s ease" }}>
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Email Scheduling</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Email Scheduling</h1>
+            {activeEvent?.event_date && campaigns.filter(c => c.status === "draft").length > 0 && (
+              <button onClick={async () => {
+                if (!activeEvent?.event_date) { fire("Set an event date first", "err"); return; }
+                setAutoScheduling(true);
+                const eventDate = new Date(activeEvent.event_date);
+                const now = new Date();
+                const daysLeft = Math.ceil((eventDate - now) / (1000*60*60*24));
+                
+                // Smart schedule: assign send dates based on email type
+                const scheduleMap = {
+                  save_the_date: -56, invitation: -28, reminder: -7,
+                  day_of_details: -1, thank_you: 1,
+                };
+                const drafts = campaigns.filter(c => c.status === "draft");
+                let scheduled = 0;
+                for (const draft of drafts) {
+                  const offsetDays = scheduleMap[draft.email_type] || -14;
+                  const sendDate = new Date(eventDate);
+                  sendDate.setDate(sendDate.getDate() + offsetDays);
+                  if (sendDate < now) sendDate.setDate(now.getDate() + 1); // don't schedule in past
+                  await supabase.from("email_campaigns").update({ 
+                    scheduled_at: sendDate.toISOString(), status: "scheduled" 
+                  }).eq("id", draft.id);
+                  scheduled++;
+                }
+                // Refresh
+                const { data } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: true });
+                setCampaigns(data || []);
+                setAutoScheduling(false);
+                fire(`✅ ${scheduled} emails auto-scheduled based on your event date!`);
+              }} disabled={autoScheduling} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 7, color: C.blue, cursor: "pointer", fontWeight: 500 }}>
+                {autoScheduling ? <><Spin />Scheduling…</> : <><Sparkles size={11} />Auto-schedule sequence</>}
+              </button>
+            )}
+          </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Send campaigns or schedule them ahead. Every send is tracked in real time.</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
@@ -2359,24 +2396,81 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   });
   const importCSV = () => { setShowImport(true); };
   const doImport = async () => {
-    const emails = importText;
-    if (!emails || !profile) return;
+    if (!importText.trim() || !profile) return;
     setImporting(true);
-    const rawList = emails.split(/[\n,]/).map(e => e.trim()).filter(e => e.includes("@"));
-    if (!rawList.length) { fire("No valid emails found", "err"); return; }
-    const rows = rawList.map(raw => {
-      // Parse "First Last <email>" format
-      const match = raw.match(/^(.+?)<(.+@.+)>$/);
-      if (match) {
-        const nameParts = match[1].trim().split(" ");
-        return { email: match[2].trim().toLowerCase(), first_name: nameParts[0] || "", last_name: nameParts.slice(1).join(" ") || "", company_id: profile.company_id, source: "import" };
+    
+    const lines = importText.split('\n').map(l => l.trim()).filter(Boolean);
+    const rows = [];
+    const BUSINESS_DOMAINS = ["gmail","yahoo","hotmail","outlook","icloud","rediffmail","aol","protonmail","zoho","live","msn"];
+    
+    // Detect if it's CSV (has commas consistently)
+    const isCSV = lines.length > 1 && lines[0].includes(',');
+    
+    if (isCSV) {
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+      const emailCol = headers.findIndex(h => h.includes('email') || h.includes('e-mail'));
+      const firstCol = headers.findIndex(h => h.includes('first') || h === 'name' || h === 'firstname');
+      const lastCol = headers.findIndex(h => h.includes('last') || h === 'surname' || h === 'lastname');
+      const phoneCol = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('tel'));
+      const companyCol = headers.findIndex(h => h.includes('company') || h.includes('organisation') || h.includes('organization') || h.includes('org'));
+      const titleCol = headers.findIndex(h => h.includes('title') || h.includes('role') || h.includes('position') || h.includes('job'));
+      
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+        const email = emailCol >= 0 ? cols[emailCol]?.toLowerCase() : '';
+        if (!email || !email.includes('@')) continue;
+        const domain = email.split('@')[1]?.split('.')[0];
+        if (BUSINESS_DOMAINS.includes(domain)) continue;
+        const nameRaw = firstCol >= 0 ? cols[firstCol] : '';
+        const nameParts = nameRaw.split(' ');
+        rows.push({
+          email,
+          first_name: nameParts[0] || '',
+          last_name: lastCol >= 0 ? cols[lastCol] : (nameParts[1] || ''),
+          phone: phoneCol >= 0 ? cols[phoneCol] : '',
+          company_name: companyCol >= 0 ? cols[companyCol] : '',
+          job_title: titleCol >= 0 ? cols[titleCol] : '',
+        });
       }
-      return { email: raw.toLowerCase(), company_id: profile.company_id, source: "import" };
-    });
-    const { data } = await supabase.from("contacts").upsert(rows, { onConflict: "company_id,email" }).select();
-    if (data) { setContacts(p => { const newOnes = data.filter(d => !p.find(c => c.id === d.id)); return [...newOnes, ...p]; }); fire(`${data.length} contacts imported!`); setImportText(''); setShowImport(false); }
+    } else {
+      // Line-by-line: email, "First Last <email>", or "First, Last, email"
+      for (const raw of lines) {
+        const angleMatch = raw.match(/^(.+?)<(.+@.+)>$/);
+        if (angleMatch) {
+          const nameParts = angleMatch[1].trim().split(' ');
+          const email = angleMatch[2].trim().toLowerCase();
+          const domain = email.split('@')[1]?.split('.')[0];
+          if (BUSINESS_DOMAINS.includes(domain)) continue;
+          rows.push({ email, first_name: nameParts[0] || '', last_name: nameParts[1] || '', phone: '', company_name: '', job_title: '' });
+        } else if (raw.includes('@')) {
+          const email = raw.toLowerCase().trim();
+          const domain = email.split('@')[1]?.split('.')[0];
+          if (BUSINESS_DOMAINS.includes(domain)) continue;
+          rows.push({ email, first_name: '', last_name: '', phone: '', company_name: '', job_title: '' });
+        }
+      }
+    }
+    
+    if (!rows.length) { fire("No valid business emails found", "err"); setImporting(false); return; }
+    
+    // Batch upsert to Supabase
+    const toInsert = rows.map(r => ({ ...r, company_id: profile.company_id }));
+    const { data, error } = await supabase.from("contacts").upsert(toInsert, { onConflict: "email,company_id", ignoreDuplicates: true }).select();
+    
+    if (error) { fire(`Import error: ${error.message}`, "err"); }
+    else {
+      const newOnes = (data || []).filter(Boolean);
+      setContacts(p => {
+        const existing = new Set(p.map(c => c.email));
+        return [...p, ...newOnes.filter(c => !existing.has(c.email))];
+      });
+      fire(`✅ ${rows.length} contacts imported! (${newOnes.length} new)`);
+      setImportText('');
+      setShowImport(false);
+    }
     setImporting(false);
-  };
+  }
+
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
@@ -2510,12 +2604,27 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           onClick={() => setShowImport(false)}>
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease" }}
             onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 6 }}>Import Contacts</h2>
-            <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Paste emails one per line, comma-separated, or in "First Last &lt;email&gt;" format.</p>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 4 }}>Import Contacts</h2>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Paste emails, CSV data, or "First Last &lt;email&gt;" format. Business emails only.</p>
+            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+              {[
+                { label: "CSV format", ex: "first_name,last_name,email,phone,company
+John,Smith,john@acme.com,+1234,Acme Corp" },
+                { label: "Email list", ex: "john@acme.com
+jane@corp.com
+bob@startup.io" },
+                { label: "Name + email", ex: 'John Smith <john@acme.com>
+Jane Lee <jane@corp.com>' },
+              ].map(t => (
+                <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex: 1, fontSize: 10, padding: "4px 6px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, cursor: "pointer" }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
             <textarea value={importText} onChange={e => setImportText(e.target.value)}
-              placeholder={"john@company.com\nJane Smith <jane@acme.com>\nbob@example.com"}
-              rows={8} autoFocus
-              style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "monospace", boxSizing: "border-box" }}
+              placeholder={"Paste CSV, emails, or names here…\n\nfirst_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,,Acme Corp\n\n— or —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
+              rows={9} autoFocus
+              style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "10px 12px", fontSize: 12, outline: "none", resize: "vertical", fontFamily: "monospace", boxSizing: "border-box" }}
               onFocus={e => e.target.style.borderColor = C.blue}
               onBlur={e => e.target.style.borderColor = C.border} />
             <div style={{ fontSize: 11, color: C.muted, marginTop: 6, marginBottom: 16 }}>
@@ -5753,6 +5862,33 @@ function UnsubscribePage() {
             <p style={{ fontSize: 11, color: "#3A3A3C", marginTop: 16 }}>Powered by evara · evarahq.com</p>
           </>
         )}
+
+        {/* ─── EMAIL DELIVERABILITY SECTION ─── */}
+        <div style={{ marginTop: 24, padding: "16px 20px", background: "#FF9F0A10", border: "1px solid #FF9F0A30", borderRadius: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
+            <span style={{ fontSize: 16 }}>⚠️</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#FF9F0A" }}>Email Deliverability — Action Required</span>
+          </div>
+          <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, marginBottom: 10 }}>
+            Without SPF and DKIM records, your emails from <strong style={{ color: C.text }}>hello@evarahq.com</strong> may land in spam. Add these DNS records in Namecheap for evarahq.com:
+          </p>
+          {[
+            { type: "TXT (SPF)", host: "@", value: "v=spf1 include:sendgrid.net ~all" },
+            { type: "CNAME (DKIM 1)", host: "s1._domainkey", value: "s1.domainkey.u[your-id].wl.sendgrid.net" },
+            { type: "CNAME (DKIM 2)", host: "s2._domainkey", value: "s2.domainkey.u[your-id].wl.sendgrid.net" },
+          ].map(r => (
+            <div key={r.type} style={{ background: C.bg, borderRadius: 6, padding: "8px 10px", marginBottom: 6, fontFamily: "monospace", fontSize: 11 }}>
+              <span style={{ color: "#FF9F0A", fontWeight: 600 }}>{r.type}</span>
+              <span style={{ color: C.muted }}> · Host: </span>
+              <span style={{ color: C.text }}>{r.host}</span>
+              <span style={{ color: C.muted }}> · Value: </span>
+              <span style={{ color: C.teal }}>{r.value}</span>
+            </div>
+          ))}
+          <p style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
+            Get your exact DKIM values from <a href="https://app.sendgrid.com/settings/sender_auth/domain/create" target="_blank" style={{ color: C.blue }}>SendGrid → Settings → Sender Authentication → Authenticate Your Domain</a>
+          </p>
+        </div>
 
         {/* ─── BRAND VOICE SECTION ─── */}
         {bv !== null && (
