@@ -4933,7 +4933,7 @@ function PublicDashboardPage({ token }) {
     </div>
   );
 
-  const { event, total, confirmed, attended, declined, pending, totalSent, totalOpened, campaigns } = data;
+  const { event, total, confirmed, attended, declined, pending, totalSent, totalOpened, campaigns: eventCampaigns } = data;
   const openRate = totalSent ? Math.round((totalOpened / totalSent) * 100) : 0;
   const showRate = confirmed ? Math.round((attended / confirmed) * 100) : 0;
 
