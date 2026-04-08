@@ -1254,6 +1254,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [tmpl, setTmpl] = useState("branded");
   const [gen, setGen] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [previewWidth, setPreviewWidth] = useState("100%");
   const [campaigns, setCampaigns] = useState([]);
   const [formLink, setFormLink] = useState("");
   const [uploadingZone, setUploadingZone] = useState(null);
@@ -1568,8 +1569,16 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
         {/* PREVIEW PANEL */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Preview</div>
-          <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500 }}>
+          <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Preview</div>
+          <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
+            {[{ label: "📱 Mobile", width: "375px" }, { label: "🖥 Desktop", width: "100%" }].map(v => (
+              <button key={v.width} onClick={() => setPreviewWidth(v.width)}
+                style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, border: `1px solid ${(previewWidth || "100%") === v.width ? C.blue : C.border}`, background: (previewWidth || "100%") === v.width ? C.blue + "14" : "transparent", color: (previewWidth || "100%") === v.width ? C.blue : C.muted, cursor: "pointer" }}>
+                {v.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
             {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
             {gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 300 }}><Spin size={28} /><span style={{ fontSize: 13, color: "#AEAEB2", fontFamily: "Outfit,sans-serif" }}>Claude is writing your email…</span></div>}
             {preview && (
@@ -1578,7 +1587,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Subject</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{preview.subject}</div>
                 </div>
-                <iframe srcDoc={preview.html} style={{ width: "100%", border: "none", minHeight: 600 }} title="Email Preview" sandbox="allow-same-origin" />
+                <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: "100%", border: "none", minHeight: 600, transition: "width .3s ease" }} title="Email Preview" sandbox="allow-same-origin" />
               </div>
             )}
           </div>
