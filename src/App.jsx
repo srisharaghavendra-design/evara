@@ -4415,11 +4415,11 @@ function PublicFormPage({ token }) {
 
         <button onClick={submit} disabled={submitting || !allFilled}
           style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: submitting || !allFilled ? "#C7C7CC" : "#0A84FF", color: "#fff", fontSize: 16, fontWeight: 600, cursor: submitting || !allFilled ? "not-allowed" : "pointer", marginTop: 8, transition: "background .15s" }}>
-          {submitting ? "Submitting…" : "Submit Registration"}
+          {submitting ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: 6 }}>⟳</span>Submitting…</> : allFilled ? "Register Now →" : "Complete all required fields"}
         </button>
 
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#AEAEB2" }}>
-          🔒 Your data is encrypted and secure · Powered by evara
+          🔒 Your data is encrypted and secure · A confirmation email will be sent to you · Powered by evara
         </div>
       </div>
     </div>
