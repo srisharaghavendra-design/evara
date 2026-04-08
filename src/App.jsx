@@ -477,6 +477,11 @@ function MainApp({ session }) {
         e.preventDefault();
         setShowNewEvent(true);
       }
+      // Cmd/Ctrl+, = settings
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        setView("settings");
+      }
       // Cmd/Ctrl+K = focus search
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
@@ -643,8 +648,8 @@ function MainApp({ session }) {
         </nav>
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
-          <span>⌘N new · ⌘K search</span>
-          <span>v1.0</span>
+          <span>⌘N new · ⌘K search · ⌘, settings</span>
+          <span>v1.1</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
