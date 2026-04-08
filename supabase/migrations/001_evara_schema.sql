@@ -264,3 +264,34 @@ create index if not exists idx_contacts_company_id on contacts(company_id);
 create index if not exists idx_contact_activity_contact_id on contact_activity(contact_id);
 create index if not exists idx_form_submissions_form_id on form_submissions(form_id);
 create index if not exists idx_forms_share_token on forms(share_token);
+
+-- Add tags column to contacts for VIP marking etc
+alter table contacts add column if not exists tags text[] default '{}';
+
+-- Add session tracking for Q&A
+create table if not exists qa_questions (
+  id uuid primary key default uuid_generate_v4(),
+  event_id uuid references events(id) on delete cascade,
+  company_id uuid references companies(id),
+  contact_id uuid references contacts(id),
+  question text not null,
+  answered boolean default false,
+  upvotes integer default 0,
+  submitted_at timestamptz default now()
+);
+
+-- Add polls table
+create table if not exists polls (
+  id uuid primary key default uuid_generate_v4(),
+  event_id uuid references events(id) on delete cascade,
+  company_id uuid references companies(id),
+  question text not null,
+  options jsonb default '[]'::jsonb,
+  is_active boolean default true,
+  created_at timestamptz default now()
+);
+
+-- Add seat assignments to event_contacts (already exists as seat_number text)
+-- Add dietary requirements
+alter table event_contacts add column if not exists dietary text;
+alter table event_contacts add column if not exists notes text;
