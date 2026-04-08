@@ -1366,6 +1366,32 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             ⏰ Remind All Pending ({contacts.filter(c => c.status === "pending").length})
           </button>
           {campaigns.filter(c => c.status === "draft" && c.html_content).length > 0 && contacts.length > 0 && (
+            <button onClick={() => {
+              const draft = campaigns.filter(c => c.status === "draft" && c.html_content)[0];
+              if (!draft) return;
+              if (!window.confirm(`Send "${draft.subject}" to all ${contacts.filter(c => !c.contacts?.unsubscribed).length} contacts?`)) return;
+              fire("📨 Sending…");
+              supabase.auth.getSession().then(({ data: { session } }) => {
+                fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                  body: JSON.stringify({
+                    campaignId: draft.id,
+                    contacts: contacts.map(ec => ({ email: ec.contacts?.email, first_name: ec.contacts?.first_name, last_name: ec.contacts?.last_name, unsubscribed: ec.contacts?.unsubscribed })).filter(c => c.email && !c.unsubscribed),
+                    subject: draft.subject,
+                    htmlContent: draft.html_content,
+                    plainText: draft.plain_text || draft.subject,
+                  })
+                }).then(r => r.json()).then(data => {
+                  if (data.sent > 0) fire(`✅ Sent to ${data.sent} contacts!`);
+                  else fire(`Send failed: ${data.error || "unknown"}`, "err");
+                });
+              });
+            }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "4px 10px", background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 5, color: C.blue, cursor: "pointer", fontWeight: 500 }}>
+              📨 Send draft to all
+            </button>
+          )}
+          {campaigns.filter(c => c.status === "draft" && c.html_content).length > 0 && contacts.length > 0 && (
             <button onClick={() => { fire("Go to Scheduling → select a draft → Send to send to all contacts"); }}
               title="Go to Scheduling to send"
               style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "4px 10px", background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 5, color: C.blue, cursor: "pointer" }}>
@@ -2298,7 +2324,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             </div>
           )}
           {campaigns.map(cam => (
-            <div key={cam.id} style={{ background: C.card, borderRadius: 10, border: `1px solid ${cam.status === "sent" ? C.green + "30" : cam.status === "paused" ? C.amber + "30" : C.border}`, padding: "16px", display: "flex", alignItems: "center", gap: 14 }}>
+            <div key={cam.id} style={{ background: C.card, borderRadius: 10, border: `1px solid ${cam.status === "sent" ? C.green + "30" : cam.status === "scheduled" ? C.blue + "40" : cam.status === "paused" ? C.amber + "30" : C.border}`, padding: "16px", display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>✉</div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
@@ -2306,7 +2332,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   <span style={{ fontSize: 10.5, fontWeight: 500, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", background: cam.status === "sent" ? `${C.green}15` : cam.status === "paused" ? `${C.amber}15` : `${C.blue}15`, color: cam.status === "sent" ? C.green : cam.status === "paused" ? C.amber : C.blue }}>{cam.status}</span>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted }}>
-                  {cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
+                  {cam.scheduled_at ? `⏰ Scheduled: ${new Date(cam.scheduled_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
                   {" · "}Segment: {cam.segment}
                   {cam.status === "sent" && ` · ${cam.total_opened || 0}/${cam.total_sent || 0} opened`}
                 </div>
