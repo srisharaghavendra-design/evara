@@ -900,6 +900,31 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 6, padding: "5px 11px", color: C.blue, cursor: "pointer" }}>
             <Plus size={11} />Add contact
           </button>
+          <button onClick={() => {
+            const fmt = window.prompt("Export format:\n1 = Standard CSV (All)\n2 = Salesforce format\n3 = Attended only\n4 = Confirmed only", "1");
+            if (!fmt) return;
+            const src = fmt === "3" ? contacts.filter(c => c.status === "attended")
+                      : fmt === "4" ? contacts.filter(c => c.status === "confirmed")
+                      : contacts;
+            const isSF = fmt === "2";
+            const headers = isSF
+              ? ["FirstName","LastName","Email","Company","Phone","LeadSource","Event_Status__c","Event_Name__c"]
+              : ["First Name","Last Name","Email","Company","Phone","Status","Event"];
+            const rows = src.map(ec => {
+              const c = ec.contacts || {};
+              return isSF
+                ? [c.first_name||"",c.last_name||"",c.email||"",c.company_name||"",c.phone||"","Event",ec.status||"",activeEvent.name]
+                : [c.first_name||"",c.last_name||"",c.email||"",c.company_name||"",c.phone||"",ec.status||"",activeEvent.name];
+            });
+            const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+            a.download = `${activeEvent.name.replace(/\s+/g,"-")}-export-${["","all","salesforce","attended","confirmed"][+fmt]||"all"}.csv`;
+            a.click();
+            fire(`Exported ${src.length} contacts`);
+          }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, background:C.raised, border:`1px solid ${C.border}`, borderRadius:6, padding:"5px 11px", color:C.muted, cursor:"pointer" }}>
+            <Download size={11}/>Export CSV
+          </button>
         </div>
 
         {loading ? (
