@@ -17,6 +17,7 @@ const supabase = createClient(
 );
 
 const SUPABASE_URL = "https://sqddpjsgtwblmkgxqyxe.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxZGRwanNndHdibG1rZ3hxeXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODk5NTAsImV4cCI6MjA4OTY2NTk1MH0.x5BOfQRzn-F_tvUJv3mHRmfdOZiklyMkGzmPfRYoII4";
 
 // Block personal/free email domains
 const BLOCKED_DOMAINS = [
@@ -2232,6 +2233,25 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             fire(`✅ ${scheduled} campaigns auto-scheduled based on event date!`);
           }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             📅 Auto-Schedule
+          </button>
+          <button onClick={async () => {
+            fire("⚡ Running scheduler…");
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/send-scheduled`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+            });
+            const data = await res.json();
+            if (data.fired > 0) {
+              fire(`✅ ${data.fired} scheduled email${data.fired !== 1 ? "s" : ""} sent!`);
+              // Refresh campaigns
+              const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
+              setCampaigns(cams || []);
+            } else {
+              fire(data.message || "No campaigns due to send right now");
+            }
+          }} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            ⚡ Run Scheduler
           </button>
           <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
         </div>
@@ -4852,7 +4872,7 @@ function PublicLandingPage({ slug }) {
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   useEffect(() => {
-    supabase.from("landing_pages").select("*, events(*)").eq("slug", slug).single()
+    supabase.from("landing_pages").select("*, events(*)").eq("slug", slug).maybeSingle()
       .then(({ data }) => {
         if (data) { setPage(data); setEvent(data.events); }
         setLoading(false);
