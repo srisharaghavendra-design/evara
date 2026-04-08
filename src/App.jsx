@@ -556,9 +556,14 @@ function MainApp({ session }) {
             {activeEvent?.event_date && (() => {
               const days = Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24));
               const color = days <= 3 ? C.red : days <= 14 ? C.amber : C.green;
-              return <span style={{ fontSize: 9, fontWeight: 700, color, background: color + "15", padding: "1px 5px", borderRadius: 3 }}>{days > 0 ? `${days}d` : "TODAY"}</span>;
+              return <span style={{ fontSize: 9, fontWeight: 700, color, background: color + "15", padding: "1px 5px", borderRadius: 3 }}>{days > 0 ? `${days}d` : days === 0 ? "TODAY" : "DONE"}</span>;
             })()}
           </div>
+          {events.length > 0 && (
+            <div style={{ fontSize: 9, color: C.muted, padding: "2px 2px 0", display: "flex", gap: 8 }}>
+              <span>{events.length} event{events.length !== 1 ? "s" : ""}</span>
+            </div>
+          )}
           {activeEvent ? (
             <div>
               <div style={{ position: "relative", marginBottom: 6 }}>
