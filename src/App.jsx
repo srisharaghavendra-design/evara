@@ -1323,7 +1323,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               value={nlQuery}
               onChange={e => setNlQuery(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") runNLFilter(nlQuery); if (e.key === "Escape") { setNlFiltered(null); setNlLabel(""); setNlQuery(""); } }}
-              placeholder='Ask AI to filter… e.g. "hot leads who haven't confirmed" or "everyone from Acme"'
+              placeholder="Ask AI to filter… e.g. hot leads who haven't confirmed, all VIPs, everyone from Acme"
               style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 12 }}
             />
             {nlLoading && <Spin />}
