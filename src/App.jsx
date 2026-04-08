@@ -1024,6 +1024,28 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.blue + "12", border: `1px solid ${C.blue}30`, borderRadius: 6, padding: "5px 11px", color: C.blue, cursor: "pointer" }}>
             ✅ Mark All Attended
           </button>
+          <button onClick={async () => {
+            const attended = contacts.filter(c => c.status === "attended");
+            if (!attended.length) { fire("No attended contacts to send thank you", "err"); return; }
+            if (!window.confirm(`Send thank you email to all ${attended.length} attendees?`)) return;
+            const { data: { session } } = await supabase.auth.getSession();
+            const contactsToSend = attended.map(ec => ({
+              email: ec.contacts?.email, first_name: ec.contacts?.first_name, last_name: ec.contacts?.last_name, unsubscribed: false
+            })).filter(c => c.email);
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                contacts: contactsToSend, triggerType: "thank_you",
+                eventName: activeEvent.name,
+                eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long" }) : "",
+                orgName: profile?.companies?.name || "evara",
+              })
+            }).then(r => r.json()).catch(e => ({ error: e.message }));
+            res.success ? fire(`✅ Thank you emails sent to ${res.sent} attendees!`) : fire(res.error || "Send failed", "err");
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.green + "12", border: `1px solid ${C.green}30`, borderRadius: 6, padding: "5px 11px", color: C.green, cursor: "pointer" }}>
+            🙏 Thank Attendees
+          </button>
           <button onClick={() => {
             const fmt = window.prompt("Export format:\n1 = Standard CSV\n2 = Salesforce CSV\n3 = Attended only", "1");
             if (!fmt) return;
