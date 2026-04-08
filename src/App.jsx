@@ -2070,7 +2070,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
     const [search, setSearch] = useState(globalSearch || "");
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
-  const [importing, setImporting] = useState(false);ect(() => {
+  const [importing, setImporting] = useState(false);
+  useEffect(() => {
     if (!profile) return;
     supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false })
       .then(({ data }) => { setContacts(data || []); setLoading(false); });
