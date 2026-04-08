@@ -1909,6 +1909,13 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
           Deduplicate
         </button>
+        <button onClick={() => {
+          const emails = filtered.map(c => c.email).filter(Boolean).join(', ');
+          navigator.clipboard?.writeText(emails);
+          fire(`📋 ${filtered.length} email(s) copied to clipboard`);
+        }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+          Copy Emails
+        </button>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 12px", marginBottom: 14, maxWidth: 320 }}>
