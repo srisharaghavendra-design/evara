@@ -1722,10 +1722,13 @@ function SettingsView({ supabase, profile, fire }) {
     await supabase.from("companies").update({ name: company }).eq("id", profile.company_id);
     setSaving(false); fire("Settings saved!");
   };
+  const [fromEmail, setFromEmail] = useState(profile?.companies?.from_email || "hello@evarahq.com");
+  const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
+
   return (
     <div style={{ animation: "fadeUp .2s ease", maxWidth: 560 }}>
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text, marginBottom: 6 }}>Settings</h1>
-      <p style={{ color: C.muted, fontSize: 13, marginBottom: 24 }}>Manage your profile, company and security settings.</p>
+      <p style={{ color: C.muted, fontSize: 13, marginBottom: 24 }}>Manage your profile, company, branding and security settings.</p>
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 16 }}>Profile</div>
         {[{ label: "Full name", val: name, set: setName }, { label: "Company name", val: company, set: setComp }].map(f => (
@@ -1738,6 +1741,25 @@ function SettingsView({ supabase, profile, fire }) {
         <div>
           <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 5 }}>Email</div>
           <div style={{ padding: "10px 12px", background: C.raised, borderRadius: 7, fontSize: 13, color: C.muted, border: `1px solid ${C.border}` }}>{profile?.email}</div>
+        </div>
+      </div>
+      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 16 }}>Brand Kit</div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>From email address</label>
+          <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
+            style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
+            onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
+        </div>
+        <div>
+          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>Brand colour</label>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)}
+              style={{ width: 40, height: 36, border: "none", background: "none", cursor: "pointer" }} />
+            <input value={brandColor} onChange={e => setBrandColor(e.target.value)}
+              style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }} />
+            <div style={{ width: 36, height: 36, borderRadius: 6, background: brandColor, flexShrink: 0, border: `1px solid ${C.border}` }} />
+          </div>
         </div>
       </div>
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
