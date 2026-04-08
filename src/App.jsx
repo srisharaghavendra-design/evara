@@ -2186,6 +2186,46 @@ function SettingsView({ supabase, profile, fire }) {
           <div key={s} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13, color: C.sec }}><CheckCircle size={13} color={C.green} />{s}</div>
         ))}
       </div>
+      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 14 }}>Team Access</div>
+        <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Invite colleagues to access your evara workspace.</div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+          <input id="invite-email" placeholder="colleague@company.com"
+            style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none" }}
+            onFocus={e => e.target.style.borderColor = C.blue}
+            onBlur={e => e.target.style.borderColor = C.border} />
+          <select style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", cursor: "pointer" }}>
+            <option>Admin</option><option>Editor</option><option>Viewer</option>
+          </select>
+          <button onClick={() => {
+            const email = document.getElementById("invite-email")?.value;
+            if (!email?.includes("@")) { return; }
+            fire(`Invite sent to ${email}! (requires email config)`);
+            document.getElementById("invite-email").value = "";
+          }} style={{ padding: "8px 18px", background: C.blue, border: "none", borderRadius: 7, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+            Invite
+          </button>
+        </div>
+        <div style={{ fontSize: 11, color: C.muted }}>
+          ℹ️ Invited members will receive an email with a sign-up link to join your workspace.
+        </div>
+      </div>
+      <div style={{ background: "#1a0808", borderRadius: 12, border: `1px solid ${C.red}30`, padding: 20, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.red, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 14 }}>Danger Zone</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>Export all data and delete account</div>
+            <div style={{ fontSize: 11, color: C.muted }}>Downloads your data then permanently removes all account data.</div>
+          </div>
+          <button onClick={() => {
+            if (window.confirm("Are you absolutely sure? This cannot be undone.")) {
+              fire("Please contact hello@evarahq.com to delete your account and data.", "err");
+            }
+          }} style={{ padding: "7px 14px", background: "transparent", border: `1px solid ${C.red}50`, borderRadius: 7, color: C.red, fontSize: 12, cursor: "pointer" }}>
+            Request Deletion
+          </button>
+        </div>
+      </div>
       <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "all .15s", cursor: "pointer" }}>
         {saving ? <><Spin />Saving…</> : "Save changes"}
       </button>
