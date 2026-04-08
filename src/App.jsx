@@ -2666,6 +2666,21 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             📋 Copy Kiosk URL
           </button>
+          <button onClick={() => {
+            const attended = contacts.filter(c => c.status === "attended");
+            const csv = ["Name,Email,Company,Checked In"].concat(
+              attended.map(ec => {
+                const c = ec.contacts || {};
+                return `"${c.first_name||""} ${c.last_name||""}","${c.email||""}","${c.company_name||""}","${ec.attended_at ? new Date(ec.attended_at).toLocaleTimeString() : "yes"}"`;
+              })
+            ).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `${activeEvent.name}-attended.csv`; a.click();
+            fire(`✅ Exported ${attended.length} attendees`);
+          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            ⬇ Export
+          </button>
           <button onClick={() => setShowWalkin(true)}
             style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 500 }}>
             + Walk-in
