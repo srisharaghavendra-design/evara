@@ -2795,8 +2795,10 @@ Return ONLY valid JSON with this structure:
 {
   "linkedin": { "post": "150-200 word professional post with paragraph breaks", "hashtags": ["tag1","tag2","tag3"] },
   "twitter": { "post": "Under 280 chars, punchy and engaging", "hashtags": ["tag1","tag2"] },
-  "instagram": { "caption": "Engaging caption with emojis", "hashtags": ["tag1","tag2","tag3","tag4","tag5"], "story_ideas": ["idea1","idea2","idea3"] }
-}`;
+  "instagram": { "caption": "Engaging caption with emojis", "hashtags": ["tag1","tag2","tag3","tag4","tag5"], "story_ideas": ["idea1","idea2","idea3"] },
+  "facebook": { "post": "Conversational 100-150 word post, good for sharing event details", "hashtags": ["tag1","tag2"] },
+  "email": { "subject": "Compelling email subject line", "preview_text": "Email preview text under 90 chars", "blurb": "2-3 sentence newsletter blurb about the event" }
+}\`;
 
       const res = await fetch("https://api.anthropic.com/v1/messages", {
         method: "POST",
