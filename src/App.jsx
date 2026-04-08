@@ -530,6 +530,7 @@ function MainApp({ session }) {
       event_time: newEventExtra?.event_time || null,
       location: newEventExtra?.location || null,
       description: newEventExtra?.description || null,
+      capacity: newEventExtra?.capacity ? parseInt(newEventExtra.capacity) : null,
       company_id: profile.company_id, status: "draft", created_by: profile.id,
       share_token: shareToken,
     }).select().single();
@@ -896,6 +897,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           {activeEvent.description && (
             <p style={{ color: C.muted, fontSize: 12, marginTop: 3, fontStyle: "italic", opacity: 0.75 }}>{activeEvent.description}</p>
           )}
+          {activeEvent.capacity && (
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
+              👥 Capacity: {activeEvent.capacity} · {contacts.length} registered ({Math.round((contacts.length / activeEvent.capacity) * 100)}% full)
+            </p>
+          )}
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           {formShareLink && (
@@ -1176,6 +1182,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               { key: "event_time",  label: "Time",             ph: "6:30 PM",                       type: "text" },
               { key: "location",    label: "Venue / Location", ph: "Marina Bay Sands",              type: "text" },
               { key: "description", label: "Description",      ph: "Brief description",             type: "text" },
+              { key: "capacity",    label: "Capacity",             ph: "e.g. 150",                      type: "number" },
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
