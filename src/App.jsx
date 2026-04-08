@@ -768,20 +768,20 @@ function MainApp({ session }) {
 
         <main style={{ flex: 1, overflow: "auto", padding: "26px" }}>
           {view === "dashboard" && <DashView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "edm" && <EdmView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
-          {view === "landing" && <LandingView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "forms" && <FormsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "contacts" && <ContactView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} />}
-          {view === "schedule" && <ScheduleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
-          {view === "checkin"   && <CheckInView  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "social"    && <SocialView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "analytics" && <AnalyticsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "campaign"  && <CampaignView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "edm" && profile && <EdmView key="edm" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "contacts" && profile && <ContactView key="contacts" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} />}
+          {view === "schedule" && profile && <ScheduleView key="schedule" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
+          {view === "checkin"   && profile && <CheckInView key="checkin"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "social"    && profile && <SocialView key="social"   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "campaign"  && profile && <CampaignView key="campaign"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} />}
           {view === "qa"        && <QAView      supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "seating"   && <SeatingView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "agenda"    && <AgendaView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "feedback"  && <FeedbackView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "feedback"  && profile && <FeedbackView key="feedback"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "lifecycle" && <LifecycleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "roi"       && <ROIView      supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "settings"  && <SettingsView supabase={supabase} profile={profile} fire={fire} />}
