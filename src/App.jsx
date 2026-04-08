@@ -2996,6 +2996,41 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
               </div>
             ))}
           </Sec>
+          {data?.total_sent > 0 && (() => {
+            const openRate = data.total_sent ? Math.round((data.total_opened / data.total_sent) * 100) : 0;
+            const convRate = data.total_sent ? Math.round(((data.ec_total||0) / data.total_sent) * 100) : 0;
+            const showRate = data.confirmed ? Math.round(((data.attended||0) / data.confirmed) * 100) : 0;
+            return (
+              <Sec label="Industry Benchmarks">
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>How your event compares to B2B event industry averages</div>
+                {[
+                  { label: "Email Open Rate", yours: openRate, benchmark: 28, unit: "%" },
+                  { label: "Email → Registration", yours: convRate, benchmark: 5, unit: "%" },
+                  { label: "Confirmed → Attended", yours: showRate, benchmark: 72, unit: "%" },
+                ].map(m => {
+                  const good = m.yours >= m.benchmark;
+                  return (
+                    <div key={m.label} style={{ marginBottom: 14 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5 }}>
+                        <span style={{ color: C.text }}>{m.label}</span>
+                        <div style={{ display: "flex", gap: 10 }}>
+                          <span style={{ color: good ? C.green : C.amber, fontWeight: 600 }}>You: {m.yours}{m.unit}</span>
+                          <span style={{ color: C.muted }}>Avg: {m.benchmark}{m.unit}</span>
+                        </div>
+                      </div>
+                      <div style={{ position: "relative", height: 8, background: C.raised, borderRadius: 4 }}>
+                        <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${Math.min(m.yours, 100)}%`, background: good ? C.green : C.amber, borderRadius: 4, transition: "width .5s" }} />
+                        <div style={{ position: "absolute", left: `${m.benchmark}%`, top: -3, width: 2, height: 14, background: C.blue, borderRadius: 1 }} title={`Industry avg: ${m.benchmark}${m.unit}`} />
+                      </div>
+                      <div style={{ fontSize: 10, color: good ? C.green : C.amber, marginTop: 4 }}>
+                        {good ? `✅ ${m.yours - m.benchmark}${m.unit} above industry average` : `⚠️ ${m.benchmark - m.yours}${m.unit} below industry average`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </Sec>
+            );
+          })()}
           <button onClick={generateCampaign} disabled={generating}
             style={{ padding: 12, borderRadius: 8, border: "none", background: generating ? C.raised : `linear-gradient(135deg, ${C.blue}, #6366f1)`, color: generating ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: generating ? "none" : `0 4px 20px ${C.blue}40` }}>
             {generating ? <><Spin />Building campaign…</> : <><Sparkles size={14} />Generate 7-Email Campaign</>}
