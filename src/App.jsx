@@ -1014,6 +1014,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const baseContacts = nlFiltered !== null ? nlFiltered : contacts;
   const rows = filt === "all" ? baseContacts : baseContacts.filter(c => c.status === filt);
   const noContactsYet = contacts.length === 0 && !loading;
+  // Go Live checklist items
+  const goLiveChecklist = activeEvent ? [
+    { id: "contacts", label: "Import contacts", done: contacts.length > 0, action: "contacts", icon: "👥" },
+    { id: "form", label: "Create registration form", done: !!formShareLink, action: "forms", icon: "📋" },
+    { id: "email", label: "Draft invite email", done: campaigns.some(c => c.email_type === "invitation"), action: "edm", icon: "✉️" },
+    { id: "sent", label: "Send first email", done: campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
+  ] : [];
+  const goLiveDone = goLiveChecklist.filter(i => i.done).length;
+
   const METRICS = [
     { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue },
     { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "%" : null },
@@ -1154,6 +1163,28 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>}
         </div>
       </div>
+
+      {/* Go Live progress bar */}
+      {goLiveChecklist.length > 0 && goLiveDone < goLiveChecklist.length && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>🚀 Go Live Checklist</span>
+            <span style={{ fontSize: 11, color: C.muted }}>{goLiveDone}/{goLiveChecklist.length} done</span>
+          </div>
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+            {goLiveChecklist.map(item => (
+              <button key={item.id}
+                onClick={() => !item.done && document.querySelector(`button[data-view="${item.action}"]`)?.click()}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: `1px solid ${item.done ? C.green + "40" : C.border}`, background: item.done ? C.green + "10" : C.raised, cursor: item.done ? "default" : "pointer", fontSize: 11, color: item.done ? C.green : C.text }}>
+                {item.done ? "✓" : item.icon} <span style={{ textDecoration: item.done ? "line-through" : "none", opacity: item.done ? 0.6 : 1 }}>{item.label}</span>
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: 10, height: 3, background: C.raised, borderRadius: 999 }}>
+            <div style={{ width: `${(goLiveDone / goLiveChecklist.length) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${C.blue}, ${C.teal})`, borderRadius: 999, transition: "width .5s" }} />
+          </div>
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 9, marginBottom: 22 }}>
         {METRICS.map((m, i) => (
@@ -2744,7 +2775,17 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
     if (!activeEvent || !profile) return; setSaving(true);
     const payload = { event_id: activeEvent.id, company_id: profile.company_id, ...info, blocks, is_published: publish };
     const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id" }).select().single();
-    if (error) { fire(error.message, "err"); } else { setPage(data); fire(publish ? "Page published! 🎉" : "Page saved as draft"); }
+    if (error) { fire(error.message, "err"); }
+    else {
+      setPage(data);
+      if (publish) {
+        const url = `${window.location.origin}/page/${data.slug}`;
+        fire(`🎉 Page published! ${url}`);
+        navigator.clipboard?.writeText(url);
+      } else {
+        fire("Draft saved");
+      }
+    }
     setSaving(false);
   };
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", gap: 10, color: C.muted }}><Spin />Loading…</div>;
@@ -2762,6 +2803,20 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
           <button onClick={() => save(true)} disabled={saving} style={{ fontSize: 13, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{saving ? <><Spin />Saving…</> : "Publish →"}</button>
         </div>}
       </div>
+
+      {/* Live page URL bar */}
+      {page?.is_published && page?.slug && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: C.green + "10", border: `1px solid ${C.green}25`, borderRadius: 8, marginBottom: 12 }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
+          <span style={{ fontSize: 11.5, color: C.green, fontWeight: 600 }}>Live:</span>
+          <code style={{ flex: 1, fontSize: 11, color: C.text }}>{window.location.origin}/page/{page.slug}</code>
+          <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/page/${page.slug}`); fire("✅ URL copied!"); }}
+            style={{ fontSize: 10.5, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", fontWeight: 500 }}>Copy</button>
+          <a href={`/page/${page.slug}`} target="_blank" rel="noreferrer"
+            style={{ fontSize: 10.5, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, textDecoration: "none" }}>Open ↗</a>
+        </div>
+      )}
+
       {step === 1 ? (
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 16 }}>Choose a template</div>
