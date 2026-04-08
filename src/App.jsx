@@ -1728,16 +1728,24 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>}
           {preview && (
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, padding: "8px 12px", background: C.raised, borderRadius: 7, border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 11, color: C.muted, flex: 1 }}>📧 Send test to {profile?.email}</span>
+              <span style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>📧 Test to:</span>
+              <input
+                id="test-email-input"
+                defaultValue={profile?.email || ""}
+                placeholder="your@email.com"
+                style={{ flex: 1, fontSize: 11, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "4px 8px", outline: "none" }}
+              />
               <button onClick={async () => {
+                const testEmail = document.getElementById("test-email-input")?.value?.trim() || profile?.email;
+                if (!testEmail?.includes("@")) { fire("Enter a valid email address", "err"); return; }
                 const { data: { session } } = await supabase.auth.getSession();
                 const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                  body: JSON.stringify({ contacts: [{ email: profile?.email, first_name: profile?.full_name?.split(" ")[0] || "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text })
+                  body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text })
                 }).then(r => r.json()).catch(e => ({ error: e.message }));
                 if (r.success) {
-                  fire(`✅ Test sent to ${profile?.email}! Check your inbox.`);
+                  fire(`✅ Test sent to ${testEmail}! Check your inbox.`);
                 } else {
                   const msg = r.error?.includes("SENDGRID") ? "❌ SendGrid API key not configured in Supabase secrets"
                     : r.error?.includes("Forbidden") ? "❌ Sender not verified — check SendGrid"
@@ -1745,7 +1753,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                     : `❌ ${r.error || "Send failed"}`;
                   fire(msg, "err");
                 }
-              }} style={{ fontSize: 11, padding: "4px 12px", background: C.blue, color: "#fff", border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 500 }}>
+              }} style={{ fontSize: 11, padding: "4px 14px", background: C.blue, color: "#fff", border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>
                 Send Test
               </button>
             </div>
