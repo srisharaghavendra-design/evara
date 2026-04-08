@@ -569,15 +569,20 @@ function MainApp({ session }) {
             {activeEvent && <><span style={{ fontSize: 12, color: C.muted }}>/</span>
             <span style={{ fontSize: 12, color: C.muted, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeEvent.name}</span></>}
             <span style={{ fontSize: 12, color: C.muted }}>/</span>
-            <span style={{ fontSize: 12.5, fontWeight: 500, color: C.text }}>{NAV.find(n => n.id === view)?.label || (view === "settings" ? "Settings" : "Dashboard")}</span>
+            {(() => {
+              const label = NAV.find(n => n.id === view)?.label || (view === "settings" ? "Settings" : view === "calendar" ? "Calendar" : "Dashboard");
+              // Update page title
+              document.title = `${label} · ${activeEvent?.name || "evara"}`;
+              return <span style={{ fontSize: 12.5, fontWeight: 500, color: C.text }}>{label}</span>;
+            })()}
           </div>
           <div style={{ width: 1, height: 18, background: C.border }} />
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 11px", flex: 1, maxWidth: 260 }}>
             <Search size={12} color={C.muted} strokeWidth={1.5} />
-            <input placeholder="Search contacts, campaigns…" value={globalSearch} onChange={e => {
-                setGlobalSearch(e.target.value);
-                if (e.target.value.length > 1) setView("contacts");
-              }} style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
+            <input placeholder="Search… (⌘K)" value={globalSearch} 
+              onChange={e => { setGlobalSearch(e.target.value); if (e.target.value.length > 1) setView("contacts"); }}
+              onKeyDown={e => { if (e.key === "Escape") { setGlobalSearch(""); e.target.blur(); } }}
+              style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
             <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
