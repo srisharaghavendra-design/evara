@@ -1288,6 +1288,8 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
         body: JSON.stringify({
           ...info, emailType: eType, templateStyle: tmpl,
+          tone: info.tone || "professional and exciting",
+          orgName: info.orgName || profile?.companies?.name || "",
           eventId: activeEvent?.id, companyId: profile?.company_id,
           registrationUrl: formLink || null,
           headerImageUrl: images.header || null,
