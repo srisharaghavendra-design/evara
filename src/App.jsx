@@ -1553,6 +1553,8 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [gen, setGen] = useState(false);
   const [preview, setPreview] = useState(null);
   const [previewWidth, setPreviewWidth] = useState("100%");
+  const [subjectAlts, setSubjectAlts] = useState([]);
+  const [loadingAlts, setLoadingAlts] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [formLink, setFormLink] = useState("");
   const [uploadingZone, setUploadingZone] = useState(null);
@@ -1885,8 +1887,36 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             {preview && (
               <div>
                 <div style={{ padding: "12px 16px", background: "white", borderBottom: "1px solid #E5E5EA", fontFamily: "Arial,sans-serif" }}>
-                  <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Subject</div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                    <div style={{ fontSize: 11, color: "#999" }}>Subject</div>
+                    <button onClick={async () => {
+                      setLoadingAlts(true); setSubjectAlts([]);
+                      const { data: { session: s } } = await supabase.auth.getSession();
+                      const res = await fetch(`${SUPABASE_URL}/functions/v1/subject-suggestions`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${s?.access_token}` },
+                        body: JSON.stringify({ subject: preview.subject, emailType: eType, eventName: info.eventName })
+                      }).then(r => r.json()).catch(() => ({ suggestions: [] }));
+                      setSubjectAlts(res.suggestions || []);
+                      setLoadingAlts(false);
+                    }} disabled={loadingAlts} style={{ fontSize: 10, padding: "2px 8px", background: "#0A84FF15", border: "1px solid #0A84FF30", borderRadius: 4, color: "#0A84FF", cursor: "pointer" }}>
+                      {loadingAlts ? "…" : "✨ Alt subjects"}
+                    </button>
+                  </div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{preview.subject}</div>
+                  {subjectAlts.length > 0 && (
+                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ fontSize: 10, color: "#999", marginBottom: 2 }}>Alternative subject lines — click to use:</div>
+                      {subjectAlts.map((s, i) => (
+                        <div key={i} onClick={() => { setPreview(p => ({ ...p, subject: s })); setSubjectAlts([]); }}
+                          style={{ fontSize: 12, padding: "5px 8px", background: "#f5f5f5", borderRadius: 4, cursor: "pointer", color: "#333", border: "1px solid #eee" }}
+                          onMouseEnter={e => e.currentTarget.style.background = "#e8f0fe"}
+                          onMouseLeave={e => e.currentTarget.style.background = "#f5f5f5"}>
+                          {s}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: "100%", border: "none", minHeight: 600, transition: "width .3s ease" }} title="Email Preview" sandbox="allow-same-origin" />
               </div>
