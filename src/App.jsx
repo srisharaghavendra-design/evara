@@ -1431,6 +1431,25 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             Quick Send Latest →
           </button>
           <button onClick={async () => {
+            // Send test email to self
+            const latest = campaigns.find(c => c.html_content);
+            if (!latest) { fire("No draft with content yet — generate one in eDM Builder first", "err"); return; }
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                contacts: [{ email: profile?.email, first_name: profile?.full_name?.split(" ")[0] || "Test", unsubscribed: false }],
+                subject: "[TEST] " + latest.subject,
+                htmlContent: latest.html_content,
+                plainText: latest.plain_text || latest.subject,
+              })
+            }).then(r => r.json()).catch(e => ({ error: e.message }));
+            res.success ? fire(`✅ Test email sent to ${profile?.email}!`) : fire(res.error || "Send failed", "err");
+          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            ✉️ Test Email
+          </button>
+          <button onClick={async () => {
             // Auto-schedule all draft campaigns with intelligent timing
             const drafts = campaigns.filter(c => c.status === "draft" && !c.send_at);
             if (drafts.length === 0) { fire("No unscheduled drafts found — generate a campaign first", "err"); return; }
@@ -1688,6 +1707,26 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <Sparkles size={12}/>AI Sales Brief
           </button>
           <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
+        <button onClick={async () => {
+          // Find duplicates by email
+          const seen = {};
+          const dupes = [];
+          contacts.forEach(c => {
+            const key = c.email?.toLowerCase().trim();
+            if (!key) return;
+            if (seen[key]) { dupes.push(c.id); }
+            else seen[key] = true;
+          });
+          if (!dupes.length) { fire("No duplicates found ✅"); return; }
+          if (!window.confirm(`Found ${dupes.length} duplicate contact(s). Delete them?`)) return;
+          await supabase.from("contacts").delete().in("id", dupes);
+          fire(`✅ Removed ${dupes.length} duplicate(s)`);
+          // Reload
+          const { data } = await supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false });
+          setContacts(data || []);
+        }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+          Deduplicate
+        </button>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 12px", marginBottom: 14, maxWidth: 320 }}>
