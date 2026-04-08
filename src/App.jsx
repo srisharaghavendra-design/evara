@@ -1329,6 +1329,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.amber + "14", border: `1px solid ${C.amber}30`, borderRadius: 6, padding: "5px 11px", color: C.amber, cursor: "pointer" }}>
             ⏰ Remind All Pending ({contacts.filter(c => c.status === "pending").length})
           </button>
+          {campaigns.filter(c => c.status === "draft" && c.html_content).length > 0 && contacts.length > 0 && (
+            <button onClick={() => { fire("Go to Scheduling → select a draft → Send to send to all contacts"); }}
+              title="Go to Scheduling to send"
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "4px 10px", background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 5, color: C.blue, cursor: "pointer" }}>
+              📨 {campaigns.filter(c => c.status === "draft" && c.html_content).length} draft{campaigns.filter(c => c.status === "draft" && c.html_content).length !== 1 ? "s" : ""} ready
+            </button>
+          )}
           <button onClick={async () => {
             const confirmed = contacts.filter(c => c.status === "confirmed");
             if (!confirmed.length) { fire("No confirmed contacts to mark as attended", "err"); return; }
