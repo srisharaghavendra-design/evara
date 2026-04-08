@@ -321,6 +321,9 @@ export default function App() {
     const shareToken = path.replace('/share/', '');
     return <PublicDashboardPage token={shareToken} />;
   }
+  if (path === '/unsubscribe' || path.startsWith('/unsubscribe')) {
+    return <UnsubscribePage />;
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setBooting(false); });
@@ -5038,6 +5041,69 @@ function PublicDashboardPage({ token }) {
         <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: "#2C2C30" }}>
           Powered by evara · evara-tau.vercel.app
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── UNSUBSCRIBE PAGE ────────────────────────────────────────
+function UnsubscribePage() {
+  const [status, setStatus] = useState("idle"); // idle | loading | done | error
+  const [email, setEmail] = useState("");
+
+  const params = new URLSearchParams(window.location.search);
+  const emailFromUrl = params.get("email") || "";
+
+  useEffect(() => {
+    if (emailFromUrl) setEmail(emailFromUrl);
+  }, []);
+
+  const unsubscribe = async () => {
+    if (!email?.includes("@")) { setStatus("error"); return; }
+    setStatus("loading");
+    try {
+      await supabase.from("contacts").update({
+        unsubscribed: true,
+        unsubscribed_at: new Date().toISOString()
+      }).eq("email", email.toLowerCase().trim());
+      setStatus("done");
+    } catch(e) {
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#080809", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", color: "#F5F5F7" }}>
+      <div style={{ maxWidth: 400, width: "100%", padding: 32, textAlign: "center" }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: "#0A84FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
+          <span style={{ fontSize: 22 }}>e</span>
+        </div>
+        {status === "done" ? (
+          <>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
+            <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Unsubscribed</h1>
+            <p style={{ fontSize: 14, color: "#636366", lineHeight: 1.6 }}>
+              <strong style={{ color: "#F5F5F7" }}>{email}</strong> has been removed from all future emails. You won't hear from us again.
+            </p>
+            <p style={{ fontSize: 12, color: "#3A3A3C", marginTop: 20 }}>Changed your mind? Contact the organiser directly.</p>
+          </>
+        ) : (
+          <>
+            <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Unsubscribe</h1>
+            <p style={{ fontSize: 14, color: "#636366", marginBottom: 24, lineHeight: 1.6 }}>
+              Enter your email below to stop receiving event communications.
+            </p>
+            <input value={email} onChange={e => setEmail(e.target.value)}
+              placeholder="your@email.com" type="email"
+              style={{ width: "100%", background: "#111114", border: "1px solid #2C2C2E", borderRadius: 8, color: "#F5F5F7", padding: "12px 14px", fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
+            {status === "error" && <p style={{ fontSize: 12, color: "#FF453A", marginBottom: 8 }}>Please enter a valid email address.</p>}
+            <button onClick={unsubscribe} disabled={status === "loading"}
+              style={{ width: "100%", padding: "12px", background: status === "loading" ? "#2C2C2E" : "#FF453A", border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600, cursor: status === "loading" ? "default" : "pointer" }}>
+              {status === "loading" ? "Processing…" : "Unsubscribe"}
+            </button>
+            <p style={{ fontSize: 11, color: "#3A3A3C", marginTop: 16 }}>Powered by evara · evarahq.com</p>
+          </>
+        )}
       </div>
     </div>
   );

@@ -13,6 +13,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/unsubscribe",
+      "destination": "/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
