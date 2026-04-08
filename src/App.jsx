@@ -1165,7 +1165,16 @@ function ScheduleView({ supabase, profile, activeEvent, fire }) {
           <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Email Scheduling</h1>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Send campaigns or schedule them ahead. Every send is tracked in real time.</p>
         </div>
-        <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={async () => {
+            const latestWithHtml = campaigns.find(c => c.html_content && c.status !== "sent");
+            if (!latestWithHtml) { fire("No draft with content found — generate one in eDM Builder first", "err"); return; }
+            openSendModal(latestWithHtml);
+          }} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            Quick Send Latest →
+          </button>
+          <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
+        </div>
       </div>
 
       {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px", color: C.muted }}><Spin />Loading campaigns…</div> : (
@@ -1335,11 +1344,19 @@ function ContactView({ supabase, profile, activeEvent, fire }) {
   }, [profile]);
   const filtered = contacts.filter(c => !search || (c.email + c.first_name + c.last_name + c.company_name).toLowerCase().includes(search.toLowerCase()));
   const importCSV = async () => {
-    const emails = prompt("Paste emails (one per line or comma-separated):");
+    const emails = prompt("Paste emails (one per line or comma-separated):\n\nYou can also paste: FirstName LastName <email@domain.com>");
     if (!emails || !profile) return;
-    const list = emails.split(/[\n,]/).map(e => e.trim()).filter(e => e.includes("@"));
-    if (!list.length) { fire("No valid emails found", "err"); return; }
-    const rows = list.map(email => ({ email, company_id: profile.company_id, source: "import" }));
+    const rawList = emails.split(/[\n,]/).map(e => e.trim()).filter(e => e.includes("@"));
+    if (!rawList.length) { fire("No valid emails found", "err"); return; }
+    const rows = rawList.map(raw => {
+      // Parse "First Last <email>" format
+      const match = raw.match(/^(.+?)<(.+@.+)>$/);
+      if (match) {
+        const nameParts = match[1].trim().split(" ");
+        return { email: match[2].trim().toLowerCase(), first_name: nameParts[0] || "", last_name: nameParts.slice(1).join(" ") || "", company_id: profile.company_id, source: "import" };
+      }
+      return { email: raw.toLowerCase(), company_id: profile.company_id, source: "import" };
+    });
     const { data } = await supabase.from("contacts").upsert(rows, { onConflict: "company_id,email" }).select();
     if (data) { setContacts(p => { const newOnes = data.filter(d => !p.find(c => c.id === d.id)); return [...newOnes, ...p]; }); fire(`${data.length} contacts imported!`); }
   };
