@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/form/:token", "destination": "/index.html" },
+    { "source": "/checkin/:eventId", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
