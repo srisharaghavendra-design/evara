@@ -515,6 +515,8 @@ function MainApp({ session }) {
         <header style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 22px", gap: 12, flexShrink: 0, background: C.sidebar }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 4 }}>
             <span style={{ fontSize: 12, color: C.muted }}>evara</span>
+            {activeEvent && <><span style={{ fontSize: 12, color: C.muted }}>/</span>
+            <span style={{ fontSize: 12, color: C.muted, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeEvent.name}</span></>}
             <span style={{ fontSize: 12, color: C.muted }}>/</span>
             <span style={{ fontSize: 12.5, fontWeight: 500, color: C.text }}>{NAV.find(n => n.id === view)?.label || (view === "settings" ? "Settings" : "Dashboard")}</span>
           </div>
@@ -681,15 +683,39 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   ];
 
   if (!activeEvent) return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "60vh", gap: 16, animation: "fadeUp .2s ease" }}>
-      <LayoutDashboard size={36} color={C.muted} strokeWidth={1} />
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 16, fontWeight: 500, color: C.text, marginBottom: 6 }}>No events yet</div>
-        <div style={{ fontSize: 13, color: C.muted }}>Click "New Event" to get started</div>
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 48, gap: 14, marginBottom: 40 }}>
+        <div style={{ fontSize: 48 }}>🚀</div>
+        <div style={{ fontSize: 20, fontWeight: 600, color: C.text, letterSpacing: "-0.4px" }}>Welcome to evara</div>
+        <p style={{ fontSize: 14, color: C.muted, textAlign: "center", maxWidth: 380, lineHeight: 1.6 }}>
+          Your all-in-one event marketing platform. Create your first event to get started.
+        </p>
+        <button onClick={() => setShowNewEvent(true)} style={{ padding: "10px 24px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: `0 4px 20px ${C.blue}40` }}>
+          + Create First Event
+        </button>
+      </div>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Getting started checklist</div>
+        {[
+          { num: 1, title: "Create your first event", desc: "Add event name, date, location" },
+          { num: 2, title: "Import your contact list", desc: "Add attendees — paste emails or import CSV" },
+          { num: 3, title: "Generate your invite email", desc: "AI writes a polished invite in 10 seconds" },
+          { num: 4, title: "Set up registration form", desc: "Share the link — contacts self-register" },
+          { num: 5, title: "Send your campaign", desc: "Schedule or send immediately to all contacts" },
+        ].map((item) => (
+          <div key={item.num} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", background: C.card, borderRadius: 9, border: `1px solid ${C.border}`, marginBottom: 8 }}>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${C.border}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{item.num}</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{item.title}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>{item.desc}</div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
-
   const daysToEvent = activeEvent.event_date ? Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
 
   return (
