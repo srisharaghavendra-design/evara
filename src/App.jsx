@@ -485,6 +485,7 @@ function MainApp({ session }) {
       event_date: newEventExtra?.event_date || null, 
       event_time: newEventExtra?.event_time || null,
       location: newEventExtra?.location || null,
+      description: newEventExtra?.description || null,
       company_id: profile.company_id, status: "draft", created_by: profile.id,
       share_token: shareToken,
     }).select().single();
@@ -645,10 +646,11 @@ function MainApp({ session }) {
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 460, animation: "fadeUp .2s ease" }}>
             <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>New event</h2>
             {[
-              { key: "name",       label: "Event name *",   ph: "e.g. Tech Summit 2026",               type: "text" },
-              { key: "event_date", label: "Date",           ph: "",                                     type: "date" },
-              { key: "event_time", label: "Time",           ph: "e.g. 6:30 PM",                        type: "text" },
-              { key: "location",   label: "Venue / Location", ph: "e.g. Marina Bay Sands, Singapore",  type: "text" },
+              { key: "name",        label: "Event name *",    ph: "e.g. Tech Summit 2026",              type: "text" },
+              { key: "event_date",  label: "Date",            ph: "",                                    type: "date" },
+              { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
+              { key: "location",    label: "Venue / Location", ph: "e.g. Marina Bay Sands, Singapore", type: "text" },
+              { key: "description", label: "Description",     ph: "Brief description of the event",     type: "text" },
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
