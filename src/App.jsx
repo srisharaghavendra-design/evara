@@ -2097,6 +2097,15 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                           fire(isVip ? "VIP tag removed" : "⭐ Marked as VIP");
                         }} title={c.tags?.includes("vip") ? "Remove VIP" : "Mark as VIP"}
                           style={{ fontSize: 13, background: "transparent", border: "none", cursor: "pointer", opacity: c.tags?.includes("vip") ? 1 : 0.3, lineHeight: 1 }}>⭐</button>
+                        <button onClick={async () => {
+                          const note = window.prompt("Add note for " + (c.first_name || c.email) + ":", c.notes || "");
+                          if (note === null) return;
+                          await supabase.from("contacts").update({ notes: note }).eq("id", c.id);
+                          setContacts(p => p.map(x => x.id === c.id ? { ...x, notes: note } : x));
+                          fire(note ? "Note saved" : "Note cleared");
+                        }} title={c.notes || "Add note"} style={{ fontSize: 12, background: "transparent", border: "none", cursor: "pointer", opacity: c.notes ? 1 : 0.3, lineHeight: 1 }}>
+                          📝
+                        </button>
                       </div>
                     </td>
                   </tr>
