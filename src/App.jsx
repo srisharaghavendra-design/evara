@@ -1110,56 +1110,20 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             🙏 Thank Attendees
           </button>
           <button onClick={() => {
-            const fmt = window.prompt("Export format:\n1 = Standard CSV\n2 = Salesforce CSV\n3 = Attended only", "1");
-            if (!fmt) return;
-            const rows_data = fmt === "3" ? contacts.filter(c => c.status === "attended") : contacts;
-            const sfdc = fmt === "2";
-            const headers = sfdc
-              ? ["FirstName","LastName","Email","Company","Phone","LeadSource","Status","Event"]
-              : ["First Name","Last Name","Email","Company","Phone","Status","Event"];
-            const rows = rows_data.map(ec => {
+            const cols = ["First Name","Last Name","Email","Phone","Company","Status","Confirmed At","Attended At"];
+            const rows_csv = contacts.map(ec => {
               const c = ec.contacts || {};
-              return sfdc
-                ? [c.first_name||"", c.last_name||"", c.email||"", c.company_name||"", c.phone||"", "Event", ec.status||"", activeEvent.name]
-                : [c.first_name||"", c.last_name||"", c.email||"", c.company_name||"", c.phone||"", ec.status||"", activeEvent.name];
+              return [c.first_name||"",c.last_name||"",c.email||"",c.phone||"",c.company_name||"",ec.status||"",
+                ec.confirmed_at ? new Date(ec.confirmed_at).toLocaleDateString() : "",
+                ec.attended_at ? new Date(ec.attended_at).toLocaleDateString() : ""
+              ].map(v => `"${v}"`).join(",");
             });
-            const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+            const csv = [cols.join(","), ...rows_csv].join("\n");
             const blob = new Blob([csv], { type: "text/csv" });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `${(activeEvent.name||"event").replace(/[^a-z0-9]/gi,"-")}-${fmt==="3"?"attended":"all"}${sfdc?"-salesforce":""}.csv`;
-            a.click(); URL.revokeObjectURL(url);
-            fire(`✅ Exported ${rows_data.length} contacts`);
-          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
-            <Download size={11}/>Export
-          </button>
-          <button onClick={() => setShowAddContact(true)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 6, padding: "5px 11px", color: C.blue, cursor: "pointer" }}>
-            <Plus size={11} />Add contact
-          </button>
-          <button onClick={() => {
-            const fmt = window.prompt("Export format:\n1 = Standard CSV (All)\n2 = Salesforce format\n3 = Attended only\n4 = Confirmed only", "1");
-            if (!fmt) return;
-            const src = fmt === "3" ? contacts.filter(c => c.status === "attended")
-                      : fmt === "4" ? contacts.filter(c => c.status === "confirmed")
-                      : contacts;
-            const isSF = fmt === "2";
-            const headers = isSF
-              ? ["FirstName","LastName","Email","Company","Phone","LeadSource","Event_Status__c","Event_Name__c"]
-              : ["First Name","Last Name","Email","Company","Phone","Status","Event"];
-            const rows = src.map(ec => {
-              const c = ec.contacts || {};
-              return isSF
-                ? [c.first_name||"",c.last_name||"",c.email||"",c.company_name||"",c.phone||"","Event",ec.status||"",activeEvent.name]
-                : [c.first_name||"",c.last_name||"",c.email||"",c.company_name||"",c.phone||"",ec.status||"",activeEvent.name];
-            });
-            const csv = [headers,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
-            a.download = `${activeEvent.name.replace(/\s+/g,"-")}-export-${["","all","salesforce","attended","confirmed"][+fmt]||"all"}.csv`;
-            a.click();
-            fire(`Exported ${src.length} contacts`);
-          }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, background:C.raised, border:`1px solid ${C.border}`, borderRadius:6, padding:"5px 11px", color:C.muted, cursor:"pointer" }}>
+            const a = document.createElement("a"); a.href = url; a.download = `${activeEvent.name}-contacts.csv`; a.click();
+            fire(`✅ Exported ${contacts.length} contacts`);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
             <Download size={11}/>Export CSV
           </button>
         </div>
