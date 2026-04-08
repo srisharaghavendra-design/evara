@@ -1576,12 +1576,19 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>Subject</div>
                   <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{preview.subject}</div>
                 </div>
-                <div dangerouslySetInnerHTML={{ __html: preview.html }} />
+                <iframe srcDoc={preview.html} style={{ width: "100%", border: "none", minHeight: 600 }} title="Email Preview" sandbox="allow-same-origin" />
               </div>
             )}
           </div>
           {preview && <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-            <button onClick={() => setPreview(null)} style={{ flex: 1, padding: "9px", background: C.raised, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>Clear</button>
+            <button onClick={() => setPreview(null)} style={{ padding: "9px 14px", background: C.raised, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>Clear</button>
+            <button onClick={() => {
+              const w = window.open("", "_blank");
+              w.document.write(preview.html);
+              w.document.close();
+            }} style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
+              🔍 Full View
+            </button>
             <button onClick={async () => {
               if (!profile || !activeEvent) { fire("Select an event first", "err"); return; }
               const { data: { session } } = await supabase.auth.getSession();
