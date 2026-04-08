@@ -818,12 +818,12 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const rows = filt === "all" ? contacts : contacts.filter(c => c.status === filt);
   const METRICS = [
     { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue },
-    { label: "Opened", val: metrics?.total_opened || 0, color: C.teal },
+    { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "%" : null },
     { label: "Registered", val: metrics?.total_invited || 0, color: C.text },
     { label: "Confirmed", val: metrics?.total_confirmed || 0, color: C.green },
     { label: "Declined", val: metrics?.total_declined || 0, color: C.red },
     { label: "Pending", val: metrics?.total_pending || 0, color: C.amber },
-    { label: "Attended", val: metrics?.total_attended || 0, color: C.blue },
+    { label: "Attended", val: metrics?.total_attended || 0, color: C.blue, sub: metrics?.total_confirmed > 0 ? Math.round((metrics.total_attended / metrics.total_confirmed) * 100) + "%" : null },
   ];
 
   if (!activeEvent) return (
@@ -933,6 +933,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <div key={i} className="mc" style={{ background: C.card, borderRadius: 10, padding: "13px 12px", border: `1px solid ${C.border}`, borderTop: `2px solid ${m.color}28`, transition: "all .18s", cursor: "default" }}>
             <div style={{ fontSize: 9.5, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 6 }}>{m.label}</div>
             <div style={{ fontSize: 22, fontWeight: 600, color: m.color, letterSpacing: "-0.5px" }}>{loading ? "—" : m.val.toLocaleString()}</div>
+            {m.sub && !loading && <div style={{ fontSize: 10, color: m.color, opacity: 0.7, marginTop: 2 }}>{m.sub}</div>}
           </div>
         ))}
       </div>
