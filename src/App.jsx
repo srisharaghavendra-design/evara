@@ -362,6 +362,9 @@ export default function App() {
     const eventId = path.replace('/checkin/', '');
     return <PublicCheckInPage eventId={eventId} />;
   }
+  if (path === '/unsubscribe') {
+    return <UnsubscribePage />;
+  }
   if (path.startsWith('/share/')) {
     const shareToken = path.replace('/share/', '');
     return <PublicDashboardPage token={shareToken} />;
@@ -713,7 +716,7 @@ function MainApp({ session }) {
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
           <span>⌘N new · ⌘K search · ⌘, settings</span>
-          <span>v1.1</span>
+          <span>v1.2</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
@@ -870,6 +873,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [liveMode, setLiveMode] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [campaigns, setCampaigns] = useState([]);
   const [insights, setInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState(false);
@@ -933,8 +937,12 @@ function DashView({ supabase, profile, activeEvent, fire }) {
     setFormShareLink("");
     const load = async () => {
       setLoading(true);
-      const { data: ec } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
-      setContacts(ec || []);
+      const [ecRes, camRes] = await Promise.all([
+        supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
+        supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id),
+      ]);
+      setContacts(ecRes.data || []);
+      setCampaigns(camRes.data || []);
       // Load form share link for quick copy
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormShareLink(`${window.location.origin}/form/${data.share_token}`); });
@@ -1161,6 +1169,46 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <button onClick={() => setLiveMode(false)} style={{ marginLeft: "auto", fontSize: 11, color: C.muted, background: "transparent", border: "none", cursor: "pointer" }}>✕ Stop</button>
         </div>
       )}
+      {/* ─── EVENT LIFECYCLE PROGRESS ─── */}
+      {activeEvent?.event_date && (() => {
+        const now = new Date();
+        const eventDate = new Date(activeEvent.event_date);
+        const daysLeft = Math.ceil((eventDate - now) / (1000*60*60*24));
+        const totalDays = 90;
+        const daysPast = Math.max(0, totalDays - daysLeft);
+        const pct = Math.min(100, Math.round((daysPast / totalDays) * 100));
+        
+        const milestones = [
+          { label: "Save the Date", day: -90, done: campaigns?.some(c => c.email_type === "save_the_date" && c.status === "sent") },
+          { label: "Invitation", day: -60, done: campaigns?.some(c => c.email_type === "invitation" && c.status === "sent") },
+          { label: "Reminder", day: -14, done: campaigns?.some(c => c.email_type === "reminder" && c.status === "sent") },
+          { label: "Event Day", day: 0, done: daysLeft <= 0 },
+          { label: "Follow Up", day: 1, done: campaigns?.some(c => c.email_type === "thank_you" && c.status === "sent") },
+        ];
+        
+        return (
+          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "14px 18px", marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: C.text }}>Event Lifecycle</span>
+              <span style={{ fontSize: 11, color: daysLeft <= 7 ? C.red : daysLeft <= 21 ? C.amber : C.muted }}>
+                {daysLeft > 0 ? `${daysLeft} days to go` : daysLeft === 0 ? "Today!" : `${Math.abs(daysLeft)} days ago`}
+              </span>
+            </div>
+            <div style={{ position: "relative", height: 6, background: C.raised, borderRadius: 999, marginBottom: 12 }}>
+              <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${C.blue}, ${C.teal})`, borderRadius: 999, transition: "width .4s ease" }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              {milestones.map((m, i) => (
+                <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: 1 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: m.done ? C.green : C.raised, border: `2px solid ${m.done ? C.green : C.border}`, boxShadow: m.done ? `0 0 6px ${C.green}60` : "none" }} />
+                  <span style={{ fontSize: 9, color: m.done ? C.green : C.muted, textAlign: "center", lineHeight: 1.3 }}>{m.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ─── AI INSIGHTS PANEL ─── */}
       {activeEvent && (
         <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
@@ -2608,13 +2656,9 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Paste emails, CSV data, or "First Last &lt;email&gt;" format. Business emails only.</p>
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               {[
-                { label: "CSV format", ex: "first_name,last_name,email,phone,company
-John,Smith,john@acme.com,+1234,Acme Corp" },
-                { label: "Email list", ex: "john@acme.com
-jane@corp.com
-bob@startup.io" },
-                { label: "Name + email", ex: 'John Smith <john@acme.com>
-Jane Lee <jane@corp.com>' },
+                { label: "CSV format", ex: `first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
+                { label: "Email list", ex: `john@acme.com\njane@corp.com\nbob@startup.io` },
+                { label: "Name + email", ex: `John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
               ].map(t => (
                 <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex: 1, fontSize: 10, padding: "4px 6px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, cursor: "pointer" }}>
                   {t.label}
@@ -2830,6 +2874,29 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
         </div>
         <button onClick={saveForm} disabled={saving} style={{ fontSize: 13, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{saving ? <><Spin />Saving…</> : activeForm ? "Save changes →" : "Create form →"}</button>
       </div>
+
+      {/* ── Prominent form URL bar ── */}
+      {activeForm?.share_token && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: C.green + "10", border: `1px solid ${C.green}30`, borderRadius: 9, marginBottom: 14 }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: C.green, fontWeight: 600, flexShrink: 0 }}>Form live:</span>
+          <code style={{ flex: 1, fontSize: 11.5, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {`${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/form/${activeForm.share_token}`}
+          </code>
+          <button onClick={() => {
+            const url = `${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/form/${activeForm.share_token}`;
+            navigator.clipboard.writeText(url);
+            fire("✅ Form URL copied!");
+          }} style={{ fontSize: 11, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", whiteSpace: "nowrap", fontWeight: 500 }}>
+            Copy Link
+          </button>
+          <a href={`${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/form/${activeForm.share_token}`} target="_blank" rel="noreferrer"
+            style={{ fontSize: 11, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, cursor: "pointer", whiteSpace: "nowrap", textDecoration: "none" }}>
+            Open ↗
+          </a>
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: 0, marginBottom: 16, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 3, width: "fit-content", flexShrink: 0 }}>
         {[{ id: "builder", label: "Form builder" }, { id: "preview", label: "Preview" }, { id: "responses", label: `Responses (${submissions.length})` }, { id: "share", label: "Share & embed" }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tab === t.id ? C.raised : "transparent", color: tab === t.id ? C.text : C.muted, fontSize: 12.5, fontWeight: tab === t.id ? 500 : 400, transition: "all .12s", cursor: "pointer" }}>{t.label}</button>
@@ -3106,20 +3173,40 @@ function SettingsView({ supabase, profile, fire }) {
             style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none" }}
             onFocus={e => e.target.style.borderColor = C.blue}
             onBlur={e => e.target.style.borderColor = C.border} />
-          <select style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", cursor: "pointer" }}>
-            <option>Admin</option><option>Editor</option><option>Viewer</option>
+          <select id="invite-role" style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", cursor: "pointer" }}>
+            <option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option>
           </select>
-          <button onClick={() => {
-            const email = document.getElementById("invite-email")?.value;
-            if (!email?.includes("@")) { return; }
-            fire(`Invite sent to ${email}! (requires email config)`);
-            document.getElementById("invite-email").value = "";
+          <button onClick={async () => {
+            const email = document.getElementById("invite-email")?.value?.trim();
+            const role = document.getElementById("invite-role")?.value || "editor";
+            if (!email?.includes("@")) { fire("Enter a valid email", "err"); return; }
+            if (!profile?.company_id) return;
+            // Send real invite email via send-email function
+            const { data: { session: sess } } = await supabase.auth.getSession();
+            const companyName = profile?.companies?.name || "evara";
+            const inviterName = profile?.full_name || "Your team";
+            const inviteUrl = `https://evara-tau.vercel.app/?invite=${profile.company_id}&role=${role}&email=${encodeURIComponent(email)}`;
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess?.access_token}` },
+              body: JSON.stringify({
+                contacts: [{ email, first_name: "" }],
+                subject: `${inviterName} invited you to ${companyName} on evara`,
+                htmlContent: `<div style="font-family:Arial;max-width:500px;padding:40px"><h2 style="color:#0A84FF">You're invited! 🎉</h2><p><strong>${inviterName}</strong> has invited you to join <strong>${companyName}</strong>'s event marketing workspace on evara.</p><p style="margin:24px 0"><a href="${inviteUrl}" style="background:#0A84FF;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block">Accept Invitation →</a></p><p style="color:#999;font-size:13px">You'll be added as <strong>${role}</strong>. If you don't have an evara account, you can create one for free.</p><p style="color:#bbb;font-size:12px">Powered by evara · evarahq.com</p></div>`,
+                plainText: `${inviterName} invited you to ${companyName} on evara. Accept here: ${inviteUrl}`,
+              })
+            });
+            const data = await res.json();
+            if (data.sent > 0) {
+              fire(`✅ Invite sent to ${email}!`);
+              document.getElementById("invite-email").value = "";
+            } else { fire(`Invite failed: ${data.error || "unknown error"}`, "err"); }
           }} style={{ padding: "8px 18px", background: C.blue, border: "none", borderRadius: 7, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
-            Invite
+            Send Invite
           </button>
         </div>
         <div style={{ fontSize: 11, color: C.muted }}>
-          ℹ️ Invited members will receive an email with a sign-up link to join your workspace.
+          ℹ️ They'll receive a real email with a link to join your workspace on evara.
         </div>
       </div>
       <div style={{ background: "#1a0808", borderRadius: 12, border: `1px solid ${C.red}30`, padding: 20, marginBottom: 14 }}>
@@ -4683,6 +4770,53 @@ Generated by evara`}
 
 // ─── FEEDBACK VIEW ────────────────────────────────────────────
 
+// ─── UNSUBSCRIBE PAGE ─────────────────────────────────────────
+function UnsubscribePage() {
+  const [status, setStatus] = useState("idle");
+  const [email, setEmail] = useState("");
+  const params = new URLSearchParams(window.location.search);
+  useEffect(() => { const e = params.get("email"); if (e) setEmail(e); }, []);
+
+  const doUnsubscribe = async () => {
+    if (!email) return;
+    setStatus("loading");
+    try {
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm");
+      const sb = createClient("https://sqddpjsgtwblmkgxqyxe.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxZGRwanNndHdibG1rZ3hxeXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODk5NTAsImV4cCI6MjA4OTY2NTk1MH0.x5BOfQRzn-F_tvUJv3mHRmfdOZiklyMkGzmPfRYoII4");
+      await sb.from("contacts").update({ unsubscribed: true, unsubscribed_at: new Date().toISOString() }).eq("email", email.toLowerCase().trim());
+      setStatus("done");
+    } catch { setStatus("error"); }
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#f4f4f4", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Arial,sans-serif", padding: 20 }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "48px 40px", maxWidth: 440, width: "100%", textAlign: "center", boxShadow: "0 4px 32px rgba(0,0,0,0.08)" }}>
+        {status === "done" ? (
+          <>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 8 }}>You've been unsubscribed</h1>
+            <p style={{ fontSize: 14, color: "#666", lineHeight: 1.6 }}><strong>{email}</strong> will receive no further event emails from us.</p>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📧</div>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 8 }}>Unsubscribe</h1>
+            <p style={{ fontSize: 14, color: "#666", marginBottom: 24, lineHeight: 1.6 }}>You'll be removed from all future event emails.</p>
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Your email address"
+              style={{ width: "100%", padding: "11px 14px", border: "1px solid #ddd", borderRadius: 8, fontSize: 14, outline: "none", marginBottom: 12, boxSizing: "border-box" }} />
+            <button onClick={doUnsubscribe} disabled={status === "loading" || !email}
+              style={{ width: "100%", padding: 12, background: status === "loading" ? "#eee" : "#111", color: status === "loading" ? "#999" : "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: status === "loading" ? "not-allowed" : "pointer" }}>
+              {status === "loading" ? "Unsubscribing…" : "Unsubscribe me"}
+            </button>
+            {status === "error" && <p style={{ fontSize: 12, color: "#FF3B30", marginTop: 8 }}>Something went wrong. Please try again.</p>}
+            <p style={{ fontSize: 11, color: "#aaa", marginTop: 20 }}>Powered by <strong>evara</strong></p>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── PUBLIC FORM PAGE ─────────────────────────────────────────
 // Rendered when someone visits /form/:token — no auth required
 function PublicFormPage({ token }) {
@@ -5805,163 +5939,4 @@ function PublicDashboardPage({ token }) {
 }
 
 // ─── UNSUBSCRIBE PAGE ────────────────────────────────────────
-function UnsubscribePage() {
-  const [status, setStatus] = useState("idle"); // idle | loading | done | error
-  const [email, setEmail] = useState("");
-
-  const params = new URLSearchParams(window.location.search);
-  const emailFromUrl = params.get("email") || "";
-
-  useEffect(() => {
-    if (emailFromUrl) setEmail(emailFromUrl);
-  }, []);
-
-  const unsubscribe = async () => {
-    if (!email?.includes("@")) { setStatus("error"); return; }
-    setStatus("loading");
-    try {
-      await supabase.from("contacts").update({
-        unsubscribed: true,
-        unsubscribed_at: new Date().toISOString()
-      }).eq("email", email.toLowerCase().trim());
-      setStatus("done");
-    } catch(e) {
-      setStatus("error");
-    }
-  };
-
-  return (
-    <div style={{ minHeight: "100vh", background: "#080809", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", color: "#F5F5F7" }}>
-      <div style={{ maxWidth: 400, width: "100%", padding: 32, textAlign: "center" }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: "#0A84FF", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px" }}>
-          <span style={{ fontSize: 22 }}>e</span>
-        </div>
-        {status === "done" ? (
-          <>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>✅</div>
-            <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Unsubscribed</h1>
-            <p style={{ fontSize: 14, color: "#636366", lineHeight: 1.6 }}>
-              <strong style={{ color: "#F5F5F7" }}>{email}</strong> has been removed from all future emails. You won't hear from us again.
-            </p>
-            <p style={{ fontSize: 12, color: "#3A3A3C", marginTop: 20 }}>Changed your mind? Contact the organiser directly.</p>
-          </>
-        ) : (
-          <>
-            <h1 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Unsubscribe</h1>
-            <p style={{ fontSize: 14, color: "#636366", marginBottom: 24, lineHeight: 1.6 }}>
-              Enter your email below to stop receiving event communications.
-            </p>
-            <input value={email} onChange={e => setEmail(e.target.value)}
-              placeholder="your@email.com" type="email"
-              style={{ width: "100%", background: "#111114", border: "1px solid #2C2C2E", borderRadius: 8, color: "#F5F5F7", padding: "12px 14px", fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 }} />
-            {status === "error" && <p style={{ fontSize: 12, color: "#FF453A", marginBottom: 8 }}>Please enter a valid email address.</p>}
-            <button onClick={unsubscribe} disabled={status === "loading"}
-              style={{ width: "100%", padding: "12px", background: status === "loading" ? "#2C2C2E" : "#FF453A", border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600, cursor: status === "loading" ? "default" : "pointer" }}>
-              {status === "loading" ? "Processing…" : "Unsubscribe"}
-            </button>
-            <p style={{ fontSize: 11, color: "#3A3A3C", marginTop: 16 }}>Powered by evara · evarahq.com</p>
-          </>
-        )}
-
-        {/* ─── EMAIL DELIVERABILITY SECTION ─── */}
-        <div style={{ marginTop: 24, padding: "16px 20px", background: "#FF9F0A10", border: "1px solid #FF9F0A30", borderRadius: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 8 }}>
-            <span style={{ fontSize: 16 }}>⚠️</span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#FF9F0A" }}>Email Deliverability — Action Required</span>
-          </div>
-          <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, marginBottom: 10 }}>
-            Without SPF and DKIM records, your emails from <strong style={{ color: C.text }}>hello@evarahq.com</strong> may land in spam. Add these DNS records in Namecheap for evarahq.com:
-          </p>
-          {[
-            { type: "TXT (SPF)", host: "@", value: "v=spf1 include:sendgrid.net ~all" },
-            { type: "CNAME (DKIM 1)", host: "s1._domainkey", value: "s1.domainkey.u[your-id].wl.sendgrid.net" },
-            { type: "CNAME (DKIM 2)", host: "s2._domainkey", value: "s2.domainkey.u[your-id].wl.sendgrid.net" },
-          ].map(r => (
-            <div key={r.type} style={{ background: C.bg, borderRadius: 6, padding: "8px 10px", marginBottom: 6, fontFamily: "monospace", fontSize: 11 }}>
-              <span style={{ color: "#FF9F0A", fontWeight: 600 }}>{r.type}</span>
-              <span style={{ color: C.muted }}> · Host: </span>
-              <span style={{ color: C.text }}>{r.host}</span>
-              <span style={{ color: C.muted }}> · Value: </span>
-              <span style={{ color: C.teal }}>{r.value}</span>
-            </div>
-          ))}
-          <p style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
-            Get your exact DKIM values from <a href="https://app.sendgrid.com/settings/sender_auth/domain/create" target="_blank" style={{ color: C.blue }}>SendGrid → Settings → Sender Authentication → Authenticate Your Domain</a>
-          </p>
-        </div>
-
-        {/* ─── BRAND VOICE SECTION ─── */}
-        {bv !== null && (
-          <div style={{ marginTop: 28 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <Sparkles size={15} color={C.blue} strokeWidth={1.5} />
-              <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text }}>Brand Voice</h2>
-              <span style={{ fontSize: 10, background: C.blue + "20", color: C.blue, padding: "2px 7px", borderRadius: 4, fontWeight: 600 }}>AI Memory</span>
-            </div>
-            <p style={{ fontSize: 12, color: C.muted, marginBottom: 16, lineHeight: 1.5 }}>
-              Tell Claude how your organisation communicates. Every AI-generated email will automatically reflect this.
-            </p>
-
-            {[
-              { key: "industry", label: "Industry", ph: "e.g. Financial Services, Technology, Healthcare", type: "text" },
-              { key: "audience", label: "Target audience", ph: "e.g. Senior executives, C-suite leaders, marketing managers", type: "text" },
-              { key: "preferred_cta", label: "Preferred CTA button text", ph: "e.g. Register Now / Secure Your Seat / Reserve Your Place", type: "text" },
-              { key: "sender_name", label: "Sender name", ph: "e.g. The Orbis Events Team", type: "text" },
-              { key: "email_sign_off", label: "Email sign-off", ph: "e.g. Warm regards, / Best, / Kind regards,", type: "text" },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
-                <input value={bv[f.key] || ""} onChange={e => setBv(p => ({ ...p, [f.key]: e.target.value }))}
-                  placeholder={f.ph}
-                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none" }}
-                  onFocus={e => e.target.style.borderColor = C.blue}
-                  onBlur={e => e.target.style.borderColor = C.border}
-                />
-              </div>
-            ))}
-
-            {[
-              { key: "tone_adjectives", label: "Tone adjectives", ph: "professional, warm, authoritative, exclusive   (comma separated)", },
-              { key: "signature_phrases", label: "Phrases to use", ph: "industry-leading, exclusive gathering, thought leaders   (comma separated)", },
-              { key: "avoid_phrases", label: "Phrases to NEVER use", ph: "synergy, leverage, low-hanging fruit, circle back   (comma separated)", },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
-                <input
-                  value={(bv[f.key] || []).join(", ")}
-                  onChange={e => setBv(p => ({ ...p, [f.key]: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))}
-                  placeholder={f.ph}
-                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none" }}
-                  onFocus={e => e.target.style.borderColor = C.blue}
-                  onBlur={e => e.target.style.borderColor = C.border}
-                />
-              </div>
-            ))}
-
-            {[
-              { key: "performance_notes", label: "What works for your audience", ph: "e.g. Subject lines with speaker names get more opens. Our audience responds to exclusivity and FOMO.", rows: 2 },
-              { key: "extra_context", label: "Extra context for Claude", ph: "e.g. We always host black-tie dinners. Never use casual language. Always mention the prestige of the venue.", rows: 2 },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
-                <textarea value={bv[f.key] || ""} onChange={e => setBv(p => ({ ...p, [f.key]: e.target.value }))}
-                  placeholder={f.ph} rows={f.rows}
-                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", resize: "vertical", lineHeight: 1.5 }}
-                  onFocus={e => e.target.style.borderColor = C.blue}
-                  onBlur={e => e.target.style.borderColor = C.border}
-                />
-              </div>
-            ))}
-
-            <button onClick={saveBrandVoice} disabled={bvSaving}
-              style={{ padding: "10px 24px", background: bvSaving ? C.raised : C.blue, border: "none", borderRadius: 8, color: bvSaving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 7, boxShadow: bvSaving ? "none" : `0 4px 16px ${C.blue}40` }}>
-              {bvSaving ? <><Spin />Saving…</> : <><Sparkles size={13} />Save Brand Voice</>}
-            </button>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
-}
-// cache bust Wed Apr  8 08:42:37 UTC 2026
+// cache bust Wed Apr 08 16:09:43 UTC 2026
