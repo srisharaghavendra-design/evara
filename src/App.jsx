@@ -702,7 +702,7 @@ function MainApp({ session }) {
               <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 10px 4px", opacity: 0.7 }}>{group.label}</div>
               {group.items.map(({ id, label, icon: Icon, badge }) => {
                 const on = view === id;
-                return (<button key={id} className="nb" onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, border: "none", background: on ? C.raised : "transparent", color: on ? C.text : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 500 : 400, borderLeft: `2px solid ${on ? C.blue : "transparent"}`, transition: "all .12s", marginBottom: 1 }}>
+                return (<button key={id} data-view={id} className="nb" onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, border: "none", background: on ? C.raised : "transparent", color: on ? C.text : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 500 : 400, borderLeft: `2px solid ${on ? C.blue : "transparent"}`, transition: "all .12s", marginBottom: 1 }}>
                   <Icon size={13} strokeWidth={on ? 2 : 1.5} /><span style={{ flex: 1 }}>{label}</span>
                   {badge && <span style={{ fontSize: 9, fontWeight: 700, background: C.blue, color: "#fff", padding: "1px 5px", borderRadius: 3 }}>{badge}</span>}
                 </button>);
@@ -870,6 +870,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [liveMode, setLiveMode] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState(false);
   const [editForm, setEditForm] = useState({});
+  const [insights, setInsights] = useState(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
+  const [insightsError, setInsightsError] = useState(false);
 
   // Auto-refresh in live mode every 10 seconds
   useEffect(() => {
@@ -943,9 +946,31 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       }
       setScores(scoreMap);
       setLoading(false);
+      
+      // Load AI insights after core data
+      setInsights(null);
+      setInsightsError(false);
     };
     load();
   }, [activeEvent, profile]);
+
+  const loadInsights = async () => {
+    if (!activeEvent || !profile) return;
+    setInsightsLoading(true);
+    setInsightsError(false);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-insights`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ eventId: activeEvent.id, companyId: profile.company_id })
+      });
+      const data = await res.json();
+      if (data.success) setInsights(data.insights);
+      else setInsightsError(true);
+    } catch { setInsightsError(true); }
+    finally { setInsightsLoading(false); }
+  };
 
   const rows = filt === "all" ? contacts : contacts.filter(c => c.status === filt);
   const noContactsYet = contacts.length === 0 && !loading;
@@ -1091,6 +1116,67 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <button onClick={() => setLiveMode(false)} style={{ marginLeft: "auto", fontSize: 11, color: C.muted, background: "transparent", border: "none", cursor: "pointer" }}>✕ Stop</button>
         </div>
       )}
+      {/* ─── AI INSIGHTS PANEL ─── */}
+      {activeEvent && (
+        <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
+          <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <Sparkles size={13} color={C.blue} strokeWidth={1.5} />
+              <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>AI Insights</span>
+              {insights && <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "2px 6px", borderRadius: 3 }}>{insights.length} recommendations</span>}
+            </div>
+            <button onClick={loadInsights} disabled={insightsLoading}
+              style={{ fontSize: 11, padding: "4px 10px", background: insightsLoading ? C.raised : C.blue + "15", border: `1px solid ${insightsLoading ? C.border : C.blue + "40"}`, borderRadius: 5, color: insightsLoading ? C.muted : C.blue, cursor: insightsLoading ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 4 }}>
+              {insightsLoading ? <><Spin />Analysing…</> : insights ? "↻ Refresh" : "✨ Analyse event"}
+            </button>
+          </div>
+          {!insights && !insightsLoading && !insightsError && (
+            <div style={{ padding: "20px 16px", textAlign: "center", color: C.muted, fontSize: 12 }}>
+              Click "Analyse event" to get AI-powered recommendations based on your event data.
+            </div>
+          )}
+          {insightsLoading && (
+            <div style={{ padding: "20px 16px", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: C.muted, fontSize: 12 }}>
+              <Spin /><span>Claude is analysing your event data…</span>
+            </div>
+          )}
+          {insightsError && (
+            <div style={{ padding: "14px 16px", fontSize: 12, color: C.red }}>Failed to load insights. Please try again.</div>
+          )}
+          {insights && insights.length > 0 && (
+            <div style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+              {insights.map((ins, i) => {
+                const typeColors = {
+                  urgent: { bg: C.red + "12", border: C.red + "30", dot: C.red },
+                  warning: { bg: C.amber + "12", border: C.amber + "30", dot: C.amber },
+                  success: { bg: C.green + "12", border: C.green + "30", dot: C.green },
+                  info: { bg: C.blue + "12", border: C.blue + "30", dot: C.blue },
+                };
+                const tc = typeColors[ins.type] || typeColors.info;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 12px", background: tc.bg, border: `1px solid ${tc.border}`, borderRadius: 8, transition: "all .15s" }}>
+                    <span style={{ fontSize: 18, flexShrink: 0, lineHeight: 1.3 }}>{ins.icon}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{ins.title}</div>
+                      <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.4 }}>{ins.body}</div>
+                    </div>
+                    {ins.action && ins.action_target !== "null" && ins.action_target && (
+                      <button onClick={() => {
+                        const targets = { edm: "edm", schedule: "schedule", contacts: "contacts", forms: "forms", campaigns: "campaign" };
+                        const t = targets[ins.action_target];
+                        if (t) document.querySelector(`button[data-view="${t}"]`)?.click();
+                      }} style={{ fontSize: 10.5, padding: "4px 10px", background: tc.dot + "20", border: `1px solid ${tc.dot}40`, borderRadius: 5, color: tc.dot, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, fontWeight: 500 }}>
+                        {ins.action} →
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Contacts</span>
