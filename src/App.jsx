@@ -426,6 +426,35 @@ function MainApp({ session }) {
   const [notifCount, setNotifCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
 
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e) => {
+      // Cmd/Ctrl+N = new event
+      if ((e.metaKey || e.ctrlKey) && e.key === "n" && !e.shiftKey) {
+        e.preventDefault();
+        setShowNewEvent(true);
+      }
+      // Cmd/Ctrl+K = focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        document.querySelector("input[placeholder*='Search']")?.focus();
+      }
+      // Escape = close modals
+      if (e.key === "Escape") {
+        setShowNewEvent(false);
+        setShowNotifs(false);
+      }
+      // Cmd+1-9 = navigate modules
+      if ((e.metaKey || e.ctrlKey) && e.key >= "1" && e.key <= "9") {
+        const allModules = ["dashboard","calendar","analytics","edm","schedule","campaign","social","landing","forms","contacts","checkin","agenda","seating","qa","feedback","lifecycle","roi","settings"];
+        const idx = parseInt(e.key) - 1;
+        if (allModules[idx]) { e.preventDefault(); setView(allModules[idx]); }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   const addNotif = (message, icon = "📬") => {
     const n = { message, icon, time: new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) };
     setNotifs(p => [n, ...p.slice(0, 19)]);
