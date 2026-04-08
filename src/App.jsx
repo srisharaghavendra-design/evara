@@ -549,6 +549,22 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [loading, setLoading] = useState(true);
   const [filt, setFilt] = useState("all");
   const [sending, setSending] = useState(null);
+  const [liveMode, setLiveMode] = useState(false);
+
+  // Auto-refresh in live mode every 10 seconds
+  useEffect(() => {
+    if (!liveMode) return;
+    const interval = setInterval(() => {
+      if (activeEvent && profile) {
+        supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id)
+          .order("created_at", { ascending: false })
+          .then(({ data }) => { if (data) setContacts(data); });
+        supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
+          .then(({ data }) => { if (data) setMetrics(data); });
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [liveMode, activeEvent, profile]);
 
   const triggerEmail = async (ecId, contactId, status) => {
     setSending(contactId);
@@ -635,6 +651,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+          <button onClick={() => setLiveMode(p => !p)}
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${liveMode ? C.green + "60" : C.border}`, background: liveMode ? C.green + "12" : "transparent", color: liveMode ? C.green : C.muted, cursor: "pointer" }}>
+            <div style={{ width: 7, height: 7, borderRadius: "50%", background: liveMode ? C.green : C.muted, animation: liveMode ? "pulse 1.5s infinite" : "none" }} />
+            {liveMode ? "Live ✓ (10s refresh)" : "Enable Live Mode"}
+          </button>
           {daysToEvent !== null && (
             <div style={{ textAlign: "center", background: C.card, border: `1px solid ${daysToEvent <= 3 ? C.red + "50" : daysToEvent <= 7 ? C.amber + "50" : C.border}`, borderRadius: 10, padding: "12px 20px" }}>
               <div style={{ fontSize: 32, fontWeight: 700, color: daysToEvent <= 3 ? C.red : daysToEvent <= 7 ? C.amber : C.text, lineHeight: 1 }}>{daysToEvent > 0 ? daysToEvent : "Today!"}</div>
