@@ -22,6 +22,29 @@ const C = {
   green:"#30D158", red:"#FF453A", amber:"#FF9F0A", teal:"#5AC8FA",
 };
 
+// Generate an ICS calendar file string
+const generateICS = (event) => {
+  const formatDate = (dateStr, timeStr) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr + (timeStr ? "T" + timeStr.replace(/[^\d:]/g, "").replace(/^(\d):/, "0$1:") + ":00" : "T090000"));
+    return d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  };
+  const start = formatDate(event.event_date, event.event_time);
+  if (!start) return null;
+  const end = formatDate(event.event_date, null); // Default 2hr event
+  const ics = [
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//evara//EN",
+    "BEGIN:VEVENT",
+    `DTSTART:${start}`,
+    `DTEND:${end || start}`,
+    `SUMMARY:${event.name}`,
+    event.location ? `LOCATION:${event.location}` : "",
+    event.description ? `DESCRIPTION:${event.description}` : "",
+    "END:VEVENT", "END:VCALENDAR"
+  ].filter(Boolean).join("\n");
+  return ics;
+};
+
 const ST = {
   confirmed:{ label:"Confirmed", color:C.green  },
   declined: { label:"Declined",  color:C.red    },
@@ -4313,8 +4336,19 @@ function PublicFormPage({ token }) {
           </div>
         )}
         {event?.location && <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>📍 {event.location}</div>}
-        <div style={{ marginTop: 24, fontSize: 12, color: "#aaa" }}>A confirmation email will be sent to you shortly.</div>
-        <div style={{ marginTop: 16, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
+        {event && event.event_date && (
+          <button onClick={() => {
+            const ics = generateICS(event);
+            if (!ics) return;
+            const blob = new Blob([ics], { type: "text/calendar" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a"); a.href = url; a.download = `${event.name}.ics`; a.click();
+          }} style={{ marginTop: 20, padding: "10px 24px", borderRadius: 8, border: "1px solid #0A84FF", background: "transparent", color: "#0A84FF", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+            📅 Add to Calendar
+          </button>
+        )}
+        <div style={{ marginTop: 16, fontSize: 12, color: "#aaa" }}>A confirmation email will be sent to you shortly.</div>
+        <div style={{ marginTop: 8, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
       </div>
     </div>
   );
