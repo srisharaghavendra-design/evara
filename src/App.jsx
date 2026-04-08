@@ -1274,7 +1274,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 }
 
 // ─── SCHEDULE VIEW — with email preview modal ─────────────────
-function ScheduleView({ supabase, profile, activeEvent, fire }) {
+function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
