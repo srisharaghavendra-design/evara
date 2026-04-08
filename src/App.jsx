@@ -2542,6 +2542,16 @@ function AnalyticsView({ supabase, profile, activeEvent, fire }) {
                         <td style={{ padding: "11px 14px", fontSize: 12, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}</td>
                         <td style={{ padding: "11px 14px" }}>
                           <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: cam.status === "sent" ? C.green + "15" : C.blue + "15", color: cam.status === "sent" ? C.green : C.blue }}>{cam.status}</span>
+                          {cam.send_at && cam.status !== "sent" && (
+                            <div style={{ fontSize: 10, color: C.amber, marginTop: 3 }}>
+                              📅 {new Date(cam.send_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </div>
+                          )}
+                          {cam.sent_at && (
+                            <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>
+                              Sent {new Date(cam.sent_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                            </div>
+                          )}
                         </td>
                         <td style={{ padding: "11px 14px", fontSize: 13, color: C.text }}>{cam.total_sent || "—"}</td>
                         <td style={{ padding: "11px 14px", fontSize: 13, color: C.text }}>{cam.total_opened || "—"}</td>
