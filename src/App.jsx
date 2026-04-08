@@ -873,6 +873,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [insights, setInsights] = useState(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
   const [insightsError, setInsightsError] = useState(false);
+  const [nlQuery, setNlQuery] = useState("");
+  const [nlFiltered, setNlFiltered] = useState(null);   // null = not filtering
+  const [nlLabel, setNlLabel] = useState("");
+  const [nlLoading, setNlLoading] = useState(false);
 
   // Auto-refresh in live mode every 10 seconds
   useEffect(() => {
@@ -972,7 +976,30 @@ function DashView({ supabase, profile, activeEvent, fire }) {
     finally { setInsightsLoading(false); }
   };
 
-  const rows = filt === "all" ? contacts : contacts.filter(c => c.status === filt);
+  const runNLFilter = async (q) => {
+    if (!q.trim() || !contacts.length) { setNlFiltered(null); setNlLabel(""); return; }
+    setNlLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/nl-filter`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ query: q, contacts })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const ids = new Set(data.matched_ids || []);
+        setNlFiltered(contacts.filter(c => ids.has(c.id)));
+        setNlLabel(data.filter_description || q);
+        fire(`🔍 ${data.matched_ids?.length || 0} contacts: ${data.filter_description}`);
+      }
+    } catch(e) { fire("Filter failed", "err"); }
+    finally { setNlLoading(false); }
+  };
+
+  // Apply NL filter first, then status filter on top
+  const baseContacts = nlFiltered !== null ? nlFiltered : contacts;
+  const rows = filt === "all" ? baseContacts : baseContacts.filter(c => c.status === filt);
   const noContactsYet = contacts.length === 0 && !loading;
   const METRICS = [
     { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue },
@@ -1190,6 +1217,14 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             </div>
           )}
           <div style={{ display: "flex", gap: 4 }}>
+            {/* NL filter pill shown when active */}
+            {nlFiltered !== null && (
+              <span style={{ fontSize: 10.5, padding: "3px 8px", borderRadius: 4, background: C.blue + "15", color: C.blue, border: `1px solid ${C.blue}40`, display: "flex", alignItems: "center", gap: 4 }}>
+                <Sparkles size={9} />
+                {nlLabel}
+                <button onClick={() => { setNlFiltered(null); setNlLabel(""); setNlQuery(""); }} style={{ background: "transparent", border: "none", color: C.blue, cursor: "pointer", padding: "0 2px", fontSize: 12, lineHeight: 1 }}>✕</button>
+              </span>
+            )}
             {["all", "confirmed", "pending", "declined", "attended"].map(f => (
               <button key={f} onClick={() => setFilt(f)} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 4, border: `1px solid ${filt === f ? C.blue + "70" : C.border}`, background: filt === f ? C.blue + "14" : "transparent", color: filt === f ? C.blue : C.muted, fontWeight: filt === f ? 500 : 400, textTransform: "capitalize", transition: "all .12s" }}>
                 {f}
@@ -1278,6 +1313,34 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
             <Download size={11}/>Export CSV
           </button>
+        </div>
+
+        {/* ✨ Natural Language Filter Bar */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, background: C.bg, border: `1px solid ${nlFiltered !== null ? C.blue + "60" : C.border}`, borderRadius: 7, padding: "7px 11px", transition: "border-color .15s" }}>
+            <Sparkles size={12} color={nlFiltered !== null ? C.blue : C.muted} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            <input
+              value={nlQuery}
+              onChange={e => setNlQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") runNLFilter(nlQuery); if (e.key === "Escape") { setNlFiltered(null); setNlLabel(""); setNlQuery(""); } }}
+              placeholder='Ask AI to filter… e.g. "hot leads who haven't confirmed" or "everyone from Acme"'
+              style={{ flex: 1, background: "none", border: "none", outline: "none", color: C.text, fontSize: 12 }}
+            />
+            {nlLoading && <Spin />}
+            {nlQuery && !nlLoading && (
+              <button onClick={() => runNLFilter(nlQuery)} style={{ fontSize: 10.5, padding: "3px 9px", background: C.blue, border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>
+                Filter →
+              </button>
+            )}
+            {nlFiltered !== null && !nlLoading && (
+              <button onClick={() => { setNlFiltered(null); setNlLabel(""); setNlQuery(""); }} style={{ fontSize: 10.5, padding: "3px 8px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
+                Clear
+              </button>
+            )}
+          </div>
+          {nlFiltered !== null && (
+            <span style={{ fontSize: 11, color: C.blue, whiteSpace: "nowrap" }}>{rows.length} result{rows.length !== 1 ? "s" : ""}</span>
+          )}
         </div>
 
         {loading ? (
