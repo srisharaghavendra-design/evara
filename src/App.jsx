@@ -1106,7 +1106,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             }
             fire(`✅ Reminder sent to ${pending.length} pending contacts!`);
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.amber + "14", border: `1px solid ${C.amber}30`, borderRadius: 6, padding: "5px 11px", color: C.amber, cursor: "pointer" }}>
-            ⏰ Remind All Pending
+            ⏰ Remind All Pending ({contacts.filter(c => c.status === "pending").length})
           </button>
           <button onClick={async () => {
             const confirmed = contacts.filter(c => c.status === "confirmed");
