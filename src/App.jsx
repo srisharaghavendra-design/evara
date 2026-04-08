@@ -2104,6 +2104,28 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
                 </div>
                 <button onClick={() => { navigator.clipboard?.writeText(`<iframe src="${shareLink}" width="100%" height="600" frameborder="0"></iframe>`); fire("Embed code copied!"); }} style={{ padding: "8px 16px", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Copy embed code</button>
               </Sec>
+              <Sec label="QR Code">
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Display this QR code on screen, print it at the venue, or include it in printed invites. Attendees scan to register instantly.</div>
+                <div style={{ background: "#fff", borderRadius: 10, padding: 16, display: "inline-block", marginBottom: 12 }}>
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(shareLink)}`} alt="QR Code" width={160} height={160} style={{ display: "block", borderRadius: 4 }} />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => {
+                    const a = document.createElement("a");
+                    a.href = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(shareLink)}`;
+                    a.download = "evara-registration-qr.png";
+                    a.target = "_blank";
+                    a.click();
+                    fire("QR code downloading…");
+                  }} style={{ padding: "8px 16px", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+                    ⬇ Download QR Code
+                  </button>
+                  <button onClick={() => { navigator.clipboard?.writeText(shareLink); fire("Link copied!"); }}
+                    style={{ padding: "8px 16px", background: "transparent", border: `1px solid ${C.border}`, color: C.muted, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
+                    📋 Copy Link
+                  </button>
+                </div>
+              </Sec>
             </div>
           )}
         </div>
