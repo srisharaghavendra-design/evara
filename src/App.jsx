@@ -3482,7 +3482,9 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
-      .then(({ data }) => setMetrics(data));
+      .then(({ data }) => {
+        setMetrics(data);
+      });
   }, [activeEvent, profile]);
 
   const totalCost = Object.values(costs).reduce((a, v) => a + (parseFloat(v) || 0), 0);
