@@ -359,7 +359,16 @@ function AuthScreen() {
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.3px" }}>evara</span>
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", marginBottom: 5 }}>{mode === "login" ? "Welcome back" : "Create your account"}</h1>
-          <p style={{ fontSize: 13, color: C.muted }}>{mode === "login" ? "Sign in to your workspace" : "Start your 14-day free trial"}</p>
+          <p style={{ fontSize: 13, color: C.muted }}>{mode === "login" ? "Sign in to your workspace" : "Replace Mailchimp + Eventbrite + Typeform in one tool"}</p>
+          {mode === "signup" && (
+            <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
+              {["eDM Builder", "Check-in", "Analytics", "AI Social"].map(f => (
+                <span key={f} style={{ fontSize: 11, color: C.muted, display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ color: C.green }}>✓</span> {f}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {mode === "signup" && <><Inp label="Full name" value={name} set={setName} ph="John Doe" /><Inp label="Company" value={company} set={setCompany} ph="Acme Corp" /></>}
