@@ -1830,7 +1830,14 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
     supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false })
       .then(({ data }) => { setContacts(data || []); setLoading(false); });
   }, [profile]);
-  const filtered = contacts.filter(c => !search || (c.email + c.first_name + c.last_name + c.company_name).toLowerCase().includes(search.toLowerCase()));
+  const [contactFilter, setContactFilter] = useState("all"); // all | vip | unsubscribed | active
+  const filtered = contacts.filter(c => {
+    if (search && !(c.email + (c.first_name||"") + (c.last_name||"") + (c.company_name||"")).toLowerCase().includes(search.toLowerCase())) return false;
+    if (contactFilter === "vip" && !c.tags?.includes("vip")) return false;
+    if (contactFilter === "unsubscribed" && !c.unsubscribed) return false;
+    if (contactFilter === "active" && c.unsubscribed) return false;
+    return true;
+  });
   const importCSV = () => { setShowImport(true); };
   const doImport = async () => {
     const emails = importText;
@@ -1903,6 +1910,19 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
       <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 12px", marginBottom: 14, maxWidth: 320 }}>
         <Search size={13} color={C.muted} strokeWidth={1.5} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search contacts…" style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 13, width: "100%" }} />
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        {[
+          { id: "all", label: `All (${contacts.length})` },
+          { id: "vip", label: `⭐ VIP (${contacts.filter(c => c.tags?.includes("vip")).length})` },
+          { id: "active", label: `✓ Active (${contacts.filter(c => !c.unsubscribed).length})` },
+          { id: "unsubscribed", label: `🚫 Unsub (${contacts.filter(c => c.unsubscribed).length})` },
+        ].map(f => (
+          <button key={f.id} onClick={() => setContactFilter(f.id)}
+            style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${contactFilter === f.id ? C.blue : C.border}`, background: contactFilter === f.id ? C.blue + "15" : "transparent", color: contactFilter === f.id ? C.blue : C.muted, cursor: "pointer", fontWeight: contactFilter === f.id ? 500 : 400 }}>
+            {f.label}
+          </button>
+        ))}
       </div>
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         {loading ? <div style={{ padding: "32px", textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading contacts…</div> : (
