@@ -509,6 +509,29 @@ function MainApp({ session }) {
   const [notifCount, setNotifCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
 
+  // Smart notifications — check events on load
+  useEffect(() => {
+    if (!session) return;
+    const checkSmartNotifs = async () => {
+      const { data: events } = await supabase.from("events").select("id,name,event_date,status").eq("company_id", session.user?.user_metadata?.company_id || "").order("event_date");
+      if (!events?.length) return;
+      const now = new Date();
+      const newNotifs = [];
+      for (const ev of events.slice(0, 5)) {
+        if (!ev.event_date) continue;
+        const days = Math.ceil((new Date(ev.event_date) - now) / (1000*60*60*24));
+        if (days > 0 && days <= 7) newNotifs.push({ icon: "🔴", message: `${ev.name} is in ${days} day${days !== 1 ? "s" : ""}!`, time: "Due soon" });
+        else if (days === 0) newNotifs.push({ icon: "🎉", message: `${ev.name} is TODAY!`, time: "Today" });
+        else if (days > 0 && days <= 21 && ev.status === "draft") newNotifs.push({ icon: "⚠️", message: `${ev.name} is ${days} days away — still on Draft`, time: `${days}d to go` });
+      }
+      if (newNotifs.length > 0) {
+        setNotifs(newNotifs);
+        setNotifCount(newNotifs.length);
+      }
+    };
+    checkSmartNotifs();
+  }, [session]);
+
   // Global keyboard shortcuts
   useEffect(() => {
     const handler = (e) => {
@@ -895,7 +918,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id)
           .order("created_at", { ascending: false })
           .then(({ data }) => { if (data) setContacts(data); });
-        supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
+        supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
           .then(({ data }) => { if (data) setMetrics(data); });
       }
     }, 10000);
@@ -946,7 +969,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         const [ecRes, camRes, metricsRes, formRes] = await Promise.all([
           supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
           supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id).limit(50),
-          supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single(),
+          supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle(),
           supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle(),
         ]);
         const ecData = ecRes.data || [];
@@ -1732,7 +1755,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     if (!activeEvent || !profile) return;
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
       .then(({ data: d }) => setCampaigns(d || []));
-    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
+    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data: d }) => setData(d));
   }, [activeEvent, profile]);
 
@@ -3836,7 +3859,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire }) {
   const load = async () => {
     setLoading(true);
     const [{ data: m }, { data: cams }, { data: ecs }] = await Promise.all([
-      supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single(),
+      supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle(),
       supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
       supabase.from("event_contacts").select("status").eq("event_id", activeEvent.id),
     ]);
@@ -4508,7 +4531,7 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
-    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
+    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => {
         setMetrics(data);
       });
