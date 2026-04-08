@@ -4,7 +4,11 @@ import {
   LayoutDashboard, Mail, Globe, FileText, Users, Calendar,
   Settings, Bell, Search, Download, Share2, Plus, Zap,
   Shield, ChevronDown, Sparkles, X, Phone,
-  LogOut, AlertCircle, CheckCircle, Send, Star, Eye, Upload, Image as ImageIcon
+  LogOut, AlertCircle, CheckCircle, Send, Star, Eye, Upload, Image as ImageIcon,
+  QrCode, BarChart3, Megaphone, UserCheck, Layers, Linkedin, Twitter,
+  QrCode, BarChart3, Megaphone, UserCheck, Layers,
+  QrCode, BarChart3, Linkedin, Twitter, Instagram, Megaphone, ClipboardList,
+  UserCheck, TrendingUp, Ticket, Coffee, Layers
 } from "lucide-react";
 
 const supabase = createClient(
@@ -35,6 +39,10 @@ const NAV = [
   { id:"forms",     label:"Forms",         icon:FileText },
   { id:"contacts",  label:"Contacts",      icon:Users },
   { id:"schedule",  label:"Scheduling",    icon:Calendar },
+  { id:"checkin",   label:"Check-in",      icon:UserCheck },
+  { id:"social",    label:"AI Social",     icon:Megaphone, badge:"AI" },
+  { id:"analytics", label:"Analytics",     icon:BarChart3 },
+  { id:"campaign",  label:"Campaigns",     icon:Layers },
 ];
 
 const EMAIL_TYPES = [
@@ -484,7 +492,11 @@ function MainApp({ session }) {
           {view === "forms" && <FormsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "contacts" && <ContactView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "schedule" && <ScheduleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "settings" && <SettingsView supabase={supabase} profile={profile} fire={fire} />}
+          {view === "checkin"   && <CheckInView  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "social"    && <SocialView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "analytics" && <AnalyticsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "campaign"  && <CampaignView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "settings"  && <SettingsView supabase={supabase} profile={profile} fire={fire} />}
         </main>
       </div>
 
@@ -1704,6 +1716,702 @@ function Sec({ label, children }) {
     <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 14 }}>
       <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 11 }}>{label}</div>
       {children}
+    </div>
+  );
+}
+
+// ─── CHECK-IN VIEW ────────────────────────────────────────────
+function CheckInView({ supabase, profile, activeEvent, fire }) {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [mode, setMode] = useState("host"); // "host" | "kiosk"
+  const [checkingIn, setCheckingIn] = useState(null);
+  const [stats, setStats] = useState({ total: 0, attended: 0, walkin: 0 });
+  const [walkinName, setWalkinName] = useState("");
+  const [walkinEmail, setWalkinEmail] = useState("");
+  const [walkinCompany, setWalkinCompany] = useState("");
+  const [showWalkin, setShowWalkin] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!activeEvent || !profile) return;
+    load();
+  }, [activeEvent, profile]);
+
+  const load = async () => {
+    setLoading(true);
+    const { data } = await supabase.from("event_contacts")
+      .select("*,contacts(*)")
+      .eq("event_id", activeEvent.id)
+      .order("created_at", { ascending: false });
+    const rows = data || [];
+    setContacts(rows);
+    setStats({
+      total: rows.length,
+      attended: rows.filter(r => r.status === "attended").length,
+      walkin: rows.filter(r => r.contacts?.source === "walkin").length,
+    });
+    setLoading(false);
+  };
+
+  const checkIn = async (ec) => {
+    setCheckingIn(ec.id);
+    await supabase.from("event_contacts")
+      .update({ status: "attended", attended_at: new Date().toISOString() })
+      .eq("id", ec.id);
+    await supabase.from("contact_activity").insert({
+      contact_id: ec.contact_id, event_id: activeEvent.id,
+      company_id: profile.company_id, activity_type: "checked_in",
+      description: "Checked in via evara Check-in"
+    });
+    fire(`✅ ${ec.contacts?.first_name || ec.contacts?.email} checked in!`);
+    setContacts(p => p.map(c => c.id === ec.id ? { ...c, status: "attended" } : c));
+    setStats(p => ({ ...p, attended: p.attended + 1 }));
+    setCheckingIn(null);
+  };
+
+  const addWalkin = async () => {
+    if (!walkinEmail.trim()) { fire("Email required", "err"); return; }
+    setSaving(true);
+    const { data: c } = await supabase.from("contacts").upsert({
+      email: walkinEmail.trim().toLowerCase(),
+      first_name: walkinName.split(" ")[0] || "",
+      last_name: walkinName.split(" ").slice(1).join(" ") || "",
+      company_name: walkinCompany,
+      company_id: profile.company_id,
+      source: "walkin"
+    }, { onConflict: "company_id,email" }).select().single();
+    if (c) {
+      const { data: ec } = await supabase.from("event_contacts").upsert({
+        contact_id: c.id, event_id: activeEvent.id,
+        company_id: profile.company_id, status: "attended",
+        attended_at: new Date().toISOString()
+      }, { onConflict: "event_id,contact_id" }).select("*,contacts(*)").single();
+      if (ec) {
+        setContacts(p => [ec, ...p]);
+        setStats(p => ({ ...p, total: p.total + 1, attended: p.attended + 1, walkin: p.walkin + 1 }));
+        fire(`✅ Walk-in registered: ${walkinName || walkinEmail}`);
+        setWalkinName(""); setWalkinEmail(""); setWalkinCompany(""); setShowWalkin(false);
+      }
+    }
+    setSaving(false);
+  };
+
+  const filtered = contacts.filter(c => !search ||
+    (c.contacts?.first_name + " " + c.contacts?.last_name + " " + c.contacts?.email + " " + c.contacts?.company_name)
+      .toLowerCase().includes(search.toLowerCase()));
+
+  const STAT_CARDS = [
+    { label: "Expected", val: stats.total, color: C.muted },
+    { label: "Checked In", val: stats.attended, color: C.green },
+    { label: "Pending", val: stats.total - stats.attended, color: C.amber },
+    { label: "Walk-ins", val: stats.walkin, color: C.blue },
+  ];
+
+  if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event</div>;
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Check-in</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — live check-in dashboard</p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          {["host", "kiosk"].map(m => (
+            <button key={m} onClick={() => setMode(m)}
+              style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${mode === m ? C.blue + "80" : C.border}`, background: mode === m ? C.blue + "14" : "transparent", color: mode === m ? C.blue : C.muted, cursor: "pointer", textTransform: "capitalize" }}>
+              {m === "host" ? "👤 Host Mode" : "🖥 Kiosk Mode"}
+            </button>
+          ))}
+          <button onClick={() => setShowWalkin(true)}
+            style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 500 }}>
+            + Walk-in
+          </button>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
+        {STAT_CARDS.map(s => (
+          <div key={s.label} style={{ background: C.card, borderRadius: 10, padding: "16px", border: `1px solid ${C.border}`, borderTop: `2px solid ${s.color}40` }}>
+            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>{s.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.val}</div>
+            {s.label === "Checked In" && stats.total > 0 && (
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{Math.round((s.val / stats.total) * 100)}% attendance</div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ background: C.card, borderRadius: 10, padding: "14px 16px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: C.muted }}>
+          <span>Check-in progress</span>
+          <span style={{ color: C.green }}>{stats.attended}/{stats.total} checked in</span>
+        </div>
+        <div style={{ height: 8, background: C.raised, borderRadius: 4, overflow: "hidden" }}>
+          <div style={{ height: "100%", background: `linear-gradient(90deg, ${C.green}, ${C.teal})`, width: `${stats.total ? (stats.attended / stats.total) * 100 : 0}%`, borderRadius: 4, transition: "width .5s ease" }} />
+        </div>
+      </div>
+
+      {/* Search + list */}
+      <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 12px", flex: 1 }}>
+            <Search size={13} color={C.muted} />
+            <input autoFocus value={search} onChange={e => setSearch(e.target.value)}
+              placeholder={mode === "kiosk" ? "Attendee types their name here…" : "Search by name, email, company…"}
+              style={{ background: "none", border: "none", outline: "none", color: C.text, fontSize: 13, width: "100%" }} />
+          </div>
+          <button onClick={load} style={{ padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer" }}>Refresh</button>
+        </div>
+        {loading ? (
+          <div style={{ padding: 40, textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading guests…</div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              {["Name", "Company", "Email", "Status", "Action"].map(h => (
+                <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase" }}>{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr><td colSpan={5} style={{ padding: 32, textAlign: "center", color: C.muted }}>No guests found</td></tr>
+              ) : filtered.map((ec, i) => {
+                const c = ec.contacts || {};
+                const attended = ec.status === "attended";
+                return (
+                  <tr key={ec.id} className="rh" style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : undefined, background: attended ? `${C.green}06` : "transparent" }}>
+                    <td style={{ padding: "12px 14px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: attended ? `${C.green}20` : `${C.blue}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: attended ? C.green : C.blue }}>
+                          {(c.first_name?.[0] || c.email?.[0] || "?").toUpperCase()}
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: "12px 14px", fontSize: 12, color: C.muted }}>{c.company_name || "—"}</td>
+                    <td style={{ padding: "12px 14px", fontSize: 12, color: C.muted }}>{c.email}</td>
+                    <td style={{ padding: "12px 14px" }}>
+                      <span style={{ fontSize: 12, fontWeight: 500, color: attended ? C.green : C.amber }}>
+                        {attended ? "✅ Checked in" : "⏳ Pending"}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 14px" }}>
+                      {!attended && (
+                        <button onClick={() => checkIn(ec)} disabled={checkingIn === ec.id}
+                          style={{ fontSize: 12, padding: "6px 16px", borderRadius: 6, border: "none", background: C.green, color: "#fff", cursor: "pointer", fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                          {checkingIn === ec.id ? <Spin size={11} /> : <CheckCircle size={12} />}
+                          Check In
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Walk-in Modal */}
+      {showWalkin && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 420, animation: "fadeUp .2s ease" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text }}>Register walk-in</h2>
+              <button onClick={() => setShowWalkin(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer" }}><X size={16} /></button>
+            </div>
+            {[{ label: "Full name", val: walkinName, set: setWalkinName, ph: "Jane Smith" },
+              { label: "Email *", val: walkinEmail, set: setWalkinEmail, ph: "jane@company.com" },
+              { label: "Company", val: walkinCompany, set: setWalkinCompany, ph: "Acme Corp" }
+            ].map(f => (
+              <div key={f.label} style={{ marginBottom: 14 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>{f.label}</label>
+                <input value={f.val} onChange={e => f.set(e.target.value)} placeholder={f.ph}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
+                  onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 9, marginTop: 8 }}>
+              <button onClick={() => setShowWalkin(false)} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={addWalkin} disabled={saving}
+                style={{ flex: 2, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+                {saving ? <><Spin />Adding…</> : "Register & Check In →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── AI SOCIAL SUITE ──────────────────────────────────────────
+function SocialView({ supabase, profile, activeEvent, fire }) {
+  const [generating, setGenerating] = useState(false);
+  const [posts, setPosts] = useState(null);
+  const [phase, setPhase] = useState("pre"); // pre | during | post
+  const [copied, setCopied] = useState(null);
+  const [eventDetails, setEventDetails] = useState({ topic: "", speakers: "", highlights: "", attendance: "" });
+
+  const PHASES = [
+    { id: "pre", label: "Pre-Event", emoji: "📣", desc: "Announce & build hype" },
+    { id: "during", label: "Day Of", emoji: "🎉", desc: "Live updates & stories" },
+    { id: "post", label: "Post-Event", emoji: "📊", desc: "Wrap-up & follow-up" },
+  ];
+
+  const PLATFORMS = [
+    { id: "linkedin", label: "LinkedIn", color: "#0077B5", emoji: "💼" },
+    { id: "twitter", label: "Twitter / X", color: "#1DA1F2", emoji: "🐦" },
+    { id: "instagram", label: "Instagram", color: "#E1306C", emoji: "📸" },
+  ];
+
+  const generate = async () => {
+    if (!activeEvent) { fire("No active event", "err"); return; }
+    setGenerating(true); setPosts(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const prompt = `You are a B2B event marketing expert. Generate social media posts for this event.
+
+Event: ${activeEvent.name}
+Date: ${activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "TBC"}
+Location: ${activeEvent.location || "TBC"}
+Phase: ${phase} (${phase === "pre" ? "before the event" : phase === "during" ? "day of the event" : "after the event"})
+${eventDetails.topic ? `Topic/theme: ${eventDetails.topic}` : ""}
+${eventDetails.speakers ? `Speakers: ${eventDetails.speakers}` : ""}
+${eventDetails.highlights ? `Key highlights: ${eventDetails.highlights}` : ""}
+${eventDetails.attendance ? `Attendance: ${eventDetails.attendance}` : ""}
+
+Return ONLY valid JSON with this structure:
+{
+  "linkedin": { "post": "150-200 word professional post with paragraph breaks", "hashtags": ["tag1","tag2","tag3"] },
+  "twitter": { "post": "Under 280 chars, punchy and engaging", "hashtags": ["tag1","tag2"] },
+  "instagram": { "caption": "Engaging caption with emojis", "hashtags": ["tag1","tag2","tag3","tag4","tag5"], "story_ideas": ["idea1","idea2","idea3"] }
+}`;
+
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 1000,
+          messages: [{ role: "user", content: prompt }]
+        })
+      });
+      const data = await res.json();
+      const text = data.content?.[0]?.text || "";
+      const clean = text.replace(/```json|```/g, "").trim();
+      setPosts(JSON.parse(clean));
+      fire("Social posts generated!");
+    } catch (err) { fire("Generation failed: " + err.message, "err"); }
+    setGenerating(false);
+  };
+
+  const copy = (text, key) => {
+    navigator.clipboard?.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
+    fire("Copied to clipboard!");
+  };
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>AI Social Suite</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Generate LinkedIn, Twitter & Instagram posts from your event — one click, all platforms.</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Sec label="Event phase">
+            {PHASES.map(p => (
+              <button key={p.id} onClick={() => setPhase(p.id)}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", marginBottom: 6, borderRadius: 7, border: `1px solid ${phase === p.id ? C.blue + "80" : C.border}`, background: phase === p.id ? C.blue + "10" : "transparent", cursor: "pointer", textAlign: "left", width: "100%" }}>
+                <span style={{ fontSize: 18 }}>{p.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: phase === p.id ? C.blue : C.text }}>{p.label}</div>
+                  <div style={{ fontSize: 11, color: C.muted }}>{p.desc}</div>
+                </div>
+              </button>
+            ))}
+          </Sec>
+          <Sec label="Extra context (optional)">
+            {[{ k: "topic", ph: "e.g. AI in Banking, ESG trends" },
+              { k: "speakers", ph: "e.g. John Smith (CEO, Acme)" },
+              { k: "highlights", ph: "e.g. 200 attendees, 5 panels" },
+              { k: "attendance", ph: "e.g. 150 executives" }
+            ].map(f => (
+              <div key={f.k} style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 3, textTransform: "capitalize" }}>{f.k}</div>
+                <input value={eventDetails[f.k]} onChange={e => setEventDetails(p => ({ ...p, [f.k]: e.target.value }))}
+                  placeholder={f.ph} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 8px", fontSize: 12, outline: "none" }} />
+              </div>
+            ))}
+          </Sec>
+          <button onClick={generate} disabled={generating}
+            style={{ padding: 11, borderRadius: 8, border: "none", background: generating ? C.raised : C.blue, color: generating ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: generating ? "none" : `0 4px 20px ${C.blue}35` }}>
+            {generating ? <><Spin />Generating…</> : <><Sparkles size={14} />Generate Posts</>}
+          </button>
+        </div>
+
+        <div>
+          {!posts && !generating && (
+            <div style={{ height: "100%", minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
+              <Megaphone size={36} strokeWidth={1} />
+              <div style={{ fontSize: 14 }}>Select a phase and click Generate</div>
+            </div>
+          )}
+          {generating && (
+            <div style={{ height: "100%", minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
+              <Spin size={28} /><div>Claude is writing your posts…</div>
+            </div>
+          )}
+          {posts && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {PLATFORMS.map(plat => {
+                const data = posts[plat.id] || {};
+                const text = data.post || data.caption || "";
+                const tags = (data.hashtags || []).map(t => `#${t.replace(/^#/, "")}`).join(" ");
+                const full = `${text}\n\n${tags}`;
+                return (
+                  <div key={plat.id} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{ fontSize: 18 }}>{plat.emoji}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{plat.label}</span>
+                        {plat.id === "twitter" && <span style={{ fontSize: 11, color: C.muted }}>({text.length}/280 chars)</span>}
+                      </div>
+                      <button onClick={() => copy(full, plat.id)}
+                        style={{ fontSize: 12, padding: "5px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: copied === plat.id ? C.green + "15" : "transparent", color: copied === plat.id ? C.green : C.muted, cursor: "pointer" }}>
+                        {copied === plat.id ? "✅ Copied!" : "Copy"}
+                      </button>
+                    </div>
+                    <div style={{ padding: "14px 16px" }}>
+                      <p style={{ fontSize: 13, color: C.sec, lineHeight: 1.7, marginBottom: 10, whiteSpace: "pre-wrap" }}>{text}</p>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                        {(data.hashtags || []).map(t => (
+                          <span key={t} style={{ fontSize: 11, color: C.blue, background: C.blue + "12", padding: "2px 8px", borderRadius: 4 }}>#{t.replace(/^#/, "")}</span>
+                        ))}
+                      </div>
+                      {plat.id === "instagram" && data.story_ideas?.length > 0 && (
+                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+                          <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Story Ideas</div>
+                          {data.story_ideas.map((s, i) => (
+                            <div key={i} style={{ fontSize: 12, color: C.sec, padding: "5px 0", borderBottom: i < data.story_ideas.length - 1 ? `1px solid ${C.border}` : undefined }}>
+                              📱 {s}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── ANALYTICS VIEW ───────────────────────────────────────────
+function AnalyticsView({ supabase, profile, activeEvent, fire }) {
+  const [data, setData] = useState(null);
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeEvent || !profile) return;
+    load();
+  }, [activeEvent, profile]);
+
+  const load = async () => {
+    setLoading(true);
+    const [{ data: m }, { data: cams }, { data: ecs }] = await Promise.all([
+      supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single(),
+      supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
+      supabase.from("event_contacts").select("status").eq("event_id", activeEvent.id),
+    ]);
+    setData(m);
+    setCampaigns(cams || []);
+    const counts = (ecs || []).reduce((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc; }, {});
+    setData(prev => ({ ...prev, ...counts, ec_total: (ecs || []).length }));
+    setLoading(false);
+  };
+
+  if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event selected</div>;
+
+  const METRICS = [
+    { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧" },
+    { label: "Open Rate", val: data?.total_sent ? `${Math.round((data.total_opened / data.total_sent) * 100)}%` : "—", color: C.teal, icon: "👁" },
+    { label: "Registered", val: data?.ec_total || 0, color: C.text, icon: "📋" },
+    { label: "Confirmed", val: data?.confirmed || 0, color: C.green, icon: "✅" },
+    { label: "Attended", val: data?.attended || 0, color: C.blue, icon: "🎟" },
+    { label: "Declined", val: data?.declined || 0, color: C.red, icon: "❌" },
+    { label: "No-show Rate", val: data?.confirmed && data?.attended ? `${Math.round(((data.confirmed - data.attended) / data.confirmed) * 100)}%` : "—", color: C.amber, icon: "📉" },
+    { label: "Show Rate", val: data?.confirmed && data?.attended ? `${Math.round((data.attended / data.confirmed) * 100)}%` : "—", color: C.green, icon: "📈" },
+  ];
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Analytics</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — full performance overview</p>
+        </div>
+        <button onClick={load} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+          ↻ Refresh
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 60, textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading analytics…</div>
+      ) : (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
+            {METRICS.map((m, i) => (
+              <div key={i} style={{ background: C.card, borderRadius: 10, padding: "16px 14px", border: `1px solid ${C.border}`, borderTop: `2px solid ${m.color}35` }}>
+                <div style={{ fontSize: 18, marginBottom: 6 }}>{m.icon}</div>
+                <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 6 }}>{m.label}</div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: m.color, letterSpacing: "-0.5px" }}>{loading ? "—" : m.val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Email campaigns breakdown */}
+          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 16 }}>
+            <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Email Campaign Performance</span>
+            </div>
+            {campaigns.length === 0 ? (
+              <div style={{ padding: 32, textAlign: "center", color: C.muted }}>No campaigns yet</div>
+            ) : (
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                  {["Campaign", "Type", "Status", "Sent", "Opened", "Open Rate"].map(h => (
+                    <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase" }}>{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {campaigns.map((cam, i) => {
+                    const openRate = cam.total_sent ? Math.round((cam.total_opened / cam.total_sent) * 100) : 0;
+                    return (
+                      <tr key={cam.id} className="rh" style={{ borderBottom: i < campaigns.length - 1 ? `1px solid ${C.border}` : undefined }}>
+                        <td style={{ padding: "11px 14px", fontSize: 13, color: C.text, maxWidth: 200 }}>
+                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</div>
+                          {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontStyle: "italic" }}>"{cam.subject}"</div>}
+                        </td>
+                        <td style={{ padding: "11px 14px", fontSize: 12, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}</td>
+                        <td style={{ padding: "11px 14px" }}>
+                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: cam.status === "sent" ? C.green + "15" : C.blue + "15", color: cam.status === "sent" ? C.green : C.blue }}>{cam.status}</span>
+                        </td>
+                        <td style={{ padding: "11px 14px", fontSize: 13, color: C.text }}>{cam.total_sent || "—"}</td>
+                        <td style={{ padding: "11px 14px", fontSize: 13, color: C.text }}>{cam.total_opened || "—"}</td>
+                        <td style={{ padding: "11px 14px" }}>
+                          {cam.total_sent > 0 ? (
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <div style={{ flex: 1, height: 4, background: C.raised, borderRadius: 2 }}>
+                                <div style={{ height: "100%", background: openRate >= 40 ? C.green : openRate >= 20 ? C.amber : C.red, width: `${Math.min(openRate, 100)}%`, borderRadius: 2 }} />
+                              </div>
+                              <span style={{ fontSize: 12, color: C.sec, minWidth: 35 }}>{openRate}%</span>
+                            </div>
+                          ) : <span style={{ fontSize: 12, color: C.muted }}>—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Event lifecycle funnel */}
+          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 16 }}>Event Lifecycle Funnel</div>
+            {[
+              { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue },
+              { label: "Opened", val: data?.total_opened || 0, color: C.teal },
+              { label: "Registered", val: data?.ec_total || 0, color: C.text },
+              { label: "Confirmed", val: data?.confirmed || 0, color: C.amber },
+              { label: "Attended", val: data?.attended || 0, color: C.green },
+            ].map((s, i, arr) => {
+              const max = arr[0].val || 1;
+              const pct = Math.round((s.val / max) * 100);
+              return (
+                <div key={s.label} style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                    <span style={{ color: C.sec }}>{s.label}</span>
+                    <span style={{ color: s.color, fontWeight: 600 }}>{s.val.toLocaleString()} {max > 0 && i > 0 ? `(${pct}%)` : ""}</span>
+                  </div>
+                  <div style={{ height: 6, background: C.raised, borderRadius: 3 }}>
+                    <div style={{ height: "100%", background: s.color, width: `${pct}%`, borderRadius: 3, transition: "width .5s ease" }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── CAMPAIGN BUILDER VIEW ────────────────────────────────────
+function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
+  const [generating, setGenerating] = useState(false);
+  const [campaigns, setCampaigns] = useState([]);
+  const [generated, setGenerated] = useState(null);
+  const [config, setConfig] = useState({
+    tone: "professional and exciting",
+    highlights: "",
+    speakers: "",
+    extras: "",
+  });
+
+  useEffect(() => {
+    if (!activeEvent || !profile) return;
+    supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
+      .then(({ data }) => setCampaigns(data || []));
+  }, [activeEvent, profile]);
+
+  const generateCampaign = async () => {
+    if (!activeEvent) { fire("No active event", "err"); return; }
+    setGenerating(true); setGenerated(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-campaign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+        body: JSON.stringify({
+          eventId: activeEvent.id,
+          eventName: activeEvent.name,
+          eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "",
+          eventTime: activeEvent.event_time || "",
+          location: activeEvent.location || "",
+          description: activeEvent.description || "",
+          orgName: profile?.companies?.name || "",
+          tone: config.tone,
+          highlights: config.highlights,
+          speakers: config.speakers,
+          extras: config.extras,
+          companyId: profile.company_id,
+        })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+      setGenerated(data);
+      fire(`✅ ${data.campaigns?.length || 7} emails generated!`);
+      const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
+      setCampaigns(cams || []);
+    } catch (err) { fire("Generation failed: " + err.message, "err"); }
+    setGenerating(false);
+  };
+
+  const EMAIL_SEQUENCE = [
+    { type: "save_the_date", label: "Save the Date", timing: "8 weeks before", emoji: "📅" },
+    { type: "invitation", label: "Invitation", timing: "6 weeks before", emoji: "✉️" },
+    { type: "reminder", label: "Reminder", timing: "2 weeks before", emoji: "⏰" },
+    { type: "byo", label: "What to Bring", timing: "3 days before", emoji: "🎒" },
+    { type: "day_of", label: "Day-of Details", timing: "Morning of event", emoji: "🗓" },
+    { type: "thank_you", label: "Thank You", timing: "Day after", emoji: "🙏" },
+    { type: "confirmation", label: "Follow-up", timing: "1 week after", emoji: "📊" },
+  ];
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Campaign Builder</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Generate a full 7-email event lifecycle campaign in one click.</p>
+        </div>
+        {campaigns.length > 0 && (
+          <button onClick={() => setView("schedule")}
+            style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.green, color: "#fff", fontWeight: 500, cursor: "pointer" }}>
+            View in Scheduling →
+          </button>
+        )}
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: 16 }}>
+        {/* Config panel */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+          <Sec label="Campaign settings">
+            {[{ k: "tone", ph: "e.g. professional, exciting, exclusive" },
+              { k: "speakers", ph: "e.g. John Smith, CEO at Acme" },
+              { k: "highlights", ph: "e.g. 3 workshops, networking dinner" },
+              { k: "extras", ph: "e.g. black tie, partners welcome" }
+            ].map(f => (
+              <div key={f.k} style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 3, textTransform: "capitalize" }}>{f.k}</div>
+                <input value={config[f.k]} onChange={e => setConfig(p => ({ ...p, [f.k]: e.target.value }))}
+                  placeholder={f.ph} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 8px", fontSize: 12, outline: "none" }} />
+              </div>
+            ))}
+          </Sec>
+          <button onClick={generateCampaign} disabled={generating}
+            style={{ padding: 12, borderRadius: 8, border: "none", background: generating ? C.raised : `linear-gradient(135deg, ${C.blue}, #6366f1)`, color: generating ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: generating ? "none" : `0 4px 20px ${C.blue}40` }}>
+            {generating ? <><Spin />Building campaign…</> : <><Sparkles size={14} />Generate 7-Email Campaign</>}
+          </button>
+          <div style={{ background: C.card, borderRadius: 8, border: `1px solid ${C.border}`, padding: 14 }}>
+            <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10 }}>What gets generated</div>
+            {EMAIL_SEQUENCE.map((e, i) => (
+              <div key={e.type} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 0", borderBottom: i < EMAIL_SEQUENCE.length - 1 ? `1px solid ${C.border}` : undefined }}>
+                <span style={{ fontSize: 16 }}>{e.emoji}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, color: C.text, fontWeight: 500 }}>{e.label}</div>
+                  <div style={{ fontSize: 10.5, color: C.muted }}>{e.timing}</div>
+                </div>
+                {campaigns.find(c => c.email_type === e.type) ? (
+                  <span style={{ fontSize: 10, color: C.green }}>✅</span>
+                ) : (
+                  <span style={{ fontSize: 10, color: C.muted }}>—</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Results panel */}
+        <div>
+          {!generated && !generating && campaigns.length === 0 && (
+            <div style={{ minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
+              <Layers size={40} strokeWidth={1} />
+              <div style={{ fontSize: 15, fontWeight: 500, color: C.text }}>Generate your full event campaign</div>
+              <div style={{ fontSize: 13, color: C.muted, textAlign: "center", maxWidth: 300 }}>
+                One click generates 7 perfectly-timed emails covering the complete event lifecycle
+              </div>
+            </div>
+          )}
+          {generating && (
+            <div style={{ minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
+              <Spin size={32} />
+              <div style={{ fontSize: 15, color: C.text }}>Claude is writing 7 emails…</div>
+              <div style={{ fontSize: 12, color: C.muted }}>This takes about 30 seconds</div>
+            </div>
+          )}
+          {campaigns.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>{campaigns.length} campaigns saved — click any to preview</div>
+              {campaigns.map(cam => (
+                <div key={cam.id} style={{ background: C.card, borderRadius: 9, border: `1px solid ${cam.status === "sent" ? C.green + "40" : C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 20 }}>{EMAIL_SEQUENCE.find(e => e.type === cam.email_type)?.emoji || "✉️"}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 2 }}>{cam.subject || cam.name}</div>
+                    <div style={{ fontSize: 11, color: C.muted, textTransform: "capitalize" }}>
+                      {cam.email_type?.replace(/_/g, " ")} · {cam.status} · {cam.segment}
+                    </div>
+                  </div>
+                  <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 4, background: cam.status === "sent" ? C.green + "15" : C.blue + "15", color: cam.status === "sent" ? C.green : C.blue }}>{cam.status}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
