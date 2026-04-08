@@ -411,7 +411,8 @@ function MainApp({ session }) {
   const [toast, setToast] = useState(null);
   const [showNewEvent, setShowNewEvent] = useState(false);
   const [newEventName, setNewEventName] = useState("");
-  const [newEventDate, setNewEventDate] = useState("");
+  const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
+
 
   const fire = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
 
@@ -428,8 +429,15 @@ function MainApp({ session }) {
 
   const createEvent = async () => {
     if (!newEventName.trim() || !profile) return;
-    const { data } = await supabase.from("events").insert({ name: newEventName.trim(), event_date: newEventDate || null, company_id: profile.company_id, status: "draft", created_by: profile.id }).select().single();
+    const { data } = await supabase.from("events").insert({ 
+      name: newEventName.trim(), 
+      event_date: newEventExtra?.event_date || null, 
+      event_time: newEventExtra?.event_time || null,
+      location: newEventExtra?.location || null,
+      company_id: profile.company_id, status: "draft", created_by: profile.id 
+    }).select().single();
     if (data) { setEvents(p => [...p, data]); setActiveEvent(data); fire("Event created!"); }
+    setNewEventExtra({ event_date: "", event_time: "", location: "" });
     setShowNewEvent(false); setNewEventName(""); setNewEventDate("");
   };
 
@@ -544,24 +552,29 @@ function MainApp({ session }) {
       {/* NEW EVENT MODAL */}
       {showNewEvent && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 400, animation: "fadeUp .2s ease" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text }}>Create new event</h2>
-              <button onClick={() => setShowNewEvent(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer" }}><X size={16} /></button>
-            </div>
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 6 }}>Event name *</label>
-              <input autoFocus value={newEventName} onChange={e => setNewEventName(e.target.value)} onKeyDown={e => e.key === "Enter" && createEvent()} placeholder="e.g. Tech Summit 2026"
-                style={{ width: "100%", background: C.bg, border: `1px solid ${C.blue}`, borderRadius: 7, color: C.text, padding: "11px 13px", fontSize: 14, outline: "none" }} />
-            </div>
-            <div style={{ marginBottom: 22 }}>
-              <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 6 }}>Event date (optional)</label>
-              <input type="date" value={newEventDate} onChange={e => setNewEventDate(e.target.value)}
-                style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 13px", fontSize: 13, outline: "none" }} />
-            </div>
-            <div style={{ display: "flex", gap: 9 }}>
-              <button onClick={() => setShowNewEvent(false)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-              <button onClick={createEvent} style={{ flex: 2, padding: "11px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", boxShadow: `0 4px 16px ${C.blue}40` }}>Create event →</button>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 460, animation: "fadeUp .2s ease" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>New event</h2>
+            {[
+              { key: "name",       label: "Event name *",   ph: "e.g. Tech Summit 2026",               type: "text" },
+              { key: "event_date", label: "Date",           ph: "",                                     type: "date" },
+              { key: "event_time", label: "Time",           ph: "e.g. 6:30 PM",                        type: "text" },
+              { key: "location",   label: "Venue / Location", ph: "e.g. Marina Bay Sands, Singapore",  type: "text" },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <input type={f.type}
+                  value={f.key === "name" ? newEventName : (newEventExtra?.[f.key] || "")}
+                  onChange={e => f.key === "name" ? setNewEventName(e.target.value) : setNewEventExtra(p => ({ ...p, [f.key]: e.target.value }))}
+                  onKeyDown={e => e.key === "Enter" && createEvent()}
+                  placeholder={f.ph} autoFocus={f.key === "name"}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = C.blue}
+                  onBlur={e => e.target.style.borderColor = C.border} />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 9, marginTop: 8 }}>
+              <button onClick={() => setShowNewEvent(false)} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={createEvent} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Create →</button>
             </div>
           </div>
         </div>
