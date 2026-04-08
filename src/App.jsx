@@ -29,22 +29,31 @@ const ST = {
   attended: { label:"Attended",  color:C.blue   },
 };
 
-const NAV = [
-  { id:"dashboard", label:"Dashboard",     icon:LayoutDashboard },
-  { id:"edm",       label:"eDM Builder",   icon:Mail, badge:"AI" },
-  { id:"landing",   label:"Landing Pages", icon:Globe },
-  { id:"forms",     label:"Forms",         icon:FileText },
-  { id:"contacts",  label:"Contacts",      icon:Users },
-  { id:"schedule",  label:"Scheduling",    icon:Calendar },
-  { id:"checkin",   label:"Check-in",      icon:UserCheck2 },
-  { id:"social",    label:"AI Social",     icon:Radio, badge:"AI" },
-  { id:"analytics", label:"Analytics",     icon:BarChart2 },
-  { id:"campaign",  label:"Campaigns",     icon:Layout },
-  { id:"agenda",    label:"Agenda",        icon:ClipboardList },
-  { id:"lifecycle", label:"Contacts 360",  icon:TrendingUp },
-  { id:"roi",       label:"ROI",           icon:BarChart3 },
-  { id:"feedback",  label:"Feedback",      icon:ClipboardList, badge:"AI" },
+const NAV_GROUPS = [
+  { label: "Overview", items: [
+    { id:"dashboard", label:"Dashboard",  icon:LayoutDashboard },
+    { id:"analytics", label:"Analytics",  icon:BarChart2 },
+  ]},
+  { label: "Marketing", items: [
+    { id:"edm",       label:"eDM Builder",   icon:Mail, badge:"AI" },
+    { id:"schedule",  label:"Scheduling",    icon:Calendar },
+    { id:"campaign",  label:"Campaigns",     icon:Layout, badge:"AI" },
+    { id:"social",    label:"AI Social",     icon:Radio, badge:"AI" },
+    { id:"landing",   label:"Landing Pages", icon:Globe },
+    { id:"forms",     label:"Forms",         icon:FileText },
+  ]},
+  { label: "Event Day", items: [
+    { id:"checkin",   label:"Check-in",    icon:UserCheck2 },
+    { id:"agenda",    label:"Agenda",      icon:ClipboardList },
+  ]},
+  { label: "Intelligence", items: [
+    { id:"contacts",  label:"Contacts",      icon:Users },
+    { id:"lifecycle", label:"Contacts 360",  icon:TrendingUp },
+    { id:"feedback",  label:"Feedback",      icon:ClipboardList, badge:"AI" },
+    { id:"roi",       label:"ROI",           icon:BarChart2 },
+  ]},
 ];
+const NAV = NAV_GROUPS.flatMap(g => g.items);
 
 const EMAIL_TYPES = [
   {id:"save_the_date",label:"Save the Date"},
@@ -450,16 +459,19 @@ function MainApp({ session }) {
             </button>
           )}
         </div>
-        <nav style={{ flex: 1, padding: "10px 8px", display: "flex", flexDirection: "column", gap: 1 }}>
-          <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", padding: "6px 10px 4px" }}>Modules</div>
-          {NAV.map(({ id, label, icon: Icon, badge }) => {
-            const on = view === id;
-            return (<button key={id} className="nb" onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: on ? C.raised : "transparent", color: on ? C.text : C.muted, width: "100%", textAlign: "left", fontSize: 13, fontWeight: on ? 500 : 400, borderLeft: `2px solid ${on ? C.blue : "transparent"}`, transition: "all .14s" }}>
-              <Icon size={14} strokeWidth={on ? 2 : 1.5} /><span style={{ flex: 1 }}>{label}</span>
-              {badge && <span style={{ fontSize: 9.5, fontWeight: 700, background: C.blue, color: "#fff", padding: "2px 5px", borderRadius: 3 }}>{badge}</span>}
-              {on && <div style={{ width: 4, height: 4, borderRadius: "50%", background: C.blue, flexShrink: 0 }} />}
-            </button>);
-          })}
+        <nav style={{ flex: 1, padding: "8px 8px", display: "flex", flexDirection: "column", gap: 0, overflowY: "auto" }}>
+          {NAV_GROUPS.map(group => (
+            <div key={group.label}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 10px 4px", opacity: 0.7 }}>{group.label}</div>
+              {group.items.map(({ id, label, icon: Icon, badge }) => {
+                const on = view === id;
+                return (<button key={id} className="nb" onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, border: "none", background: on ? C.raised : "transparent", color: on ? C.text : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 500 : 400, borderLeft: `2px solid ${on ? C.blue : "transparent"}`, transition: "all .12s", marginBottom: 1 }}>
+                  <Icon size={13} strokeWidth={on ? 2 : 1.5} /><span style={{ flex: 1 }}>{label}</span>
+                  {badge && <span style={{ fontSize: 9, fontWeight: 700, background: C.blue, color: "#fff", padding: "1px 5px", borderRadius: 3 }}>{badge}</span>}
+                </button>);
+              })}
+            </div>
+          ))}
         </nav>
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
