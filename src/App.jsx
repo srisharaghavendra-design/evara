@@ -405,6 +405,7 @@ function Spin({ size = 14 }) {
 // ─── MAIN APP ────────────────────────────────────────────────
 function MainApp({ session }) {
   const [view, setView] = useState("dashboard");
+  const [globalSearch, setGlobalSearch] = useState("");
   const [profile, setProfile] = useState(null);
   const [events, setEvents] = useState([]);
   const [activeEvent, setActiveEvent] = useState(null);
@@ -520,7 +521,10 @@ function MainApp({ session }) {
           <div style={{ width: 1, height: 18, background: C.border }} />
           <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 11px", flex: 1, maxWidth: 260 }}>
             <Search size={12} color={C.muted} strokeWidth={1.5} />
-            <input placeholder="Search…" style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
+            <input placeholder="Search contacts, campaigns…" value={globalSearch} onChange={e => {
+                setGlobalSearch(e.target.value);
+                if (e.target.value.length > 1) setView("contacts");
+              }} style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
             <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
@@ -535,7 +539,7 @@ function MainApp({ session }) {
           {view === "edm" && <EdmView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && <LandingView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "forms" && <FormsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "contacts" && <ContactView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "contacts" && <ContactView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} />}
           {view === "schedule" && <ScheduleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "checkin"   && <CheckInView  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "social"    && <SocialView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -1435,11 +1439,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire }) {
 }
 
 // ─── CONTACT VIEW ─────────────────────────────────────────────
-function ContactView({ supabase, profile, activeEvent, fire }) {
+function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", setGlobalSearch }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  useEffect(() => {
+    const [search, setSearch] = useState(globalSearch || "");ect(() => {
     if (!profile) return;
     supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false })
       .then(({ data }) => { setContacts(data || []); setLoading(false); });
