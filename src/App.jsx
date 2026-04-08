@@ -46,6 +46,7 @@ const NAV_GROUPS = [
   { label: "Event Day", items: [
     { id:"checkin",   label:"Check-in",    icon:UserCheck2 },
     { id:"agenda",    label:"Agenda",      icon:ClipboardList },
+    { id:"seating",   label:"Seating",     icon:Layout },
   ]},
   { label: "Intelligence", items: [
     { id:"contacts",  label:"Contacts",      icon:Users },
@@ -616,6 +617,7 @@ function MainApp({ session }) {
           {view === "analytics" && <AnalyticsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "campaign"  && <CampaignView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} />}
+          {view === "seating"   && <SeatingView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "agenda"    && <AgendaView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "feedback"  && <FeedbackView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "lifecycle" && <LifecycleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -3984,3 +3986,169 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
 }
 
 // ─── EVENT CALENDAR VIEW ──────────────────────────────────────
+
+// ─── SEATING VIEW ────────────────────────────────────────────
+function SeatingView({ supabase, profile, activeEvent, fire }) {
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assigning, setAssigning] = useState(false);
+  const [layout, setLayout] = useState({ tables: 8, seatsPerTable: 10 });
+  const [assignments, setAssignments] = useState({});
+  const [dragOver, setDragOver] = useState(null);
+
+  useEffect(() => {
+    if (!activeEvent || !profile) return;
+    supabase.from("event_contacts")
+      .select("*,contacts(*)")
+      .eq("event_id", activeEvent.id)
+      .in("status", ["confirmed", "attended"])
+      .order("created_at")
+      .then(({ data }) => {
+        const rows = data || [];
+        setContacts(rows);
+        // Load existing seat assignments
+        const existing = {};
+        rows.forEach(ec => {
+          if (ec.seat_number) existing[ec.id] = ec.seat_number;
+        });
+        setAssignments(existing);
+        setLoading(false);
+      });
+  }, [activeEvent, profile]);
+
+  const autoAssign = async () => {
+    if (!contacts.length) { fire("No confirmed contacts to seat", "err"); return; }
+    setAssigning(true);
+    const newAssignments = {};
+    contacts.forEach((ec, i) => {
+      const table = Math.floor(i / layout.seatsPerTable) + 1;
+      const seat = (i % layout.seatsPerTable) + 1;
+      newAssignments[ec.id] = `T${table}-${seat}`;
+    });
+    setAssignments(newAssignments);
+    // Save to DB
+    for (const [ecId, seat] of Object.entries(newAssignments)) {
+      await supabase.from("event_contacts").update({ seat_number: seat }).eq("id", ecId);
+    }
+    fire(`✅ ${contacts.length} guests auto-assigned to ${layout.tables} tables`);
+    setAssigning(false);
+  };
+
+  const copyChart = () => {
+    const lines = [`SEATING CHART — ${activeEvent?.name}`, "=".repeat(40)];
+    for (let t = 1; t <= layout.tables; t++) {
+      const tableGuests = contacts.filter(ec => assignments[ec.id]?.startsWith(`T${t}-`));
+      if (!tableGuests.length) continue;
+      lines.push(`\nTABLE ${t}`);
+      tableGuests.forEach(ec => {
+        const c = ec.contacts || {};
+        lines.push(`  ${assignments[ec.id]?.split("-")[1] || "?"}: ${`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email} ${c.company_name ? `(${c.company_name})` : ""}`);
+      });
+    }
+    navigator.clipboard?.writeText(lines.join("\n"));
+    fire("Seating chart copied to clipboard!");
+  };
+
+  const unassigned = contacts.filter(ec => !assignments[ec.id]);
+  const totalTables = Math.ceil(contacts.length / layout.seatsPerTable);
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Seating Planner</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Auto-assign seats for confirmed guests. {contacts.length} confirmed attendees.</p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={copyChart} disabled={Object.keys(assignments).length === 0}
+            style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            📋 Copy Chart
+          </button>
+          <button onClick={autoAssign} disabled={assigning || loading}
+            style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: assigning ? C.raised : C.blue, color: assigning ? C.muted : "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            {assigning ? <><Spin size={12} />Assigning…</> : <><Sparkles size={13} />Auto-Assign Seats</>}
+          </button>
+        </div>
+      </div>
+
+      {/* Config */}
+      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+        {[{ label: "Tables", key: "tables", min: 1, max: 50 }, { label: "Seats per table", key: "seatsPerTable", min: 2, max: 20 }].map(f => (
+          <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px" }}>
+            <span style={{ fontSize: 12, color: C.muted }}>{f.label}:</span>
+            <input type="number" value={layout[f.key]} min={f.min} max={f.max}
+              onChange={e => setLayout(p => ({ ...p, [f.key]: parseInt(e.target.value) || f.min }))}
+              style={{ width: 50, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "4px 6px", fontSize: 13, outline: "none", textAlign: "center" }} />
+          </div>
+        ))}
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, color: C.muted }}>Capacity:</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>{layout.tables * layout.seatsPerTable}</span>
+          {contacts.length > layout.tables * layout.seatsPerTable && (
+            <span style={{ fontSize: 11, color: C.red }}>⚠ Overflow: need {contacts.length - layout.tables * layout.seatsPerTable} more seats</span>
+          )}
+        </div>
+        {unassigned.length > 0 && (
+          <div style={{ background: C.amber + "14", border: `1px solid ${C.amber}30`, borderRadius: 8, padding: "8px 14px", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, color: C.amber }}>{unassigned.length} unassigned</span>
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 60, textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading guests…</div>
+      ) : contacts.length === 0 ? (
+        <div style={{ background: C.card, borderRadius: 10, border: `1px dashed ${C.border}`, padding: 60, textAlign: "center", color: C.muted }}>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>🪑</div>
+          <div style={{ fontSize: 14 }}>No confirmed guests yet</div>
+          <div style={{ fontSize: 12, marginTop: 4 }}>Guests with status "confirmed" or "attended" appear here</div>
+        </div>
+      ) : (
+        /* Table grid */
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+          {Array.from({ length: totalTables }, (_, ti) => {
+            const tableNum = ti + 1;
+            const tableGuests = contacts.filter(ec => assignments[ec.id]?.startsWith(`T${tableNum}-`));
+            return (
+              <div key={tableNum} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: C.raised }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Table {tableNum}</span>
+                  <span style={{ fontSize: 11, color: C.muted }}>{tableGuests.length}/{layout.seatsPerTable} seats</span>
+                </div>
+                <div style={{ padding: "8px 0" }}>
+                  {tableGuests.length === 0 ? (
+                    <div style={{ padding: "12px 14px", fontSize: 12, color: C.muted, fontStyle: "italic", textAlign: "center" }}>Empty</div>
+                  ) : tableGuests.map(ec => {
+                    const c = ec.contacts || {};
+                    const seat = assignments[ec.id];
+                    return (
+                      <div key={ec.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 14px", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: C.blue, flexShrink: 0 }}>
+                          {seat?.split("-")[1] || "?"}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email}
+                          </div>
+                          {c.company_name && <div style={{ fontSize: 10, color: C.muted }}>{c.company_name}</div>}
+                        </div>
+                        <button onClick={async () => {
+                          const newSeat = window.prompt(`Reassign seat for ${c.first_name || c.email}:`, seat);
+                          if (newSeat && newSeat !== seat) {
+                            await supabase.from("event_contacts").update({ seat_number: newSeat }).eq("id", ec.id);
+                            setAssignments(p => ({ ...p, [ec.id]: newSeat }));
+                            fire("Seat updated");
+                          }
+                        }} style={{ fontSize: 10, padding: "2px 7px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>Edit</button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
