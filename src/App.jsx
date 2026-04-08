@@ -4114,14 +4114,19 @@ function PublicFormPage({ token }) {
     <div style={{ minHeight: "100vh", background: "#F2F2F7", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif" }}>
       <div style={{ textAlign: "center", maxWidth: 480, padding: 40, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
         <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 10 }}>You&apos;re registered!</div>
-        <div style={{ fontSize: 15, color: "#666", lineHeight: 1.6, marginBottom: 8 }}>
-          Thanks for registering for <strong>{event?.name}</strong>.
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 10 }}>You're confirmed!</div>
+        <div style={{ fontSize: 15, color: "#666", lineHeight: 1.6, marginBottom: 16 }}>
+          Thanks for registering for <strong>{event?.name}</strong>. A confirmation email is on its way to you.
         </div>
-        {event?.event_date && (
-          <div style={{ fontSize: 14, color: "#0A84FF", fontWeight: 500 }}>
-            📅 {new Date(event.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}
+        {(event?.event_date || event?.location) && (
+          <div style={{ background: "#F8F9FA", borderRadius: 10, padding: "14px 18px", marginBottom: 16, textAlign: "left" }}>
+            {event?.event_date && <div style={{ fontSize: 14, color: "#333", marginBottom: 6 }}>📅 {new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>}
+            {event?.event_time && <div style={{ fontSize: 14, color: "#333", marginBottom: 6 }}>🕐 {event.event_time}</div>}
+            {event?.location && <div style={{ fontSize: 14, color: "#333" }}>📍 {event.location}</div>}
           </div>
+        )}
+        {event?.event_date && (
+          <div style={{ fontSize: 14, color: "#0A84FF", fontWeight: 500, display: "none" }}>hidden
         )}
         {event?.location && <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>📍 {event.location}</div>}
         <div style={{ marginTop: 24, fontSize: 12, color: "#aaa" }}>A confirmation email will be sent to you shortly.</div>
