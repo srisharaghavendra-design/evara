@@ -1499,12 +1499,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             🙏 Thank Attendees
           </button>
           <button onClick={() => {
-            const cols = ["First Name","Last Name","Email","Phone","Company","Status","Confirmed At","Attended At"];
+            const cols = ["First Name","Last Name","Email","Phone","Company","Job Title","Status","Lead Score","Confirmed At","Attended At","Registered At"];
             const rows_csv = contacts.map(ec => {
               const c = ec.contacts || {};
-              return [c.first_name||"",c.last_name||"",c.email||"",c.phone||"",c.company_name||"",ec.status||"",
+              const scoreData = scores[c.id] || {};
+              return [c.first_name||"",c.last_name||"",c.email||"",c.phone||"",c.company_name||"",c.job_title||"",ec.status||"",
+                scoreData.score || 0,
                 ec.confirmed_at ? new Date(ec.confirmed_at).toLocaleDateString() : "",
-                ec.attended_at ? new Date(ec.attended_at).toLocaleDateString() : ""
+                ec.attended_at ? new Date(ec.attended_at).toLocaleDateString() : "",
+                ec.created_at ? new Date(ec.created_at).toLocaleDateString() : ""
               ].map(v => `"${v}"`).join(",");
             });
             const csv = [cols.join(","), ...rows_csv].join("\n");
