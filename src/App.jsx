@@ -389,6 +389,18 @@ function AuthScreen() {
             {loading ? <><Spin />Loading…</> : mode === "login" ? "Sign in →" : "Create account →"}
           </button>
         </form>
+        {mode === "login" && (
+          <p style={{ textAlign: "center", marginTop: 10, fontSize: 12 }}>
+            <button onClick={async () => {
+              const email = document.querySelector("input[type=email]")?.value;
+              if (!email?.includes("@")) { return; }
+              const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+              error ? alert(error.message) : alert("Password reset email sent! Check your inbox.");
+            }} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 12, textDecoration: "underline" }}>
+              Forgot password?
+            </button>
+          </p>
+        )}
         <p style={{ textAlign: "center", marginTop: 18, fontSize: 13, color: C.muted }}>
           {mode === "login" ? "No account? " : "Have one? "}
           <span onClick={() => { setMode(m => m === "login" ? "signup" : "login"); setError(null); setMsg(null); }} style={{ color: C.blue, cursor: "pointer", fontWeight: 500 }}>
