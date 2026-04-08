@@ -921,7 +921,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <div style={{ fontSize: 10.5, fontWeight: 600, color: C.blue, textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>Active Event</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
             <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text, margin: 0 }}>{activeEvent.name}</h1>
-            <span style={{ fontSize: 11, fontWeight: 600, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "15", padding: "2px 8px", borderRadius: 4, textTransform: "capitalize", flexShrink: 0 }}>
+            <span onClick={async () => {
+              const statuses = ["draft", "published", "completed"];
+              const curr = activeEvent.status || "draft";
+              const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
+              await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
+              fire(`Event status → ${next}`);
+            }} style={{ fontSize: 11, fontWeight: 600, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "15", padding: "2px 8px", borderRadius: 4, textTransform: "capitalize", flexShrink: 0, cursor: "pointer" }} title="Click to change status">
               {activeEvent.status || "draft"}
             </span>
             <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
