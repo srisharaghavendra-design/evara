@@ -691,6 +691,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [filt, setFilt] = useState("all");
   const [sending, setSending] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
+  const [showEditEvent, setShowEditEvent] = useState(false);
+  const [editForm, setEditForm] = useState({});
 
   // Auto-refresh in live mode every 10 seconds
   useEffect(() => {
@@ -814,6 +816,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <span style={{ fontSize: 11, fontWeight: 600, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "15", padding: "2px 8px", borderRadius: 4, textTransform: "capitalize", flexShrink: 0 }}>
               {activeEvent.status || "draft"}
             </span>
+            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
+              Edit
+            </button>
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
@@ -1068,6 +1073,50 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             </tbody>
           </table>
         )}
+      {/* EDIT EVENT MODAL */}
+      {showEditEvent && activeEvent && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
+          onClick={() => setShowEditEvent(false)}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 460, animation: "fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>Edit event</h2>
+            {[
+              { key: "name",        label: "Event name",       ph: "Tech Summit 2026",              type: "text" },
+              { key: "event_date",  label: "Date",             ph: "",                               type: "date" },
+              { key: "event_time",  label: "Time",             ph: "6:30 PM",                       type: "text" },
+              { key: "location",    label: "Venue / Location", ph: "Marina Bay Sands",              type: "text" },
+              { key: "description", label: "Description",      ph: "Brief description",             type: "text" },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <input type={f.type}
+                  value={editForm[f.key] ?? activeEvent[f.key] ?? ""}
+                  onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.ph}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = C.blue}
+                  onBlur={e => e.target.style.borderColor = C.border} />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 9, marginTop: 8 }}>
+              <button onClick={() => { setShowEditEvent(false); setEditForm({}); }} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={async () => {
+                const updates = {};
+                ["name","event_date","event_time","location","description"].forEach(k => {
+                  if (editForm[k] !== undefined) updates[k] = editForm[k] || null;
+                });
+                if (!updates.name && !activeEvent.name) return;
+                await supabase.from("events").update(updates).eq("id", activeEvent.id);
+                setActiveEvent(p => ({ ...p, ...updates }));
+                setEvents(p => p.map(e => e.id === activeEvent.id ? { ...e, ...updates } : e));
+                setEditForm({});
+                setShowEditEvent(false);
+                fire("✅ Event updated");
+              }} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Save changes</button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
