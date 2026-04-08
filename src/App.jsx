@@ -1358,7 +1358,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
       fire("Email generated & saved as draft!");
       const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
       setCampaigns(cams || []);
-    } catch (err) { fire(err.message, "err"); } finally { setGen(false); }
+    } catch (err) {
+      const msg = err.message?.includes("ANTHROPIC_API_KEY") 
+        ? "❌ AI key not configured — add ANTHROPIC_API_KEY in Supabase → Edge Function Secrets"
+        : err.message?.includes("fetch") 
+        ? "❌ Network error — check your connection and try again"
+        : err.message || "Generation failed";
+      fire(msg, "err");
+    } finally { setGen(false); }
   };
 
   return (
