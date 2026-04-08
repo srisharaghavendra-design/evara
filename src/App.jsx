@@ -1744,15 +1744,20 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", setGlobalSearch }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState(globalSearch || "");ect(() => {
+    const [search, setSearch] = useState(globalSearch || "");
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [importing, setImporting] = useState(false);ect(() => {
     if (!profile) return;
     supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false })
       .then(({ data }) => { setContacts(data || []); setLoading(false); });
   }, [profile]);
   const filtered = contacts.filter(c => !search || (c.email + c.first_name + c.last_name + c.company_name).toLowerCase().includes(search.toLowerCase()));
-  const importCSV = async () => {
-    const emails = prompt("Paste emails (one per line or comma-separated):\n\nYou can also paste: FirstName LastName <email@domain.com>");
+  const importCSV = () => { setShowImport(true); };
+  const doImport = async () => {
+    const emails = importText;
     if (!emails || !profile) return;
+    setImporting(true);
     const rawList = emails.split(/[\n,]/).map(e => e.trim()).filter(e => e.includes("@"));
     if (!rawList.length) { fire("No valid emails found", "err"); return; }
     const rows = rawList.map(raw => {
@@ -1765,7 +1770,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
       return { email: raw.toLowerCase(), company_id: profile.company_id, source: "import" };
     });
     const { data } = await supabase.from("contacts").upsert(rows, { onConflict: "company_id,email" }).select();
-    if (data) { setContacts(p => { const newOnes = data.filter(d => !p.find(c => c.id === d.id)); return [...newOnes, ...p]; }); fire(`${data.length} contacts imported!`); }
+    if (data) { setContacts(p => { const newOnes = data.filter(d => !p.find(c => c.id === d.id)); return [...newOnes, ...p]; }); fire(`${data.length} contacts imported!`); setImportText(''); setShowImport(false); }
+    setImporting(false);
   };
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
@@ -1865,6 +1871,34 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             </tbody>
           </table>
         )}
+      {/* IMPORT MODAL */}
+      {showImport && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
+          onClick={() => setShowImport(false)}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 6 }}>Import Contacts</h2>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Paste emails one per line, comma-separated, or in "First Last &lt;email&gt;" format.</p>
+            <textarea value={importText} onChange={e => setImportText(e.target.value)}
+              placeholder={"john@company.com\nJane Smith <jane@acme.com>\nbob@example.com"}
+              rows={8} autoFocus
+              style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none", resize: "vertical", fontFamily: "monospace", boxSizing: "border-box" }}
+              onFocus={e => e.target.style.borderColor = C.blue}
+              onBlur={e => e.target.style.borderColor = C.border} />
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 6, marginBottom: 16 }}>
+              {importText.split(/[\n,]/).filter(e => e.includes("@")).length} email(s) detected
+            </div>
+            <div style={{ display: "flex", gap: 9 }}>
+              <button onClick={() => { setShowImport(false); setImportText(""); }}
+                style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={doImport} disabled={importing || !importText.trim()}
+                style={{ flex: 1, padding: 11, background: importing ? C.raised : C.blue, border: "none", borderRadius: 8, color: importing ? C.muted : "#fff", fontSize: 13, fontWeight: 500, cursor: importing ? "default" : "pointer" }}>
+                {importing ? "Importing…" : "Import Contacts"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
