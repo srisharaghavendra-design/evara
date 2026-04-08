@@ -1379,6 +1379,24 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   );
 }
 
+// ─── BRAND VOICE BADGE ───────────────────────────────────────
+function BrandVoiceBadge({ supabase, profile }) {
+  const [bv, setBv] = useState(null);
+  useEffect(() => {
+    if (!profile?.company_id) return;
+    supabase.from("brand_voice").select("industry,tone_adjectives,audience").eq("company_id", profile.company_id).maybeSingle()
+      .then(({ data }) => setBv(data));
+  }, [profile]);
+  if (!bv || (!bv.industry && !bv.tone_adjectives?.length && !bv.audience)) return null;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: "#30D15810", border: "1px solid #30D15830", borderRadius: 6, marginBottom: 2 }}>
+      <Sparkles size={11} color="#30D158" strokeWidth={2} />
+      <span style={{ fontSize: 11, color: "#30D158", fontWeight: 500 }}>Brand voice active</span>
+      <span style={{ fontSize: 10, color: "#30D15880" }}>· {[bv.industry, bv.tone_adjectives?.[0]].filter(Boolean).join(" · ")}</span>
+    </div>
+  );
+}
+
 // ─── EDM BUILDER — with AI content + beautiful templates + image upload ──────
 function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [eType, setEType] = useState("invitation");
@@ -1551,7 +1569,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         }
       }
       setPreview({ subject: finalSubject, html: finalHtml, plain_text: finalPlain, campaign_id: finalCampaignId });
-      fire("Email generated & saved as draft!");
+      fire(`Email generated & saved as draft!${data.brand_voice_applied ? " ✨ Brand voice applied." : ""}`);
       const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
       setCampaigns(cams || []);
     } catch (err) {
@@ -1672,6 +1690,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             />
           </Sec>
 
+          <BrandVoiceBadge supabase={supabase} profile={profile} />
           <button onClick={generate} disabled={gen} style={{ padding: "11px", borderRadius: 8, border: "none", background: gen ? C.raised : C.blue, color: gen ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s", boxShadow: gen ? "none" : `0 4px 20px ${C.blue}35`, cursor: "pointer" }}>
             {gen ? <><Spin />AI is writing…</> : <><Sparkles size={14} strokeWidth={1.5} />Generate with AI</>}
           </button>
@@ -2688,6 +2707,28 @@ function SettingsView({ supabase, profile, fire }) {
   };
   const [fromEmail, setFromEmail] = useState(profile?.companies?.from_email || "hello@evarahq.com");
   const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
+  
+  // Brand Voice states
+  const [bv, setBv] = useState(null);
+  const [bvSaving, setBvSaving] = useState(false);
+
+  useEffect(() => {
+    if (!profile?.company_id) return;
+    supabase.from("brand_voice").select("*").eq("company_id", profile.company_id).maybeSingle()
+      .then(({ data }) => setBv(data || {
+        tone_adjectives: [], industry: "", audience: "", signature_phrases: [],
+        avoid_phrases: [], preferred_cta: "", sender_name: "", email_sign_off: "",
+        performance_notes: "", extra_context: ""
+      }));
+  }, [profile]);
+
+  const saveBrandVoice = async () => {
+    if (!profile?.company_id || !bv) return;
+    setBvSaving(true);
+    await supabase.from("brand_voice").upsert({ ...bv, company_id: profile.company_id }, { onConflict: "company_id" });
+    setBvSaving(false);
+    fire("✅ Brand voice saved!");
+  };
 
   return (
     <div style={{ animation: "fadeUp .2s ease", maxWidth: 560 }}>
@@ -5515,6 +5556,77 @@ function UnsubscribePage() {
             <p style={{ fontSize: 11, color: "#3A3A3C", marginTop: 16 }}>Powered by evara · evarahq.com</p>
           </>
         )}
+
+        {/* ─── BRAND VOICE SECTION ─── */}
+        {bv !== null && (
+          <div style={{ marginTop: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Sparkles size={15} color={C.blue} strokeWidth={1.5} />
+              <h2 style={{ fontSize: 16, fontWeight: 600, color: C.text }}>Brand Voice</h2>
+              <span style={{ fontSize: 10, background: C.blue + "20", color: C.blue, padding: "2px 7px", borderRadius: 4, fontWeight: 600 }}>AI Memory</span>
+            </div>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 16, lineHeight: 1.5 }}>
+              Tell Claude how your organisation communicates. Every AI-generated email will automatically reflect this.
+            </p>
+
+            {[
+              { key: "industry", label: "Industry", ph: "e.g. Financial Services, Technology, Healthcare", type: "text" },
+              { key: "audience", label: "Target audience", ph: "e.g. Senior executives, C-suite leaders, marketing managers", type: "text" },
+              { key: "preferred_cta", label: "Preferred CTA button text", ph: "e.g. Register Now / Secure Your Seat / Reserve Your Place", type: "text" },
+              { key: "sender_name", label: "Sender name", ph: "e.g. The Orbis Events Team", type: "text" },
+              { key: "email_sign_off", label: "Email sign-off", ph: "e.g. Warm regards, / Best, / Kind regards,", type: "text" },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <input value={bv[f.key] || ""} onChange={e => setBv(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.ph}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none" }}
+                  onFocus={e => e.target.style.borderColor = C.blue}
+                  onBlur={e => e.target.style.borderColor = C.border}
+                />
+              </div>
+            ))}
+
+            {[
+              { key: "tone_adjectives", label: "Tone adjectives", ph: "professional, warm, authoritative, exclusive   (comma separated)", },
+              { key: "signature_phrases", label: "Phrases to use", ph: "industry-leading, exclusive gathering, thought leaders   (comma separated)", },
+              { key: "avoid_phrases", label: "Phrases to NEVER use", ph: "synergy, leverage, low-hanging fruit, circle back   (comma separated)", },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <input
+                  value={(bv[f.key] || []).join(", ")}
+                  onChange={e => setBv(p => ({ ...p, [f.key]: e.target.value.split(",").map(s => s.trim()).filter(Boolean) }))}
+                  placeholder={f.ph}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none" }}
+                  onFocus={e => e.target.style.borderColor = C.blue}
+                  onBlur={e => e.target.style.borderColor = C.border}
+                />
+              </div>
+            ))}
+
+            {[
+              { key: "performance_notes", label: "What works for your audience", ph: "e.g. Subject lines with speaker names get more opens. Our audience responds to exclusivity and FOMO.", rows: 2 },
+              { key: "extra_context", label: "Extra context for Claude", ph: "e.g. We always host black-tie dinners. Never use casual language. Always mention the prestige of the venue.", rows: 2 },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <textarea value={bv[f.key] || ""} onChange={e => setBv(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.ph} rows={f.rows}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", resize: "vertical", lineHeight: 1.5 }}
+                  onFocus={e => e.target.style.borderColor = C.blue}
+                  onBlur={e => e.target.style.borderColor = C.border}
+                />
+              </div>
+            ))}
+
+            <button onClick={saveBrandVoice} disabled={bvSaving}
+              style={{ padding: "10px 24px", background: bvSaving ? C.raised : C.blue, border: "none", borderRadius: 8, color: bvSaving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 7, boxShadow: bvSaving ? "none" : `0 4px 16px ${C.blue}40` }}>
+              {bvSaving ? <><Spin />Saving…</> : <><Sparkles size={13} />Save Brand Voice</>}
+            </button>
+          </div>
+        )}
+
       </div>
     </div>
   );
