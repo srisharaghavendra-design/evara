@@ -18,6 +18,23 @@ const supabase = createClient(
 
 const SUPABASE_URL = "https://sqddpjsgtwblmkgxqyxe.supabase.co";
 
+// Block personal/free email domains
+const BLOCKED_DOMAINS = [
+  "gmail.com","googlemail.com","yahoo.com","yahoo.co.in","yahoo.co.uk",
+  "yahoo.com.au","ymail.com","hotmail.com","hotmail.co.uk","hotmail.co.in",
+  "outlook.com","outlook.co.in","live.com","msn.com","rediffmail.com",
+  "rediff.com","icloud.com","me.com","mac.com","aol.com","protonmail.com",
+  "proton.me","tutanota.com","zoho.com","mail.com","inbox.com","gmx.com",
+  "gmx.net","yandex.com","yandex.ru","mail.ru","qq.com","163.com","126.com",
+  "tempmail.com","throwaway.email","mailinator.com","guerrillamail.com"
+];
+
+const isBusinessEmail = (email) => {
+  if (!email || !email.includes("@")) return false;
+  const domain = email.split("@")[1]?.toLowerCase();
+  return domain && !BLOCKED_DOMAINS.includes(domain);
+};
+
 const C = {
   bg:"#080809", sidebar:"#0D0D0F", card:"#111114", raised:"#161619",
   border:"#1C1C1F", borderHi:"#2C2C30",
@@ -381,6 +398,11 @@ function AuthScreen() {
   const [loading, setLoading] = useState(false); const [error, setError] = useState(null); const [msg, setMsg] = useState(null);
   const submit = async e => {
     e.preventDefault(); setLoading(true); setError(null);
+    // Block personal email domains on signup
+    if (mode === "signup" && !isBusinessEmail(email)) {
+      setError("Please use a business email address. Personal emails (Gmail, Yahoo, Hotmail, etc.) are not allowed.");
+      setLoading(false); return;
+    }
     try {
       if (mode === "login") { const { error: err } = await supabase.auth.signInWithPassword({ email, password }); if (err) throw err; }
       else { const { error: err } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name, company_name: company } } }); if (err) throw err; setMsg("Check your email to confirm your account!"); }
@@ -410,10 +432,20 @@ function AuthScreen() {
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {mode === "signup" && <><Inp label="Full name" value={name} set={setName} ph="John Doe" /><Inp label="Company" value={company} set={setCompany} ph="Acme Corp" /></>}
           <Inp label="Work email" value={email} set={setEmail} ph="john@company.com" type="email" />
+          {mode === "signup" && email.includes("@") && !isBusinessEmail(email) && (
+            <div style={{ fontSize: 12, color: "#FF9F0A", marginTop: -8, marginBottom: 4, display: "flex", alignItems: "center", gap: 5 }}>
+              ⚠️ Please use a business email — personal emails are not allowed
+            </div>
+          )}
+          {mode === "signup" && email.includes("@") && isBusinessEmail(email) && (
+            <div style={{ fontSize: 12, color: "#30D158", marginTop: -8, marginBottom: 4 }}>
+              ✅ Business email verified
+            </div>
+          )}
           <Inp label="Password" value={password} set={setPassword} ph="••••••••" type="password" />
           {error && <Alert type="error">{error}</Alert>}
           {msg && <Alert type="success">{msg}</Alert>}
-          <button type="submit" disabled={loading} style={{ padding: "12px", background: loading ? C.raised : C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s" }}>
+          <button type="submit" disabled={loading} style={{ padding: "12px", background: (loading || (mode === "signup" && email.includes("@") && !isBusinessEmail(email))) ? C.raised : C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, marginTop: 4, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s" }}>
             {loading ? <><Spin />Loading…</> : mode === "login" ? "Sign in →" : "Create account →"}
           </button>
         </form>
