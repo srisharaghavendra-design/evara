@@ -41,7 +41,7 @@ const buildHtml = (opts: {
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td style="font-family:Arial,sans-serif;font-size:12px;color:#999;">© ${new Date().getFullYear()} ${opts.orgName}. All rights reserved.</td>
-            <td align="right" style="font-family:Arial,sans-serif;font-size:12px;"><a href="#unsubscribe" style="color:#999;text-decoration:underline;">Unsubscribe</a></td>
+            <td align="right" style="font-family:Arial,sans-serif;font-size:12px;"><a href="https://evara-tau.vercel.app/unsubscribe" style="color:#999;text-decoration:underline;">Unsubscribe</a></td>
           </tr>
         </table>
       </td></tr>
