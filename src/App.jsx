@@ -716,7 +716,29 @@ function MainApp({ session }) {
                   company_id: profile.company_id, status: "draft",
                   created_by: profile.id, share_token: shareToken,
                 }).select().single();
-                if (data) { setEvents(p => [...p, data]); setActiveEvent(data); fire("✅ Event duplicated!"); }
+                if (data) { if (data) {
+                    setEvents(p => [...p, data]);
+                    setActiveEvent(data);
+                    fire("✅ Event duplicated! Copying email drafts…");
+                    // Duplicate email campaigns as drafts
+                    const { data: existingCams } = await supabase.from("email_campaigns")
+                      .select("*").eq("event_id", activeEvent.id).limit(20);
+                    if (existingCams?.length) {
+                      const dupCams = existingCams.map(c => ({
+                        event_id: data.id,
+                        company_id: profile.company_id,
+                        name: c.name,
+                        email_type: c.email_type,
+                        subject: c.subject,
+                        html_content: c.html_content,
+                        plain_text: c.plain_text,
+                        status: "draft",
+                        segment: c.segment || "all",
+                      }));
+                      await supabase.from("email_campaigns").insert(dupCams);
+                      fire(`✅ Duplicated with ${existingCams.length} email draft${existingCams.length !== 1 ? "s" : ""}!`);
+                    }
+                  }
               }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
                 + Duplicate event
               </button>
@@ -1137,16 +1159,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           {formShareLink && (
-            <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Registration link copied!"); }}
+            <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }}
               style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
-              📝 Copy Reg Link
+              📝 Reg Link
             </button>
-            <a href={formShareLink} target="_blank" rel="noreferrer"
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 12px", color: C.muted, textDecoration: "none" }}>
-              ↗
-            </a>
-            </div>
           )}
           <button onClick={async () => {
             // Get or create share token for this event
