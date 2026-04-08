@@ -944,10 +944,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       setLoading(true);
       const [ecRes, camRes] = await Promise.all([
         supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
-        supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id),
+        supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id).limit(50),
       ]);
       setContacts(ecRes.data || []);
       setCampaigns(camRes.data || []);
+      setLoading(false);
       // Load form share link for quick copy
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormShareLink(`${window.location.origin}/form/${data.share_token}`); });
@@ -962,8 +963,6 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         }
       }
       setScores(scoreMap);
-      setLoading(false);
-      
       // Load AI insights after core data
       setInsights(null);
       setInsightsError(false);
