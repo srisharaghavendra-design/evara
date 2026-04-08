@@ -4283,6 +4283,7 @@ function PublicFormPage({ token }) {
   const [event, setEvent] = useState(null);
   const [answers, setAnswers] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -4301,6 +4302,15 @@ function PublicFormPage({ token }) {
 
   const submit = async () => {
     if (!form) return;
+    
+    // Validate business email
+    const emailFieldCheck = form.fields?.find(f => f.type === "email");
+    const emailValueCheck = answers[emailFieldCheck?.id] || "";
+    if (emailValueCheck && !isBusinessEmail(emailValueCheck)) {
+      setSubmitError("Please use a business email address. Personal emails (Gmail, Yahoo, Hotmail, Rediffmail, etc.) are not accepted for event registration.");
+      return;
+    }
+    
     setSubmitting(true);
     try {
       const emailField = form.fields?.find(f => f.type === "email");
@@ -4460,17 +4470,25 @@ function PublicFormPage({ token }) {
                 {field.required && <span style={{ color: "#0A84FF", marginLeft: 3 }}>*</span>}
               </label>
             )}
-            {(field.type === "text" || field.type === "email" || field.type === "phone") && (
+            {(field.type === "text" || field.type === "email" || field.type === "phone") && (<>
               <input
                 type={field.type}
                 value={answers[field.id] || ""}
                 onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))}
                 placeholder={`Enter ${field.label.toLowerCase()}…`}
                 style={{ width: "100%", height: 44, borderRadius: 10, border: "1.5px solid #D1D1D6", padding: "0 14px", fontSize: 15, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
-                onFocus={e => e.target.style.borderColor = "#0A84FF"}
+                onFocus={e => { e.target.style.borderColor = "#0A84FF"; setSubmitError(""); }}
                 onBlur={e => e.target.style.borderColor = "#D1D1D6"}
               />
-            )}
+              {field.type === "email" && answers[field.id]?.includes("@") && !isBusinessEmail(answers[field.id]) && (
+                <div style={{ fontSize: 12, color: "#FF453A", marginTop: 5 }}>
+                  ⚠️ Personal emails (Gmail, Yahoo, Hotmail, Rediffmail etc.) are not accepted — use your work email
+                </div>
+              )}
+              {field.type === "email" && answers[field.id]?.includes("@") && isBusinessEmail(answers[field.id]) && (
+                <div style={{ fontSize: 12, color: "#30D158", marginTop: 5 }}>✅ Business email accepted</div>
+              )}
+            </>)}
             {field.type === "textarea" && (
               <textarea
                 value={answers[field.id] || ""}
@@ -4517,6 +4535,12 @@ function PublicFormPage({ token }) {
           style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: submitting || !allFilled ? "#C7C7CC" : "#0A84FF", color: "#fff", fontSize: 16, fontWeight: 600, cursor: submitting || !allFilled ? "not-allowed" : "pointer", marginTop: 8, transition: "background .15s" }}>
           {submitting ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: 6 }}>⟳</span>Submitting…</> : allFilled ? "Register Now →" : "Complete all required fields"}
         </button>
+
+        {submitError && (
+          <div style={{ background: "#FF453A15", border: "1px solid #FF453A40", borderRadius: 8, padding: "10px 14px", marginTop: 12, fontSize: 13, color: "#FF453A", lineHeight: 1.5 }}>
+            ⚠️ {submitError}
+          </div>
+        )}
 
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#AEAEB2" }}>
           🔒 Your data is encrypted and secure · A confirmation email will be sent to you · Powered by evara
