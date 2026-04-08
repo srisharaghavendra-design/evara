@@ -1711,7 +1711,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
                 body: JSON.stringify({ contacts, subject: preview.subject, htmlContent: preview.html, plainText: preview.plain_text, campaignId: preview.campaign_id })
               }).then(r => r.json()).catch(e => ({ error: e.message }));
-              res.success ? fire(`✅ Sent to ${res.sent} contacts!`) : fire(res.error || "Send failed", "err");
+              if (res.success) {
+              fire(`✅ Sent to ${res.sent} contacts! Dashboard will update.`);
+            } else {
+              const msg = res.error?.includes("SENDGRID") ? "❌ SendGrid API key not configured"
+                : res.error?.includes("Forbidden") ? "❌ Sender not verified in SendGrid"
+                : `❌ ${res.error || "Send failed"}`;
+              fire(msg, "err");
+            }
             }} style={{ padding: "9px 16px", background: C.green + "15", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
               <Send size={13} />Send Now
             </button>
@@ -1729,7 +1736,15 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
                   body: JSON.stringify({ contacts: [{ email: profile?.email, first_name: profile?.full_name?.split(" ")[0] || "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text })
                 }).then(r => r.json()).catch(e => ({ error: e.message }));
-                r.success ? fire(`✅ Test sent to ${profile?.email}!`) : fire(r.error || "Send failed — check SENDGRID_API_KEY", "err");
+                if (r.success) {
+                  fire(`✅ Test sent to ${profile?.email}! Check your inbox.`);
+                } else {
+                  const msg = r.error?.includes("SENDGRID") ? "❌ SendGrid API key not configured in Supabase secrets"
+                    : r.error?.includes("Forbidden") ? "❌ Sender not verified — check SendGrid"
+                    : r.error?.includes("Unauthorized") ? "❌ Session expired — please refresh"
+                    : `❌ ${r.error || "Send failed"}`;
+                  fire(msg, "err");
+                }
               }} style={{ fontSize: 11, padding: "4px 12px", background: C.blue, color: "#fff", border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 500 }}>
                 Send Test
               </button>
