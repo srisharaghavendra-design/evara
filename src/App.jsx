@@ -492,6 +492,10 @@ function MainApp({ session }) {
         setShowNewEvent(false);
         setShowNotifs(false);
       }
+      // Cmd+D = Dashboard, Cmd+E = eDM Builder
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "D") { e.preventDefault(); setView("dashboard"); }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "E") { e.preventDefault(); setView("edm"); }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "C") { e.preventDefault(); setView("contacts"); }
       // Cmd+1-9 = navigate modules
       if ((e.metaKey || e.ctrlKey) && e.key >= "1" && e.key <= "9") {
         const allModules = ["dashboard","calendar","analytics","edm","schedule","campaign","social","landing","forms","contacts","checkin","agenda","seating","qa","feedback","lifecycle","roi","settings"];
@@ -595,6 +599,14 @@ function MainApp({ session }) {
           {events.length > 0 && (
             <div style={{ fontSize: 9, color: C.muted, padding: "2px 2px 0", display: "flex", gap: 8 }}>
               <span>{events.length} event{events.length !== 1 ? "s" : ""}</span>
+              <span style={{ color: C.border }}>·</span>
+              <span 
+                onClick={() => setView("contacts")} 
+                style={{ cursor: "pointer", textDecoration: "underline", textDecorationStyle: "dotted" }}
+                title="Go to contacts"
+              >
+                Contacts
+              </span>
             </div>
           )}
           {activeEvent ? (
