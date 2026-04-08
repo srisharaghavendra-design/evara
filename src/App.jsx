@@ -23,10 +23,12 @@ const C = {
 };
 
 const ST = {
-  confirmed:{ label:"Confirmed", color:C.green },
-  declined: { label:"Declined",  color:C.red   },
+  confirmed:{ label:"Confirmed", color:C.green  },
+  declined: { label:"Declined",  color:C.red    },
   pending:  { label:"Pending",   color:C.amber  },
   attended: { label:"Attended",  color:C.blue   },
+  invited:  { label:"Invited",   color:C.teal   },
+  waitlist: { label:"Waitlist",  color:"#8B5CF6" },
 };
 
 const NAV_GROUPS = [
