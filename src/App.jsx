@@ -5,10 +5,7 @@ import {
   Settings, Bell, Search, Download, Share2, Plus, Zap,
   Shield, ChevronDown, Sparkles, X, Phone,
   LogOut, AlertCircle, CheckCircle, Send, Star, Eye, Upload, Image as ImageIcon,
-  QrCode, BarChart3, Megaphone, UserCheck, Layers, Linkedin, Twitter,
-  QrCode, BarChart3, Megaphone, UserCheck, Layers,
-  QrCode, BarChart3, Linkedin, Twitter, Instagram, Megaphone, ClipboardList,
-  UserCheck, TrendingUp, Ticket, Coffee, Layers
+  QrCode, BarChart3, Megaphone, UserCheck, Layers, Link, ExternalLink
 } from "lucide-react";
 
 const supabase = createClient(
@@ -39,10 +36,10 @@ const NAV = [
   { id:"forms",     label:"Forms",         icon:FileText },
   { id:"contacts",  label:"Contacts",      icon:Users },
   { id:"schedule",  label:"Scheduling",    icon:Calendar },
-  { id:"checkin",   label:"Check-in",      icon:UserCheck },
-  { id:"social",    label:"AI Social",     icon:Megaphone, badge:"AI" },
-  { id:"analytics", label:"Analytics",     icon:BarChart3 },
-  { id:"campaign",  label:"Campaigns",     icon:Layers },
+  { id:"checkin",   label:"Check-in",      icon:UserCheck2 },
+  { id:"social",    label:"AI Social",     icon:Radio, badge:"AI" },
+  { id:"analytics", label:"Analytics",     icon:BarChart2 },
+  { id:"campaign",  label:"Campaigns",     icon:Layout },
 ];
 
 const EMAIL_TYPES = [
@@ -2060,7 +2057,7 @@ Return ONLY valid JSON with this structure:
         <div>
           {!posts && !generating && (
             <div style={{ height: "100%", minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
-              <Megaphone size={36} strokeWidth={1} />
+              <Radio size={36} strokeWidth={1} />
               <div style={{ fontSize: 14 }}>Select a phase and click Generate</div>
             </div>
           )}
@@ -2379,7 +2376,7 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
         <div>
           {!generated && !generating && campaigns.length === 0 && (
             <div style={{ minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
-              <Layers size={40} strokeWidth={1} />
+              <Layout size={40} strokeWidth={1} />
               <div style={{ fontSize: 15, fontWeight: 500, color: C.text }}>Generate your full event campaign</div>
               <div style={{ fontSize: 13, color: C.muted, textAlign: "center", maxWidth: 300 }}>
                 One click generates 7 perfectly-timed emails covering the complete event lifecycle
