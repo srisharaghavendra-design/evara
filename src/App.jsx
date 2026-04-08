@@ -878,6 +878,8 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [uploadingZone, setUploadingZone] = useState(null);
   const [images, setImages] = useState({ header: null, body: null, footer: null });
   const [info, setInfo] = useState({ eventName: "", eventDate: "", eventTime: "", location: "", description: "", tone: "professional and exciting", extra: "" });
+  const [resources, setResources] = useState({ photos: "", slides: "", recording: "", nextEvent: "" });
+  const [showResources, setShowResources] = useState(false);
 
   useEffect(() => {
     if (activeEvent) {
@@ -1076,6 +1078,23 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           <Sec label="Tone / Extra context">
             <textarea value={info.extra} onChange={e => setInfo(p => ({ ...p, extra: e.target.value }))} rows={2} placeholder="e.g. Black tie. Partners welcome. Emphasise exclusivity." style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "7px 8px", fontSize: 12.5, outline: "none", resize: "none", lineHeight: 1.5 }} />
           </Sec>
+          {eType === "thank_you" && (
+            <Sec label="Post-event resources (Thank You)">
+              <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>AI includes these links in the thank you email</div>
+              {[
+                { k: "photos", ph: "https://photos.google.com/...", label: "Event photos URL" },
+                { k: "slides", ph: "https://slides.com/...", label: "Presentation slides URL" },
+                { k: "recording", ph: "https://youtube.com/...", label: "Recording URL" },
+                { k: "nextEvent", ph: "https://...", label: "Next event URL" },
+              ].map(f => (
+                <div key={f.k} style={{ marginBottom: 7 }}>
+                  <div style={{ fontSize: 10, color: C.muted, marginBottom: 3 }}>{f.label}</div>
+                  <input value={resources[f.k]} onChange={e => setResources(p => ({ ...p, [f.k]: e.target.value }))}
+                    placeholder={f.ph} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 8px", fontSize: 11.5, outline: "none" }} />
+                </div>
+              ))}
+            </Sec>
+          )}
 
           <Sec label="Registration form link">
             <div style={{ fontSize: 11, color: formLink ? C.green : C.muted, marginBottom: 6 }}>{formLink ? "✓ Auto-loaded from your saved form" : "Paste your form URL — becomes the CTA button"}</div>
