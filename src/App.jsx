@@ -2413,11 +2413,13 @@ function SettingsView({ supabase, profile, fire }) {
           Add these in Supabase → Project Settings → Edge Functions → Secrets to activate sending and AI generation:
         </p>
         {[
-          { key: "ANTHROPIC_API_KEY", desc: "AI email generation", href: "https://console.anthropic.com" },
-          { key: "SENDGRID_API_KEY", desc: "Email sending via SendGrid", href: "https://app.sendgrid.com/settings/api_keys" },
-          { key: "SENDGRID_FROM_EMAIL", desc: "e.g. hello@evarahq.com", href: null },
+          { key: "ANTHROPIC_API_KEY", desc: "AI email generation (required)", href: "https://console.anthropic.com", status: "✅" },
+          { key: "SENDGRID_API_KEY", desc: "Email sending via SendGrid (required)", href: "https://app.sendgrid.com/settings/api_keys", status: "✅" },
+          { key: "FROM_EMAIL", desc: "e.g. hello@evarahq.com", href: null, status: "✅" },
+          { key: "FROM_NAME", desc: "e.g. Your Company Name", href: null, status: "✅" },
         ].map(s => (
-          <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: C.bg, borderRadius: 6, border: `1px solid ${C.border}`, marginBottom: 6 }}>
+          <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: C.bg, borderRadius: 6, border: `1px solid ${s.status ? C.green + "30" : C.border}`, marginBottom: 6 }}>
+            {s.status && <span style={{ fontSize: 12 }}>{s.status}</span>}
             <code style={{ fontSize: 11, color: C.teal, fontFamily: "monospace", flex: 1 }}>{s.key}</code>
             <span style={{ fontSize: 11, color: C.muted }}>{s.desc}</span>
             {s.href && <a href={s.href} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: C.blue, textDecoration: "none" }}>Get →</a>}
