@@ -603,7 +603,27 @@ function MainApp({ session }) {
       company_id: profile.company_id, status: "draft", created_by: profile.id,
       share_token: shareToken,
     }).select().single();
-    if (data) { setEvents(p => [...p, data]); setActiveEvent(data); fire("Event created!"); }
+    if (data) {
+      setEvents(p => [...p, data]);
+      setActiveEvent(data);
+      setShowNewEvent(false);
+      setNewEventName("");
+      setNewEventDate("");
+      setNewEventExtra({ event_date: "", event_time: "", location: "" });
+      
+      // 🤖 AI-first: auto-draft the full email lifecycle in the background
+      fire("✅ Event created! AI is drafting your email sequence…");
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      fetch(`${SUPABASE_URL}/functions/v1/auto-draft-lifecycle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess?.access_token}` },
+        body: JSON.stringify({ eventId: data.id, companyId: profile.company_id })
+      }).then(r => r.json()).then(res => {
+        if (res.success && res.drafts_created > 0) {
+          fire(`🤖 ${res.drafts_created} email drafts ready in eDM Builder — review & send!`);
+        }
+      }).catch(() => {});
+    }
     setNewEventExtra({ event_date: "", event_time: "", location: "" });
     setShowNewEvent(false); setNewEventName(""); setNewEventDate("");
   };
@@ -812,9 +832,15 @@ function MainApp({ session }) {
                   onBlur={e => e.target.style.borderColor = C.border} />
               </div>
             ))}
+            <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}25`, borderRadius: 8, padding: "10px 12px", marginTop: 4, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
+              <Sparkles size={13} color={C.blue} strokeWidth={1.5} />
+              <span style={{ fontSize: 11.5, color: C.blue, lineHeight: 1.4 }}>
+                <strong>AI will auto-draft</strong> your Save the Date, Invitation, Reminder, Day-of and Thank You emails the moment you create this event.
+              </span>
+            </div>
             <div style={{ display: "flex", gap: 9, marginTop: 8 }}>
               <button onClick={() => setShowNewEvent(false)} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-              <button onClick={createEvent} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Create →</button>
+              <button onClick={createEvent} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Sparkles size={13} />Create + Auto-Draft →</button>
             </div>
           </div>
         </div>
@@ -863,14 +889,18 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const triggerEmail = async (ecId, contactId, status) => {
     setSending(contactId);
     try {
-      await supabase.from("event_contacts").update({ status, [`${status}_at`]: new Date().toISOString() }).eq("id", ecId);
+      const updatePayload = { status };
+      if (status === "confirmed") updatePayload.confirmed_at = new Date().toISOString();
+      if (status === "attended") updatePayload.attended_at = new Date().toISOString();
+      await supabase.from("event_contacts").update(updatePayload).eq("id", ecId);
       const triggerType = status === "confirmed" ? "confirmation" : status === "declined" ? "decline" : status === "attended" ? "attended" : null;
       if (triggerType && profile && activeEvent) {
         const ec = contacts.find(c => c.id === ecId);
         const contact = ec?.contacts || {};
+        const { data: { session: triggerSess } } = await supabase.auth.getSession();
         const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${triggerSess?.access_token}` },
           body: JSON.stringify({
             contacts: [{ email: contact.email, first_name: contact.first_name || "", last_name: contact.last_name || "", unsubscribed: contact.unsubscribed || false }],
             triggerType, eventName: activeEvent.name,
@@ -890,6 +920,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
+    // Clear stale data immediately when event changes
+    setContacts([]);
+    setMetrics(null);
+    setFormShareLink("");
     const load = async () => {
       setLoading(true);
       const { data: ec } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
@@ -3393,7 +3427,7 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       setGenerated(data);
-      fire(`✅ ${data.campaigns?.length || 7} emails generated!`);
+      fire(`✅ 7 emails generated! View in Scheduling →`);
       const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
       setCampaigns(cams || []);
     } catch (err) { fire("Generation failed: " + err.message, "err"); }
@@ -3442,9 +3476,9 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
             ))}
           </Sec>
           {data?.total_sent > 0 && (() => {
-            const openRate = data.total_sent ? Math.round((data.total_opened / data.total_sent) * 100) : 0;
-            const convRate = data.total_sent ? Math.round(((data.ec_total||0) / data.total_sent) * 100) : 0;
-            const showRate = data.confirmed ? Math.round(((data.attended||0) / data.confirmed) * 100) : 0;
+            const openRate = (data.total_sent||0) > 0 ? Math.round(((data.total_opened||0) / data.total_sent) * 100) : 0;
+            const convRate = (data.total_sent||0) > 0 ? Math.round((((data.ec_total||data.total_registered)||0) / data.total_sent) * 100) : 0;
+            const showRate = (data.confirmed||0) > 0 ? Math.round(((data.attended||0) / data.confirmed) * 100) : 0;
             return (
               <Sec label="Industry Benchmarks">
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 12 }}>How your event compares to B2B event industry averages</div>
