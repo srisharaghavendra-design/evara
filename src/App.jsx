@@ -2089,7 +2089,11 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
     { id: 5, type: "radio", label: "Will you attend?", required: true, options: ["Yes, I'll attend", "Unable to attend"] },
     { id: 6, type: "checkbox", label: "I consent to receive event communications.", required: true, options: [] },
   ];
-  const FIELD_TYPES = [{ type: "text", icon: "Aa", label: "Short Text" }, { type: "email", icon: "@", label: "Email" }, { type: "phone", icon: "✆", label: "Phone" }, { type: "textarea", icon: "¶", label: "Long Text" }, { type: "select", icon: "▾", label: "Dropdown" }, { type: "radio", icon: "◉", label: "Multiple Choice" }, { type: "checkbox", icon: "☑", label: "Checkbox" }, { type: "file", icon: "↑", label: "File Upload" }];
+  const FIELD_TYPES = [{ type: "text", icon: "Aa", label: "Short Text" }, { type: "email", icon: "@", label: "Email" }, { type: "phone", icon: "✆", label: "Phone" }, { type: "textarea", icon: "¶", label: "Long Text" }, { type: "select", icon: "▾", label: "Dropdown" }, { type: "radio", icon: "◉", label: "Multiple Choice" }, { type: "checkbox", icon: "☑", label: "Checkbox" }, { type: "file", icon: "↑", label: "File Upload" }, 
+  { type: "date", icon: "📅", label: "Date" }, 
+  { type: "number", icon: "#", label: "Number" }, 
+  { type: "rating", icon: "⭐", label: "Rating (1-5)" },
+  { type: "dietary", icon: "🍽", label: "Dietary Needs" }];
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("forms").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
