@@ -2395,7 +2395,9 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
           )}
           {campaigns.map(cam => (
             <div key={cam.id} style={{ background: C.card, borderRadius: 10, border: `1px solid ${cam.status === "sent" ? C.green + "30" : cam.status === "scheduled" ? C.blue + "40" : cam.status === "paused" ? C.amber + "30" : C.border}`, padding: "16px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>✉</div>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${cam.status === "sent" ? C.green : C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+              {cam.email_type === "save_the_date" ? "📅" : cam.email_type === "invitation" ? "✉️" : cam.email_type === "reminder" ? "⏰" : cam.email_type === "day_of_details" ? "📍" : cam.email_type === "thank_you" ? "🙏" : cam.email_type === "confirmation" ? "✅" : "📧"}
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{cam.name}</span>
@@ -2404,7 +2406,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 <div style={{ fontSize: 12, color: C.muted }}>
                   {cam.scheduled_at ? `⏰ Scheduled: ${new Date(cam.scheduled_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
                   {" · "}Segment: {cam.segment}
-                  {cam.status === "sent" && ` · ${cam.total_opened || 0}/${cam.total_sent || 0} opened`}
+                  {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent · ${cam.total_sent > 0 ? Math.round(((cam.total_opened || 0) / cam.total_sent) * 100) : 0}% opened`}
                 </div>
                 {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
               </div>
