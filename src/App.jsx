@@ -1749,6 +1749,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: C.blue, flexShrink: 0 }}>{ini(`${c.first_name || ""} ${c.last_name || ""}`)}</div>
                         <span style={{ fontSize: 13, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</span>
+                        {c.tags?.includes("vip") && <span style={{ fontSize: 10, color: "#FFB800", marginLeft: 4 }}>⭐ VIP</span>}
                       </div>
                     </td>
                     <td style={{ padding: "11px 14px", fontSize: 12.5, color: C.muted }}>{c.email}</td>
@@ -1760,9 +1761,16 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                     </td>
                     <td style={{ padding: "11px 14px", fontSize: 11, color: C.muted, textTransform: "capitalize" }}>{c.source || "manual"}</td>
                     <td style={{ padding: "11px 14px" }}>
-                      <div style={{ display: "flex", gap: 5 }}>
+                      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                         {c.phone && <a href={`tel:${c.phone}`} style={{ fontSize: 11, color: C.blue, textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}><Phone size={10} />{c.phone}</a>}
-                        {!c.phone && <span style={{ fontSize: 11, color: C.muted }}>—</span>}
+                        <button onClick={async () => {
+                          const isVip = c.tags?.includes("vip");
+                          const newTags = isVip ? (c.tags||[]).filter(t=>t!=="vip") : [...(c.tags||[]), "vip"];
+                          await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
+                          setContacts(p => p.map(x => x.id===c.id ? {...x,tags:newTags} : x));
+                          fire(isVip ? "VIP tag removed" : "⭐ Marked as VIP");
+                        }} title={c.tags?.includes("vip") ? "Remove VIP" : "Mark as VIP"}
+                          style={{ fontSize: 13, background: "transparent", border: "none", cursor: "pointer", opacity: c.tags?.includes("vip") ? 1 : 0.3, lineHeight: 1 }}>⭐</button>
                       </div>
                     </td>
                   </tr>
