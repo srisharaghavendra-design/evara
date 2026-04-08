@@ -1,3 +1,4 @@
+// evara — All-in-One Event Marketing Platform v1.0
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
@@ -5,7 +6,9 @@ import {
   Settings, Bell, Search, Download, Share2, Plus, Zap,
   Shield, ChevronDown, Sparkles, X, Phone,
   LogOut, AlertCircle, CheckCircle, Send, Star, Eye, Upload, Image as ImageIcon,
-  QrCode, BarChart3, Megaphone, UserCheck, Layers, Link, ExternalLink, ClipboardList, TrendingUp
+  QrCode, BarChart3, BarChart2, Megaphone, UserCheck, UserCheck2,
+  Layers, Layout, Link, ExternalLink, ClipboardList, TrendingUp,
+  Radio
 } from "lucide-react";
 
 const supabase = createClient(
@@ -5368,3 +5371,4 @@ function UnsubscribePage() {
     </div>
   );
 }
+// cache bust Wed Apr  8 08:42:37 UTC 2026
