@@ -943,12 +943,28 @@ function DashView({ supabase, profile, activeEvent, fire }) {
     const load = async () => {
       setLoading(true);
       try {
-        const [ecRes, camRes] = await Promise.all([
+        const [ecRes, camRes, metricsRes, formRes] = await Promise.all([
           supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
           supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id).limit(50),
+          supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single(),
+          supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle(),
         ]);
-        setContacts(ecRes.data || []);
+        const ecData = ecRes.data || [];
+        setContacts(ecData);
         setCampaigns(camRes.data || []);
+        if (metricsRes.data) setMetrics(metricsRes.data);
+        if (formRes.data?.share_token) setFormShareLink(`${window.location.origin}/form/${formRes.data.share_token}`);
+        
+        // Load lead scores
+        if (ecData.length) {
+          const contactIds = ecData.map(r => r.contacts?.id || r.contact_id).filter(Boolean).slice(0, 100);
+          if (contactIds.length) {
+            const { data: scoreRows } = await supabase.from("contact_lead_scores").select("contact_id,score,temperature").in("contact_id", contactIds);
+            const scoreMap = {};
+            (scoreRows || []).forEach(r => { scoreMap[r.contact_id] = { score: r.score, temp: r.temperature }; });
+            setScores(scoreMap);
+          }
+        }
       } catch(e) {
         console.error("Dashboard load error:", e);
         setContacts([]);
@@ -956,20 +972,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       } finally {
         setLoading(false);
       }
-      // Load form share link for quick copy
-      supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
-        .then(({ data }) => { if (data?.share_token) setFormShareLink(`${window.location.origin}/form/${data.share_token}`); });
-      const { data: m } = await supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single();
-      setMetrics(m);
-      const scoreMap = {};
-      if (ec?.length) {
-        const contactIds = ec.map(r => r.contacts?.id || r.contact_id).filter(Boolean);
-        if (contactIds.length) {
-          const { data: scoreRows } = await supabase.from("contact_lead_scores").select("contact_id,score,temperature").in("contact_id", contactIds.slice(0, 100));
-          (scoreRows || []).forEach(r => { scoreMap[r.contact_id] = { score: r.score, temp: r.temperature }; });
-        }
-      }
-      setScores(scoreMap);
+
       // Load AI insights after core data
       setInsights(null);
       setInsightsError(false);
