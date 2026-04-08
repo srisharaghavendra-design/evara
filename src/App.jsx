@@ -406,6 +406,15 @@ function Spin({ size = 14 }) {
 function MainApp({ session }) {
   const [view, setView] = useState("dashboard");
   const [globalSearch, setGlobalSearch] = useState("");
+  const [notifs, setNotifs] = useState([]);
+  const [notifCount, setNotifCount] = useState(0);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  const addNotif = (message, icon = "📬") => {
+    const n = { message, icon, time: new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" }) };
+    setNotifs(p => [n, ...p.slice(0, 19)]);
+    setNotifCount(p => p + 1);
+  };
   const [profile, setProfile] = useState(null);
   const [events, setEvents] = useState([]);
   const [activeEvent, setActiveEvent] = useState(null);
@@ -532,7 +541,32 @@ function MainApp({ session }) {
             <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
               <Plus size={12} />New Event
             </button>
-            <div style={{ position: "relative", cursor: "pointer", padding: 4 }}><Bell size={15} color={C.muted} /><div style={{ position: "absolute", top: 3, right: 3, width: 5, height: 5, borderRadius: "50%", background: C.blue, boxShadow: `0 0 0 1.5px ${C.sidebar}` }} /></div>
+            <div style={{ position: "relative", cursor: "pointer", padding: 4 }} onClick={() => setShowNotifs(p => !p)}>
+            <Bell size={15} color={C.muted} />
+            {notifCount > 0 && <div style={{ position: "absolute", top: 2, right: 2, width: 7, height: 7, borderRadius: "50%", background: C.red, boxShadow: `0 0 0 1.5px ${C.sidebar}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontSize: 6, color: "#fff", fontWeight: 700 }}>{notifCount > 9 ? "9+" : notifCount}</span>
+            </div>}
+            {showNotifs && (
+              <div style={{ position: "absolute", top: 28, right: 0, width: 300, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: "0 8px 32px rgba(0,0,0,.4)", zIndex: 200, overflow: "hidden" }}
+                onClick={e => e.stopPropagation()}>
+                <div style={{ padding: "12px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Notifications</span>
+                  <button onClick={() => { setNotifs([]); setNotifCount(0); setShowNotifs(false); }} style={{ fontSize: 11, color: C.muted, background: "transparent", border: "none", cursor: "pointer" }}>Clear all</button>
+                </div>
+                {notifs.length === 0 ? (
+                  <div style={{ padding: "24px 14px", textAlign: "center", fontSize: 12, color: C.muted }}>No new notifications</div>
+                ) : notifs.slice(0, 8).map((n, i) => (
+                  <div key={i} style={{ padding: "10px 14px", borderBottom: i < notifs.length - 1 ? `1px solid ${C.border}` : undefined, display: "flex", gap: 9, alignItems: "flex-start" }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>{n.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 12, color: C.text, lineHeight: 1.4 }}>{n.message}</div>
+                      <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{n.time}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           </div>
         </header>
 
@@ -542,7 +576,7 @@ function MainApp({ session }) {
           {view === "landing" && <LandingView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "forms" && <FormsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "contacts" && <ContactView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} />}
-          {view === "schedule" && <ScheduleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "schedule" && <ScheduleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
           {view === "checkin"   && <CheckInView  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "social"    && <SocialView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "analytics" && <AnalyticsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -1279,6 +1313,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire }) {
       const data = await res.json();
       if (data.success) {
         fire(`✅ Sent to ${data.sent} contacts! ${data.failed > 0 ? `(${data.failed} failed)` : ""}`);
+        if (addNotif) addNotif(`📧 "${sendModal.subject}" sent to ${data.sent} contacts`, "📧");
         setCampaigns(p => p.map(c => c.id === sendModal.id ? { ...c, status: "sent", sent_at: new Date().toISOString(), total_sent: data.sent } : c));
       } else { fire(data.error || "Send failed", "err"); }
     } catch (err) { fire(err.message, "err"); } finally { setSending(false); setSendModal(null); }
