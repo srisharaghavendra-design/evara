@@ -1893,7 +1893,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             </div>
             <div style={{ background: C.raised, borderRadius: 8, padding: "14px", marginBottom: 16 }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{sendModal.name}</div>
-              {sendModal.subject && <div style={{ fontSize: 12, color: C.muted }}>Subject: {sendModal.subject}</div>}
+              {sendModal.subject && (
+              <div>
+                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>"{sendModal.subject}"</div>
+                <div style={{ fontSize: 10, color: sendModal.subject.length > 60 ? C.amber : C.green }}>
+                  {sendModal.subject.length}/60 chars {sendModal.subject.length > 60 ? "⚠️ may truncate in inbox" : "✅ good length"}
+                </div>
+              </div>
+            )}
             </div>
             <div style={{ background: `${C.blue}10`, border: `1px solid ${C.blue}25`, borderRadius: 8, padding: "12px 14px", marginBottom: 20 }}>
               <div style={{ fontSize: 13, fontWeight: 500, color: C.blue, marginBottom: 4 }}>📬 Sending to {sendModal.recipientCount} contacts</div>
