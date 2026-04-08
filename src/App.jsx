@@ -975,7 +975,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Contacts</span>
-          <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>{contacts.length}</span>
+          <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>{contacts.length} total</span>
+          {contacts.length > 0 && (
+            <div style={{ display: "flex", gap: 3, fontSize: 10 }}>
+              {[["confirmed", C.green], ["attended", C.blue], ["pending", C.amber], ["declined", C.red]].map(([s, col]) => {
+                const n = contacts.filter(c => c.status === s).length;
+                return n > 0 ? <span key={s} style={{ color: col, background: col + "15", padding: "1px 6px", borderRadius: 3, fontWeight: 500 }}>{n} {s}</span> : null;
+              })}
+            </div>
+          )}
           <div style={{ display: "flex", gap: 4 }}>
             {["all", "confirmed", "pending", "declined", "attended"].map(f => (
               <button key={f} onClick={() => setFilt(f)} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 4, border: `1px solid ${filt === f ? C.blue + "70" : C.border}`, background: filt === f ? C.blue + "14" : "transparent", color: filt === f ? C.blue : C.muted, fontWeight: filt === f ? 500 : 400, textTransform: "capitalize", transition: "all .12s" }}>
