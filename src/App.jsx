@@ -5,7 +5,7 @@ import {
   Settings, Bell, Search, Download, Share2, Plus, Zap,
   Shield, ChevronDown, Sparkles, X, Phone,
   LogOut, AlertCircle, CheckCircle, Send, Star, Eye, Upload, Image as ImageIcon,
-  QrCode, BarChart3, Megaphone, UserCheck, Layers, Link, ExternalLink
+  QrCode, BarChart3, Megaphone, UserCheck, Layers, Link, ExternalLink, ClipboardList, TrendingUp
 } from "lucide-react";
 
 const supabase = createClient(
@@ -40,6 +40,9 @@ const NAV = [
   { id:"social",    label:"AI Social",     icon:Radio, badge:"AI" },
   { id:"analytics", label:"Analytics",     icon:BarChart2 },
   { id:"campaign",  label:"Campaigns",     icon:Layout },
+  { id:"agenda",    label:"Agenda",        icon:ClipboardList },
+  { id:"lifecycle", label:"Contacts 360",  icon:TrendingUp },
+  { id:"roi",       label:"ROI",           icon:BarChart3 },
 ];
 
 const EMAIL_TYPES = [
@@ -493,6 +496,9 @@ function MainApp({ session }) {
           {view === "social"    && <SocialView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "analytics" && <AnalyticsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "campaign"  && <CampaignView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "agenda"    && <AgendaView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "lifecycle" && <LifecycleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "roi"       && <ROIView      supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "settings"  && <SettingsView supabase={supabase} profile={profile} fire={fire} />}
         </main>
       </div>
@@ -2407,6 +2413,407 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
               ))}
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AI AGENDA BUILDER ────────────────────────────────────────
+function AgendaView({ supabase, profile, activeEvent, fire }) {
+  const [sessions, setSessions] = useState([
+    { id: 1, title: "Welcome & Registration", duration: 30, type: "logistics" },
+    { id: 2, title: "Opening Keynote", duration: 45, type: "keynote" },
+    { id: 3, title: "Morning Break", duration: 15, type: "break" },
+    { id: 4, title: "Panel Discussion", duration: 60, type: "panel" },
+    { id: 5, title: "Networking Lunch", duration: 60, type: "networking" },
+  ]);
+  const [startTime, setStartTime] = useState("09:00");
+  const [generating, setGenerating] = useState(false);
+  const [agenda, setAgenda] = useState(null);
+  const [nextId, setNextId] = useState(10);
+
+  const SESSION_TYPES = [
+    { id: "keynote", label: "Keynote", color: C.blue, emoji: "🎤" },
+    { id: "panel", label: "Panel", color: "#8B5CF6", emoji: "💬" },
+    { id: "workshop", label: "Workshop", color: C.amber, emoji: "🛠" },
+    { id: "networking", label: "Networking", color: C.green, emoji: "🤝" },
+    { id: "break", label: "Break", color: C.muted, emoji: "☕" },
+    { id: "logistics", label: "Logistics", color: C.teal, emoji: "📋" },
+    { id: "dinner", label: "Dinner/Social", color: "#EC4899", emoji: "🍽" },
+  ];
+
+  const buildAgenda = () => {
+    const [h, m] = startTime.split(":").map(Number);
+    let current = h * 60 + m;
+    return sessions.map(s => {
+      const startH = Math.floor(current / 60).toString().padStart(2, "0");
+      const startM = (current % 60).toString().padStart(2, "0");
+      current += s.duration;
+      const endH = Math.floor(current / 60).toString().padStart(2, "0");
+      const endM = (current % 60).toString().padStart(2, "0");
+      return { ...s, startTime: `${startH}:${startM}`, endTime: `${endH}:${endM}` };
+    });
+  };
+
+  const optimize = async () => {
+    setGenerating(true);
+    try {
+      const sessionList = sessions.map(s => `${s.title} (${s.duration} min, ${s.type})`).join(", ");
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 800,
+          messages: [{
+            role: "user",
+            content: `You are an expert event planner. Optimize this agenda for best flow and attendee experience.
+
+Event: ${activeEvent?.name || "Event"}
+Sessions: ${sessionList}
+Start time: ${startTime}
+
+Rules: Don't put 2+ intensive sessions back-to-back without a break. End networking/breaks logically. 
+Return ONLY JSON array with objects: { "title": string, "duration": number, "type": string, "tip": string }
+Keep all sessions, just reorder if needed and add a "tip" explaining any change.`
+          }]
+        })
+      });
+      const d = await res.json();
+      const text = d.content?.[0]?.text?.replace(/```json|```/g, "").trim();
+      const optimized = JSON.parse(text);
+      setSessions(optimized.map((s, i) => ({ ...s, id: i + 1 })));
+      fire("✅ Agenda optimized by AI!");
+    } catch(e) { fire("Optimization failed: " + e.message, "err"); }
+    setGenerating(false);
+  };
+
+  const timed = buildAgenda();
+  const totalMins = sessions.reduce((a, s) => a + s.duration, 0);
+  const totalHrs = Math.floor(totalMins / 60);
+  const totalMin = totalMins % 60;
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>AI Agenda Builder</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Build your timed agenda — AI optimizes flow, populates emails and landing page.</p>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ fontSize: 12, color: C.muted }}>Total: {totalHrs}h {totalMin}m</div>
+          <button onClick={optimize} disabled={generating}
+            style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: generating ? C.raised : C.blue, color: generating ? C.muted : "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            {generating ? <><Spin size={12} />Optimizing…</> : <><Sparkles size={13} />AI Optimize</>}
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16 }}>
+        {/* Session list */}
+        <div>
+          <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
+            <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>Sessions</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: C.muted }}>Start:</span>
+                <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                  style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "4px 8px", fontSize: 12, outline: "none" }} />
+                <button onClick={() => { setSessions(p => [...p, { id: nextId, title: "New Session", duration: 30, type: "keynote" }]); setNextId(p => p + 1); }}
+                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: C.blue, color: "#fff", cursor: "pointer" }}>+ Add</button>
+              </div>
+            </div>
+            {sessions.map((s, i) => {
+              const typeInfo = SESSION_TYPES.find(t => t.id === s.type) || SESSION_TYPES[0];
+              return (
+                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < sessions.length - 1 ? `1px solid ${C.border}` : undefined, display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{typeInfo.emoji}</span>
+                  <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center" }}>
+                    <input value={s.title} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, title: e.target.value } : x))}
+                      style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 8px", fontSize: 13, outline: "none" }} />
+                    <select value={s.type} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, type: e.target.value } : x))}
+                      style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: typeInfo.color, padding: "6px 8px", fontSize: 12, outline: "none", cursor: "pointer" }}>
+                      {SESSION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                      <input type="number" value={s.duration} min={5} max={480} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, duration: parseInt(e.target.value) || 30 } : x))}
+                        style={{ width: 60, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 6px", fontSize: 12, outline: "none", textAlign: "center" }} />
+                      <span style={{ fontSize: 11, color: C.muted }}>min</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 3 }}>
+                    <button onClick={() => { if (i === 0) return; setSessions(p => { const a = [...p]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; }); }}
+                      style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 14, padding: "0 3px" }}>↑</button>
+                    <button onClick={() => { if (i === sessions.length - 1) return; setSessions(p => { const a = [...p]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; }); }}
+                      style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 14, padding: "0 3px" }}>↓</button>
+                    <button onClick={() => setSessions(p => p.filter(x => x.id !== s.id))}
+                      style={{ background: "transparent", border: "none", color: C.red, cursor: "pointer", fontSize: 16, padding: "0 3px" }}>×</button>
+                  </div>
+                  {s.tip && <div style={{ fontSize: 10, color: C.amber, background: C.amber + "10", padding: "2px 6px", borderRadius: 3, maxWidth: 120 }}>💡 {s.tip}</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Timed agenda preview */}
+        <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 16, height: "fit-content" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Timed Schedule</div>
+          {timed.map((s, i) => {
+            const typeInfo = SESSION_TYPES.find(t => t.id === s.type) || SESSION_TYPES[0];
+            return (
+              <div key={s.id} style={{ display: "flex", gap: 10, marginBottom: 10, paddingBottom: 10, borderBottom: i < timed.length - 1 ? `1px solid ${C.border}` : undefined }}>
+                <div style={{ textAlign: "right", minWidth: 40, flexShrink: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: typeInfo.color }}>{s.startTime}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{s.endTime}</div>
+                </div>
+                <div style={{ width: 3, background: typeInfo.color, borderRadius: 2, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{s.emoji || typeInfo.emoji} {s.title}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{s.duration} min · {typeInfo.label}</div>
+                </div>
+              </div>
+            );
+          })}
+          <button onClick={() => { navigator.clipboard?.writeText(timed.map(s => `${s.startTime}–${s.endTime}  ${s.title}`).join("\n")); fire("Agenda copied!"); }}
+            style={{ width: "100%", marginTop: 8, padding: "8px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer" }}>
+            Copy agenda text
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── CONTACT LIFECYCLE VIEW ───────────────────────────────────
+function LifecycleView({ supabase, profile, activeEvent, fire }) {
+  const [contacts, setContacts] = useState([]);
+  const [selected, setSelected] = useState(null);
+  const [activity, setActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    if (!profile) return;
+    supabase.from("contacts").select("*").eq("company_id", profile.company_id)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => { setContacts(data || []); setLoading(false); });
+  }, [profile]);
+
+  const loadActivity = async (contact) => {
+    setSelected(contact);
+    const { data } = await supabase.from("contact_activity")
+      .select("*, events(name)")
+      .eq("contact_id", contact.id)
+      .order("created_at", { ascending: false });
+    setActivity(data || []);
+  };
+
+  const filtered = contacts.filter(c => !search ||
+    (c.email + c.first_name + c.last_name + c.company_name).toLowerCase().includes(search.toLowerCase()));
+
+  const getScore = (c) => {
+    const actCount = activity.filter(a => a.contact_id === c.id).length;
+    return Math.min(100, actCount * 15 + (c.source === "walkin" ? 10 : 5));
+  };
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease", display: "flex", gap: 16, height: "calc(100vh - 130px)" }}>
+      {/* Contact list */}
+      <div style={{ width: 320, flexShrink: 0, display: "flex", flexDirection: "column" }}>
+        <div style={{ marginBottom: 14 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: C.text, letterSpacing: "-0.5px" }}>Contact Lifecycle</h1>
+          <p style={{ color: C.muted, fontSize: 12, marginTop: 3 }}>Full journey across every event</p>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 12px", marginBottom: 10 }}>
+          <Search size={13} color={C.muted} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search contacts…"
+            style={{ background: "none", border: "none", outline: "none", color: C.text, fontSize: 13, width: "100%" }} />
+        </div>
+        <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+          {loading ? <div style={{ padding: 20, color: C.muted, textAlign: "center" }}><Spin /></div> :
+            filtered.map(c => (
+              <div key={c.id} onClick={() => loadActivity(c)}
+                style={{ background: selected?.id === c.id ? C.raised : C.card, border: `1px solid ${selected?.id === c.id ? C.blue + "60" : C.border}`, borderRadius: 8, padding: "10px 12px", cursor: "pointer", transition: "all .12s" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: C.blue, flexShrink: 0 }}>
+                    {(c.first_name?.[0] || c.email?.[0] || "?").toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email}
+                    </div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{c.company_name || c.email}</div>
+                  </div>
+                  <span style={{ fontSize: 10, color: C.green, background: C.green + "12", padding: "2px 6px", borderRadius: 3 }}>
+                    {c.source === "walkin" ? "Walk-in" : c.source || "manual"}
+                  </span>
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Contact detail */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {!selected ? (
+          <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
+            <Users size={40} strokeWidth={1} />
+            <div style={{ fontSize: 14 }}>Select a contact to see their journey</div>
+          </div>
+        ) : (
+          <div>
+            {/* Profile card */}
+            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", background: `linear-gradient(135deg, ${C.blue}, ${C.teal})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "#fff" }}>
+                  {(selected.first_name?.[0] || selected.email?.[0] || "?").toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>{`${selected.first_name || ""} ${selected.last_name || ""}`.trim() || "—"}</div>
+                  <div style={{ fontSize: 13, color: C.muted }}>{selected.email}</div>
+                  {selected.company_name && <div style={{ fontSize: 12, color: C.muted }}>{selected.company_name}</div>}
+                </div>
+                <div style={{ marginLeft: "auto", textAlign: "right" }}>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: C.green }}>{activity.length}</div>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Touchpoints</div>
+                </div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8 }}>
+                {[
+                  { label: "Events", val: [...new Set(activity.map(a => a.event_id))].length, color: C.blue },
+                  { label: "Check-ins", val: activity.filter(a => a.activity_type === "checked_in").length, color: C.green },
+                  { label: "Status changes", val: activity.filter(a => a.activity_type === "status_changed").length, color: C.amber },
+                  { label: "Source", val: selected.source || "manual", color: C.teal },
+                ].map(s => (
+                  <div key={s.label} style={{ background: C.raised, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 4 }}>{s.label}</div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: s.color }}>{s.val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Activity timeline */}
+            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 16 }}>Activity Timeline</div>
+              {activity.length === 0 ? (
+                <div style={{ textAlign: "center", color: C.muted, padding: 24 }}>No activity recorded yet</div>
+              ) : activity.map((a, i) => (
+                <div key={a.id} style={{ display: "flex", gap: 12, marginBottom: 16, paddingBottom: 16, borderBottom: i < activity.length - 1 ? `1px solid ${C.border}` : undefined }}>
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: a.activity_type === "checked_in" ? C.green : a.activity_type === "status_changed" ? C.amber : C.blue, flexShrink: 0, marginTop: 4 }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: C.text }}>{a.description}</div>
+                    {a.events?.name && <div style={{ fontSize: 11, color: C.blue, marginTop: 2 }}>📅 {a.events.name}</div>}
+                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(a.created_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
+                  </div>
+                  <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "2px 7px", borderRadius: 3, height: "fit-content", textTransform: "capitalize" }}>
+                    {a.activity_type?.replace(/_/g, " ")}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── ROI CALCULATOR ───────────────────────────────────────────
+function ROIView({ supabase, profile, activeEvent, fire }) {
+  const [costs, setCosts] = useState({ venue: "", catering: "", av: "", marketing: "", staff: "", other: "" });
+  const [revenue, setRevenue] = useState({ tickets: "", sponsorship: "", pipeline: "", other: "" });
+  const [metrics, setMetrics] = useState(null);
+
+  useEffect(() => {
+    if (!activeEvent || !profile) return;
+    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
+      .then(({ data }) => setMetrics(data));
+  }, [activeEvent, profile]);
+
+  const totalCost = Object.values(costs).reduce((a, v) => a + (parseFloat(v) || 0), 0);
+  const totalRevenue = Object.values(revenue).reduce((a, v) => a + (parseFloat(v) || 0), 0);
+  const roi = totalCost > 0 ? ((totalRevenue - totalCost) / totalCost * 100).toFixed(0) : 0;
+  const costPerAttendee = metrics?.total_attended > 0 ? (totalCost / metrics.total_attended).toFixed(0) : 0;
+  const roiColor = roi >= 0 ? C.green : C.red;
+
+  const inputStyle = { width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "7px 10px", fontSize: 13, outline: "none" };
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>ROI Calculator</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Measure and report event return on investment to your stakeholders.</p>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 320px", gap: 14 }}>
+        {/* Costs */}
+        <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.red, marginBottom: 14 }}>💸 Costs</div>
+          {[["venue", "Venue"], ["catering", "Catering & Drinks"], ["av", "AV & Production"], ["marketing", "Marketing"], ["staff", "Staff & Speakers"], ["other", "Other"]].map(([k, l]) => (
+            <div key={k} style={{ marginBottom: 10 }}>
+              <label style={{ display: "block", fontSize: 11, color: C.muted, marginBottom: 4 }}>{l}</label>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>$</span>
+                <input type="number" value={costs[k]} onChange={e => setCosts(p => ({ ...p, [k]: e.target.value }))}
+                  placeholder="0" style={{ ...inputStyle, paddingLeft: 22 }} />
+              </div>
+            </div>
+          ))}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, color: C.muted }}>Total Costs</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: C.red }}>${totalCost.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Revenue */}
+        <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: C.green, marginBottom: 14 }}>💰 Revenue & Value</div>
+          {[["tickets", "Ticket Revenue"], ["sponsorship", "Sponsorship"], ["pipeline", "Pipeline Generated"], ["other", "Other Value"]].map(([k, l]) => (
+            <div key={k} style={{ marginBottom: 10 }}>
+              <label style={{ display: "block", fontSize: 11, color: C.muted, marginBottom: 4 }}>{l}</label>
+              <div style={{ position: "relative" }}>
+                <span style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: C.muted, fontSize: 13 }}>$</span>
+                <input type="number" value={revenue[k]} onChange={e => setRevenue(p => ({ ...p, [k]: e.target.value }))}
+                  placeholder="0" style={{ ...inputStyle, paddingLeft: 22 }} />
+              </div>
+            </div>
+          ))}
+          <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 4, display: "flex", justifyContent: "space-between" }}>
+            <span style={{ fontSize: 13, color: C.muted }}>Total Value</span>
+            <span style={{ fontSize: 16, fontWeight: 700, color: C.green }}>${totalRevenue.toLocaleString()}</span>
+          </div>
+        </div>
+
+        {/* Summary */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ background: C.card, borderRadius: 10, border: `2px solid ${roiColor}40`, padding: 20, textAlign: "center" }}>
+            <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Return on Investment</div>
+            <div style={{ fontSize: 48, fontWeight: 800, color: roiColor, letterSpacing: "-2px" }}>{roi}%</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>
+              {roi >= 0 ? `$${(totalRevenue - totalCost).toLocaleString()} net gain` : `$${(totalCost - totalRevenue).toLocaleString()} net loss`}
+            </div>
+          </div>
+          {[
+            { label: "Cost per Attendee", val: `$${parseInt(costPerAttendee || 0).toLocaleString()}`, color: C.amber },
+            { label: "Total Attendees", val: metrics?.total_attended || 0, color: C.blue },
+            { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.teal },
+            { label: "Open Rate", val: metrics?.total_sent ? `${Math.round((metrics.total_opened / metrics.total_sent) * 100)}%` : "—", color: C.green },
+          ].map(s => (
+            <div key={s.label} style={{ background: C.card, borderRadius: 8, border: `1px solid ${C.border}`, padding: "12px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 12, color: C.muted }}>{s.label}</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: s.color }}>{s.val}</span>
+            </div>
+          ))}
+          <button onClick={() => {
+            const report = `EVARA EVENT ROI REPORT\n${"=".repeat(30)}\nEvent: ${activeEvent?.name}\n\nCOSTS\nVenue: $${costs.venue || 0}\nCatering: $${costs.catering || 0}\nAV/Production: $${costs.av || 0}\nMarketing: $${costs.marketing || 0}\nStaff: $${costs.staff || 0}\nOther: $${costs.other || 0}\nTOTAL COSTS: $${totalCost.toLocaleString()}\n\nREVENUE & VALUE\nTickets: $${revenue.tickets || 0}\nSponsorship: $${revenue.sponsorship || 0}\nPipeline: $${revenue.pipeline || 0}\nOther: $${revenue.other || 0}\nTOTAL VALUE: $${totalRevenue.toLocaleString()}\n\nROI: ${roi}%\nNet: $${(totalRevenue - totalCost).toLocaleString()}\nCost/Attendee: $${costPerAttendee}\nAttendees: ${metrics?.total_attended || 0}\nOpen Rate: ${metrics?.total_sent ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + '%' : 'N/A'}`;
+            navigator.clipboard?.writeText(report);
+            fire("ROI report copied to clipboard!");
+          }} style={{ padding: "10px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
+            📋 Copy ROI Report
+          </button>
         </div>
       </div>
     </div>
