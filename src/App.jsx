@@ -4125,9 +4125,6 @@ function PublicFormPage({ token }) {
             {event?.location && <div style={{ fontSize: 14, color: "#333" }}>📍 {event.location}</div>}
           </div>
         )}
-        {event?.event_date && (
-          <div style={{ fontSize: 14, color: "#0A84FF", fontWeight: 500, display: "none" }}>hidden
-        )}
         {event?.location && <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>📍 {event.location}</div>}
         <div style={{ marginTop: 24, fontSize: 12, color: "#aaa" }}>A confirmation email will be sent to you shortly.</div>
         <div style={{ marginTop: 16, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
