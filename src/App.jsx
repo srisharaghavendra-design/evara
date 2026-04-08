@@ -445,13 +445,25 @@ function MainApp({ session }) {
             <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>evara</span>
             <span style={{ fontSize: 9, fontWeight: 600, background: `${C.blue}20`, color: C.blue, padding: "2px 5px", borderRadius: 3, letterSpacing: "0.5px", marginLeft: "auto" }}>BETA</span>
           </div>
-          <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 5, paddingLeft: 2 }}>Active Event</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5, paddingLeft: 2, paddingRight: 2 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px" }}>Active Event</div>
+            {activeEvent?.event_date && (() => {
+              const days = Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24));
+              const color = days <= 3 ? C.red : days <= 14 ? C.amber : C.green;
+              return <span style={{ fontSize: 9, fontWeight: 700, color, background: color + "15", padding: "1px 5px", borderRadius: 3 }}>{days > 0 ? `${days}d` : "TODAY"}</span>;
+            })()}
+          </div>
           {activeEvent ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "8px 11px", cursor: "pointer" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = C.borderHi} onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-              <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: C.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: 500 }}>{activeEvent.name}</span>
-              <ChevronDown size={11} color={C.muted} />
+            <div style={{ position: "relative" }}>
+              <select value={activeEvent.id} onChange={e => {
+                const ev = events.find(x => x.id === e.target.value);
+                if (ev) setActiveEvent(ev);
+              }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
+                {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+              </select>
+              <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                <ChevronDown size={11} color={C.muted} />
+              </div>
             </div>
           ) : (
             <button onClick={() => setShowNewEvent(true)} style={{ width: "100%", padding: "8px 11px", background: `${C.blue}12`, border: `1px dashed ${C.blue}40`, borderRadius: 8, color: C.blue, fontSize: 12, textAlign: "left", cursor: "pointer" }}>
