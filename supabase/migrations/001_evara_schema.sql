@@ -303,3 +303,6 @@ create index if not exists idx_events_share_token on events(share_token);
 -- Public read access for shared dashboards
 create policy "Public can view events by share token" on events for select
   using (share_token is not null);
+
+-- Add capacity field to events
+alter table events add column if not exists capacity integer;
