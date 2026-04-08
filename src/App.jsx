@@ -793,6 +793,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [scores, setScores] = useState({});
   const [loading, setLoading] = useState(true);
   const [filt, setFilt] = useState("all");
+  const [formShareLink, setFormShareLink] = useState("");
   const [sending, setSending] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState(false);
