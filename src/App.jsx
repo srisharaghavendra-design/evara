@@ -3216,6 +3216,37 @@ function SettingsView({ supabase, profile, fire }) {
           ℹ️ They'll receive a real email with a link to join your workspace on evara.
         </div>
       </div>
+      {/* ── Email deliverability & webhook setup ── */}
+      <div style={{ background: "#FF9F0A08", border: "1px solid #FF9F0A25", borderRadius: 12, padding: 20, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#FF9F0A", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12 }}>Email Deliverability</div>
+        <p style={{ fontSize: 12, color: C.muted, lineHeight: 1.6, marginBottom: 12 }}>
+          Add these DNS records in Namecheap for <strong style={{ color: C.text }}>evarahq.com</strong> to prevent emails going to spam:
+        </p>
+        {[
+          { type: "TXT (SPF)", host: "@", value: "v=spf1 include:sendgrid.net ~all" },
+          { type: "CNAME (DKIM)", host: "s1._domainkey", value: "s1.domainkey.u[id].wl.sendgrid.net" },
+        ].map(r => (
+          <div key={r.type} style={{ background: C.bg, borderRadius: 6, padding: "7px 10px", marginBottom: 6, fontFamily: "monospace", fontSize: 11, display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ color: "#FF9F0A", fontWeight: 600, flexShrink: 0 }}>{r.type}</span>
+            <span style={{ color: C.muted, flexShrink: 0 }}>Host: <span style={{ color: C.text }}>{r.host}</span></span>
+            <span style={{ color: C.muted, flex: 1 }}>Value: <span style={{ color: C.teal }}>{r.value}</span></span>
+          </div>
+        ))}
+        <div style={{ marginTop: 14, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
+          <div style={{ fontSize: 12, fontWeight: 500, color: C.text, marginBottom: 6 }}>📡 Open & Click Tracking Webhook</div>
+          <div style={{ background: C.bg, borderRadius: 6, padding: "8px 10px", fontFamily: "monospace", fontSize: 11, color: C.teal, marginBottom: 8, wordBreak: "break-all" }}>
+            https://sqddpjsgtwblmkgxqyxe.supabase.co/functions/v1/email-webhook
+          </div>
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>
+            SendGrid → Settings → Mail Settings → Event Webhook → paste URL above → check Opens, Clicks, Bounces, Unsubscribes → Save
+          </div>
+          <button onClick={() => { navigator.clipboard?.writeText("https://sqddpjsgtwblmkgxqyxe.supabase.co/functions/v1/email-webhook"); fire("✅ Webhook URL copied!"); }}
+            style={{ fontSize: 11, padding: "4px 12px", background: C.blue + "15", border: `1px solid ${C.blue}30`, borderRadius: 5, color: C.blue, cursor: "pointer" }}>
+            Copy Webhook URL
+          </button>
+        </div>
+      </div>
+
       <div style={{ background: "#1a0808", borderRadius: 12, border: `1px solid ${C.red}30`, padding: 20, marginBottom: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.red, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 14 }}>Danger Zone</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
