@@ -942,13 +942,20 @@ function DashView({ supabase, profile, activeEvent, fire }) {
     setFormShareLink("");
     const load = async () => {
       setLoading(true);
-      const [ecRes, camRes] = await Promise.all([
-        supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
-        supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id).limit(50),
-      ]);
-      setContacts(ecRes.data || []);
-      setCampaigns(camRes.data || []);
-      setLoading(false);
+      try {
+        const [ecRes, camRes] = await Promise.all([
+          supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
+          supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id).limit(50),
+        ]);
+        setContacts(ecRes.data || []);
+        setCampaigns(camRes.data || []);
+      } catch(e) {
+        console.error("Dashboard load error:", e);
+        setContacts([]);
+        setCampaigns([]);
+      } finally {
+        setLoading(false);
+      }
       // Load form share link for quick copy
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormShareLink(`${window.location.origin}/form/${data.share_token}`); });
@@ -958,7 +965,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       if (ec?.length) {
         const contactIds = ec.map(r => r.contacts?.id || r.contact_id).filter(Boolean);
         if (contactIds.length) {
-          const { data: scoreRows } = await supabase.from("contact_lead_scores").select("contact_id,score,temperature").in("contact_id", contactIds);
+          const { data: scoreRows } = await supabase.from("contact_lead_scores").select("contact_id,score,temperature").in("contact_id", contactIds.slice(0, 100));
           (scoreRows || []).forEach(r => { scoreMap[r.contact_id] = { score: r.score, temp: r.temperature }; });
         }
       }
@@ -1104,10 +1111,16 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           {formShareLink && (
+            <div style={{ display: "flex", gap: 6 }}>
             <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Registration link copied!"); }}
               style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
-              📝 Reg Link
+              📝 Copy Reg Link
             </button>
+            <a href={formShareLink} target="_blank" rel="noreferrer"
+              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 12px", color: C.muted, textDecoration: "none" }}>
+              ↗
+            </a>
+            </div>
           )}
           <button onClick={async () => {
             // Get or create share token for this event
