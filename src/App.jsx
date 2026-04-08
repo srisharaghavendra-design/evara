@@ -1531,6 +1531,22 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               <Calendar size={13} />Schedule →
             </button>
           </div>}
+          {preview && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, padding: "8px 12px", background: C.raised, borderRadius: 7, border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 11, color: C.muted, flex: 1 }}>📧 Send test to {profile?.email}</span>
+              <button onClick={async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+                  body: JSON.stringify({ contacts: [{ email: profile?.email, first_name: profile?.full_name?.split(" ")[0] || "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text })
+                }).then(r => r.json()).catch(e => ({ error: e.message }));
+                r.success ? fire(`✅ Test sent to ${profile?.email}!`) : fire(r.error || "Send failed — check SENDGRID_API_KEY", "err");
+              }} style={{ fontSize: 11, padding: "4px 12px", background: C.blue, color: "#fff", border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 500 }}>
+                Send Test
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
