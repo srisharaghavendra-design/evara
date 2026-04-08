@@ -1447,8 +1447,24 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>
           {preview && <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
             <button onClick={() => setPreview(null)} style={{ flex: 1, padding: "9px", background: C.raised, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>Clear</button>
+            <button onClick={async () => {
+              if (!profile || !activeEvent) { fire("Select an event first", "err"); return; }
+              const { data: { session } } = await supabase.auth.getSession();
+              const { data: ecs } = await supabase.from("event_contacts").select("contacts(email,first_name)").eq("event_id", activeEvent.id);
+              const contacts = (ecs || []).map(ec => ec.contacts).filter(c => c?.email);
+              if (!contacts.length) { fire("No contacts in this event yet", "err"); return; }
+              if (!window.confirm(`Send to all ${contacts.length} contacts now?`)) return;
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+                body: JSON.stringify({ contacts, subject: preview.subject, htmlContent: preview.html, plainText: preview.plain_text, campaignId: preview.campaign_id })
+              }).then(r => r.json()).catch(e => ({ error: e.message }));
+              res.success ? fire(`✅ Sent to ${res.sent} contacts!`) : fire(res.error || "Send failed", "err");
+            }} style={{ padding: "9px 16px", background: C.green + "15", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+              <Send size={13} />Send Now
+            </button>
             <button onClick={() => { fire("Saved! Opening Scheduling…"); setView("schedule"); }} style={{ flex: 1, padding: "9px", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <Send size={13} />Schedule & Send →
+              <Calendar size={13} />Schedule →
             </button>
           </div>}
         </div>
