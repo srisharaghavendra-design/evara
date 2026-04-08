@@ -1580,10 +1580,17 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                     <td style={{ padding: "11px 14px", fontSize: 12.5, color: C.muted }}>{c.email}</td>
                     <td style={{ padding: "11px 14px", fontSize: 12.5, color: C.muted }}>{c.company_name || "—"}</td>
                     <td style={{ padding: "11px 14px" }}>
-                      {c.phone ? <a href={`tel:${c.phone}`} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: C.blue, textDecoration: "none" }}><Phone size={11} />{c.phone}</a> : <span style={{ fontSize: 12, color: C.muted }}>—</span>}
+                      <span style={{ fontSize: 11, fontWeight: 500, color: c.unsubscribed ? C.red : C.green, background: (c.unsubscribed ? C.red : C.green) + "12", padding: "2px 8px", borderRadius: 4 }}>
+                        {c.unsubscribed ? "🚫 Unsub" : "✓ Active"}
+                      </span>
                     </td>
-                    <td style={{ padding: "11px 14px", fontSize: 12, color: C.muted, textTransform: "capitalize" }}>{c.source || "manual"}</td>
-                    <td style={{ padding: "11px 14px" }}><span style={{ fontSize: 11, color: c.unsubscribed ? C.red : C.green }}>{c.unsubscribed ? "🚫 Unsubscribed" : "✓ Active"}</span></td>
+                    <td style={{ padding: "11px 14px", fontSize: 11, color: C.muted, textTransform: "capitalize" }}>{c.source || "manual"}</td>
+                    <td style={{ padding: "11px 14px" }}>
+                      <div style={{ display: "flex", gap: 5 }}>
+                        {c.phone && <a href={`tel:${c.phone}`} style={{ fontSize: 11, color: C.blue, textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}><Phone size={10} />{c.phone}</a>}
+                        {!c.phone && <span style={{ fontSize: 11, color: C.muted }}>—</span>}
+                      </div>
+                    </td>
                   </tr>
                 ))}
             </tbody>
