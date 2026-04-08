@@ -1698,9 +1698,7 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
   const moveUp = i => { if (i === 0) return; const a = [...fields]; [a[i - 1], a[i]] = [a[i], a[i - 1]]; setFields(a); };
   const moveDown = i => { if (i === fields.length - 1) return; const a = [...fields]; [a[i], a[i + 1]] = [a[i + 1], a[i]]; setFields(a); };
   const shareLink = activeForm 
-    ? (window.location.hostname === 'localhost' 
-        ? `${window.location.origin}/form/${activeForm.share_token}`
-        : `https://evara-srisharaghavendra-8908s-projects.vercel.app/form/${activeForm.share_token}`)
+    ? `${window.location.hostname === 'localhost' ? 'https://evara-tau.vercel.app' : window.location.origin}/form/${activeForm.share_token}`
     : "Save form first";
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", gap: 10, color: C.muted }}><Spin />Loading…</div>;
   return (
@@ -1795,7 +1793,26 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
                 <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                   <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{submissions.length} responses</span>
-                    <button onClick={() => fire("Exported!")} style={{ fontSize: 12, padding: "5px 12px", background: C.blue, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>Export CSV</button>
+                    <button onClick={() => {
+                      if (!submissions.length) return;
+                      // Build headers from first submission
+                      const fields = activeForm?.fields || [];
+                      const headers = ["Submitted", "Email", ...fields.map(f => f.label)];
+                      const rows = submissions.map(s => [
+                        new Date(s.submitted_at).toLocaleString(),
+                        s.submitter_email || "",
+                        ...fields.map(f => (s.responses?.[f.id] || "").toString().replace(/"/g, '""'))
+                      ]);
+                      const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+                      const blob = new Blob([csv], { type: "text/csv" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url; a.download = `${activeForm?.name || "form"}-responses.csv`;
+                      a.click(); URL.revokeObjectURL(url);
+                      fire("CSV exported!");
+                    }} style={{ fontSize: 12, padding: "5px 12px", background: C.blue, color: "#fff", border: "none", borderRadius: 6, cursor: "pointer" }}>
+                    <Download size={11} style={{ display: "inline", marginRight: 4 }} />Export CSV
+                    </button>
                   </div>
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>{["Submitted", "Name", "Email", "Responses"].map(h => <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase" }}>{h}</th>)}</tr></thead>
