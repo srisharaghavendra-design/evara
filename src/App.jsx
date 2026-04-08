@@ -721,7 +721,7 @@ function MainApp({ session }) {
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
           <span>⌘N new · ⌘K search · ⌘, settings</span>
-          <span>v1.2</span>
+          <span>v1.3</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
@@ -6174,4 +6174,4 @@ function PublicDashboardPage({ token }) {
 }
 
 // ─── UNSUBSCRIBE PAGE ────────────────────────────────────────
-// cache bust Wed Apr 08 16:09:43 UTC 2026
+// cache bust Wed Apr 08 16:48 UTC 2026
