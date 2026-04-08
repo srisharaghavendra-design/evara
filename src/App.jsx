@@ -1798,6 +1798,29 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 {cam.status === "draft" && !cam.html_content && (
                   <span style={{ fontSize: 11, color: C.muted, fontStyle: "italic" }}>Generate email first in eDM Builder</span>
                 )}
+                {cam.status === "sent" && cam.total_sent > 0 && cam.html_content && (
+                  <button onClick={async () => {
+                    if (!window.confirm(`Resend to contacts who haven't opened "${cam.subject}"?`)) return;
+                    const { data: { session } } = await supabase.auth.getSession();
+                    // Get all contacts who didn't open
+                    const { data: ecs } = await supabase.from("event_contacts")
+                      .select("contacts(email,first_name,last_name)")
+                      .eq("event_id", activeEvent?.id);
+                    const { data: opens } = await supabase.from("email_sends")
+                      .select("email").eq("campaign_id", cam.id).not("opened_at", "is", null);
+                    const openedEmails = new Set((opens || []).map(o => o.email));
+                    const unopened = (ecs || []).map(ec => ec.contacts).filter(c => c?.email && !openedEmails.has(c.email));
+                    if (!unopened.length) { fire("No unopened contacts found — great open rate!"); return; }
+                    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+                      body: JSON.stringify({ contacts: unopened, subject: "Following up: " + cam.subject, htmlContent: cam.html_content, plainText: cam.plain_text })
+                    }).then(r => r.json()).catch(e => ({ error: e.message }));
+                    res.success ? fire(`✅ Resent to ${res.sent} unopened contacts`) : fire(res.error || "Failed", "err");
+                  }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.amber}40`, background: C.amber + "10", color: C.amber, cursor: "pointer" }}>
+                    Resend Unopened
+                  </button>
+                )}
                 {cam.status !== "sent" && (
                   <button onClick={async () => {
                     if (!window.confirm("Delete this campaign?")) return;
