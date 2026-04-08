@@ -593,7 +593,11 @@ function MainApp({ session }) {
           ))}
         </nav>
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
-          <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
+          <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
+          <span>⌘N new · ⌘K search</span>
+          <span>v1.0</span>
+        </div>
+        <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 9, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 10px", marginTop: 6, cursor: "pointer" }}
@@ -719,7 +723,7 @@ function MainApp({ session }) {
       )}
 
       {toast && (
-        <div style={{ position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", background: C.raised, border: `1px solid ${C.border}`, borderLeft: `3px solid ${toast.type === "ok" ? C.green : C.red}`, borderRadius: 8, padding: "11px 18px", display: "flex", alignItems: "center", gap: 9, animation: "fadeUp .2s ease", zIndex: 999, whiteSpace: "nowrap", boxShadow: "0 4px 24px #00000080" }}>
+        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#1C1C1F", border: `1px solid ${toast.type === "ok" ? C.green + "40" : C.red + "40"}`, borderLeft: `3px solid ${toast.type === "ok" ? C.green : C.red}`, borderRadius: 10, padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, animation: "fadeUp .2s ease", zIndex: 9999, whiteSpace: "nowrap", boxShadow: "0 8px 32px rgba(0,0,0,.6)", backdropFilter: "blur(8px)" }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: toast.type === "ok" ? C.green : C.red, flexShrink: 0 }} />
           <span style={{ fontSize: 13, color: C.text }}>{toast.msg}</span>
         </div>
