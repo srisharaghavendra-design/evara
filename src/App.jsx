@@ -307,7 +307,7 @@ export default function App() {
 function Splash() {
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "Outfit,sans-serif" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}@keyframes spin{to{transform:rotate(360deg)}}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}`}</style>
       <Zap size={26} color={C.blue} />
       <span style={{ fontSize: 18, fontWeight: 700, color: C.text }}>evara</span>
       <div style={{ width: 18, height: 18, border: `2px solid ${C.blue}25`, borderTop: `2px solid ${C.blue}`, borderRadius: "50%", animation: "spin .7s linear infinite" }} />
@@ -329,7 +329,7 @@ function AuthScreen() {
   };
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit,sans-serif", color: C.text }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
       <div style={{ width: 380, animation: "fadeUp .3s ease" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
@@ -414,7 +414,7 @@ function MainApp({ session }) {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, fontFamily: "Outfit,sans-serif", overflow: "hidden" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2A2A2E;border-radius:3px}button{cursor:pointer;font-family:Outfit,sans-serif}input,textarea,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}.nb:hover{background:${C.raised}!important;color:${C.text}!important}.mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}.rh:hover{background:${C.raised}!important}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2A2A2E;border-radius:3px}button{cursor:pointer;font-family:Outfit,sans-serif}input,textarea,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}.nb:hover{background:${C.raised}!important;color:${C.text}!important}.mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}.rh:hover{background:${C.raised}!important}`}</style>
 
       {/* SIDEBAR */}
       <aside style={{ width: 216, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0 }}>
@@ -1367,7 +1367,27 @@ function ContactView({ supabase, profile, activeEvent, fire }) {
           <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Contacts</h1>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Unified contact records across every event — {contacts.length.toLocaleString()} total</p>
         </div>
-        <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={async () => {
+            if (contacts.length === 0) { fire("No contacts to brief", "err"); return; }
+            fire("Generating AI Sales Brief…");
+            const topContacts = contacts.slice(0, 10);
+            const res = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                model: "claude-sonnet-4-20250514", max_tokens: 1500,
+                messages: [{ role: "user", content: "Generate a concise sales brief for each of these event contacts. For each person write 2-3 lines: who they are, what to talk about, and the best approach.\n\nContacts:\n" + topContacts.map(c => "- " + (c.first_name||"") + " " + (c.last_name||"") + ", " + (c.company_name||"unknown") + " (" + c.email + ")").join("\n") + "\n\nFormat: Name: brief" }]
+              })
+            }).then(r => r.json()).catch(() => null);
+            const text = res?.content?.[0]?.text || "Could not generate brief";
+            navigator.clipboard?.writeText(text);
+            fire("📋 AI Sales Brief copied to clipboard!");
+          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+            <Sparkles size={12}/>AI Sales Brief
+          </button>
+          <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
+        </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 12px", marginBottom: 14, maxWidth: 320 }}>
         <Search size={13} color={C.muted} strokeWidth={1.5} />
@@ -1397,7 +1417,7 @@ function ContactView({ supabase, profile, activeEvent, fire }) {
                       {c.phone ? <a href={`tel:${c.phone}`} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: C.blue, textDecoration: "none" }}><Phone size={11} />{c.phone}</a> : <span style={{ fontSize: 12, color: C.muted }}>—</span>}
                     </td>
                     <td style={{ padding: "11px 14px", fontSize: 12, color: C.muted, textTransform: "capitalize" }}>{c.source || "manual"}</td>
-                    <td style={{ padding: "11px 14px" }}><span style={{ fontSize: 11, color: c.unsubscribed ? C.red : C.green }}>{c.unsubscribed ? "⚠ Unsubscribed" : "✓ Active"}</span></td>
+                    <td style={{ padding: "11px 14px" }}><span style={{ fontSize: 11, color: c.unsubscribed ? C.red : C.green }}>{c.unsubscribed ? "🚫 Unsubscribed" : "✓ Active"}</span></td>
                   </tr>
                 ))}
             </tbody>
