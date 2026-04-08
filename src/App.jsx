@@ -1,4 +1,4 @@
-// evara — All-in-One Event Marketing Platform v1.0
+// evara — All-in-One Event Marketing Platform v1.2
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 import {
