@@ -2112,6 +2112,23 @@ function SettingsView({ supabase, profile, fire }) {
         </div>
       </div>
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12 }}>Email & AI Configuration</div>
+        <p style={{ fontSize: 12, color: C.muted, marginBottom: 12, lineHeight: 1.6 }}>
+          Add these in Supabase → Project Settings → Edge Functions → Secrets to activate sending and AI generation:
+        </p>
+        {[
+          { key: "ANTHROPIC_API_KEY", desc: "AI email generation", href: "https://console.anthropic.com" },
+          { key: "SENDGRID_API_KEY", desc: "Email sending via SendGrid", href: "https://app.sendgrid.com/settings/api_keys" },
+          { key: "SENDGRID_FROM_EMAIL", desc: "e.g. hello@evarahq.com", href: null },
+        ].map(s => (
+          <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: C.bg, borderRadius: 6, border: `1px solid ${C.border}`, marginBottom: 6 }}>
+            <code style={{ fontSize: 11, color: C.teal, fontFamily: "monospace", flex: 1 }}>{s.key}</code>
+            <span style={{ fontSize: 11, color: C.muted }}>{s.desc}</span>
+            {s.href && <a href={s.href} target="_blank" rel="noreferrer" style={{ fontSize: 10, color: C.blue, textDecoration: "none" }}>Get →</a>}
+          </div>
+        ))}
+      </div>
+      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 16 }}><Shield size={13} color={C.blue} /><span style={{ fontSize: 11, fontWeight: 600, color: C.blue, textTransform: "uppercase", letterSpacing: "0.8px" }}>Security & Privacy</span></div>
         {["Data isolated per company", "Zero PII sent to AI", "TLS 1.3 encryption in transit", "Row-level security enforced", "GDPR compliant"].map(s => (
           <div key={s} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, fontSize: 13, color: C.sec }}><CheckCircle size={13} color={C.green} />{s}</div>
