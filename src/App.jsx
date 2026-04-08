@@ -4224,6 +4224,29 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
               </div>
             ))}
           </Sec>
+          
+          {/* AI Calendar Intelligence */}
+          {(() => {
+            const warnings = [];
+            const sorted = (events||[]).filter(e => e.event_date).sort((a,b) => new Date(a.event_date) - new Date(b.event_date));
+            for (let i = 0; i < sorted.length - 1; i++) {
+              const a = new Date(sorted[i].event_date);
+              const b = new Date(sorted[i+1].event_date);
+              const daysBetween = Math.ceil((b - a) / 86400000);
+              if (daysBetween <= 7) {
+                warnings.push({ type: "overlap", msg: `"${sorted[i].name}" and "${sorted[i+1].name}" are only ${daysBetween} day(s) apart — contacts may receive too many emails` });
+              }
+            }
+            if (!warnings.length) return null;
+            return (
+              <div style={{ background: C.card, borderRadius: 9, border: `1px solid ${C.amber}30`, padding: 14, marginTop: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: C.amber, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>⚠️ Calendar Intelligence</div>
+                {warnings.map((w, i) => (
+                  <div key={i} style={{ fontSize: 12, color: C.sec, marginBottom: 6, lineHeight: 1.5 }}>• {w.msg}</div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>
