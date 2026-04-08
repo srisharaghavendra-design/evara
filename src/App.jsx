@@ -732,6 +732,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         ))}
       </div>
 
+      {liveMode && (
+        <div style={{ background: C.card, borderRadius: 9, border: `1px solid ${C.green}30`, padding: "10px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, animation: "pulse 1.5s infinite", flexShrink: 0 }} />
+          <span style={{ fontSize: 12, color: C.green, fontWeight: 600 }}>LIVE</span>
+          <span style={{ fontSize: 12, color: C.muted }}>Auto-refreshing every 10s ·</span>
+          <span style={{ fontSize: 12, color: C.text }}>{contacts.filter(c => c.status === "attended").length} checked in · {contacts.filter(c => c.status === "pending").length} pending</span>
+          <button onClick={() => setLiveMode(false)} style={{ marginLeft: "auto", fontSize: 11, color: C.muted, background: "transparent", border: "none", cursor: "pointer" }}>✕ Stop</button>
+        </div>
+      )}
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Contacts</span>
