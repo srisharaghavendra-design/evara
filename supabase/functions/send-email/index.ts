@@ -14,7 +14,7 @@ serve(async (req) => {
     
     const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
     const FROM_EMAIL = fromEmail || Deno.env.get("FROM_EMAIL") || "hello@evarahq.com";
-    const FROM_NAME = fromName || "evara";
+    const FROM_NAME = fromName || Deno.env.get("FROM_NAME") || "evara";
 
     if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY not configured");
     if (!contacts?.length) throw new Error("No contacts provided");
