@@ -1420,9 +1420,20 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           <Sec label="Template style">
             <div style={{ display: "flex", gap: 6 }}>
               {["minimal", "branded", "vibrant"].map(t => (
-                <button key={t} onClick={() => setTmpl(t)} style={{ flex: 1, padding: "9px 6px", borderRadius: 6, border: `1px solid ${tmpl === t ? C.blue + "80" : C.border}`, background: tmpl === t ? C.blue + "10" : "transparent", cursor: "pointer", textAlign: "center", transition: "all .12s" }}>
+                <button key={t} onClick={() => { setTmpl(t); setPreview(null); }} style={{ flex: 1, padding: "9px 6px", borderRadius: 6, border: `1px solid ${tmpl === t ? C.blue + "80" : C.border}`, background: tmpl === t ? C.blue + "10" : "transparent", cursor: "pointer", textAlign: "center", transition: "all .12s" }}>
                   <div style={{ width: "100%", height: 24, borderRadius: 3, marginBottom: 5, background: t === "minimal" ? "#F8F8F6" : t === "branded" ? "#1E3A5F" : "#FF5C35" }} />
                   <div style={{ fontSize: 11.5, fontWeight: 500, color: tmpl === t ? C.blue : C.text, textTransform: "capitalize" }}>{t}</div>
+                </button>
+              ))}
+            </div>
+          </Sec>
+
+          <Sec label="Tone">
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {["professional", "exciting", "formal", "friendly", "urgent"].map(t => (
+                <button key={t} onClick={() => setInfo(p => ({ ...p, tone: t }))}
+                  style={{ fontSize: 11, padding: "4px 10px", borderRadius: 4, border: `1px solid ${(info.tone||"professional") === t ? C.blue + "80" : C.border}`, background: (info.tone||"professional") === t ? C.blue + "10" : "transparent", cursor: "pointer", color: (info.tone||"professional") === t ? C.blue : C.muted, textTransform: "capitalize" }}>
+                  {t}
                 </button>
               ))}
             </div>
