@@ -240,3 +240,27 @@ create policy "Public can update check-in status" on event_contacts for update
 
 create policy "Public can read contacts for check-in" on event_contacts for select
   using (true);
+
+-- Functions for webhook tracking
+create or replace function increment_campaign_opens(campaign_id uuid)
+returns void language plpgsql security definer as $$
+begin
+  update email_campaigns set total_opened = total_opened + 1 where id = campaign_id;
+end;
+$$;
+
+create or replace function increment_campaign_clicks(campaign_id uuid)
+returns void language plpgsql security definer as $$
+begin
+  update email_campaigns set total_clicked = total_clicked + 1 where id = campaign_id;
+end;
+$$;
+
+-- Index for performance
+create index if not exists idx_event_contacts_event_id on event_contacts(event_id);
+create index if not exists idx_event_contacts_status on event_contacts(status);
+create index if not exists idx_email_campaigns_event_id on email_campaigns(event_id);
+create index if not exists idx_contacts_company_id on contacts(company_id);
+create index if not exists idx_contact_activity_contact_id on contact_activity(contact_id);
+create index if not exists idx_form_submissions_form_id on form_submissions(form_id);
+create index if not exists idx_forms_share_token on forms(share_token);
