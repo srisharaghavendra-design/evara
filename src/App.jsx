@@ -878,8 +878,12 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
-            {activeEvent.location ? ` · ${activeEvent.location}` : ""}
+            {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
+            {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
           </p>
+          {activeEvent.description && (
+            <p style={{ color: C.muted, fontSize: 12, marginTop: 3, fontStyle: "italic", opacity: 0.75 }}>{activeEvent.description}</p>
+          )}
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           {formShareLink && (
