@@ -32,6 +32,7 @@ const ST = {
 const NAV_GROUPS = [
   { label: "Overview", items: [
     { id:"dashboard", label:"Dashboard",  icon:LayoutDashboard },
+    { id:"calendar",  label:"Calendar",   icon:Calendar },
     { id:"analytics", label:"Analytics",  icon:BarChart2 },
   ]},
   { label: "Marketing", items: [
@@ -581,6 +582,7 @@ function MainApp({ session }) {
           {view === "social"    && <SocialView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "analytics" && <AnalyticsView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "campaign"  && <CampaignView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} />}
           {view === "agenda"    && <AgendaView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "feedback"  && <FeedbackView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "lifecycle" && <LifecycleView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -3795,3 +3797,136 @@ function PublicCheckInPage({ eventId }) {
     </div>
   );
 }
+
+// ─── EVENT CALENDAR VIEW ──────────────────────────────────────
+function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire }) {
+  const [month, setMonth] = useState(new Date());
+  const [hoveredEvent, setHoveredEvent] = useState(null);
+
+  const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+  const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+  const startDay = monthStart.getDay(); // 0=Sun
+
+  // Build calendar grid
+  const days = [];
+  for (let i = 0; i < startDay; i++) days.push(null);
+  for (let d = 1; d <= monthEnd.getDate(); d++) days.push(d);
+  while (days.length % 7 !== 0) days.push(null);
+
+  const eventsThisMonth = (events || []).filter(e => {
+    if (!e.event_date) return false;
+    const d = new Date(e.event_date);
+    return d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear();
+  });
+
+  const eventsByDay = {};
+  eventsThisMonth.forEach(e => {
+    const day = new Date(e.event_date).getDate();
+    if (!eventsByDay[day]) eventsByDay[day] = [];
+    eventsByDay[day].push(e);
+  });
+
+  const today = new Date();
+  const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  const upcomingEvents = (events || [])
+    .filter(e => e.event_date && new Date(e.event_date) >= today)
+    .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+    .slice(0, 5);
+
+  return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+        <div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Calendar</h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>All your events across time — click to switch active event.</p>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 16 }}>
+        {/* Calendar */}
+        <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+          {/* Month header */}
+          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
+              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "4px 10px", fontSize: 16 }}>‹</button>
+            <span style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</span>
+            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
+              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "4px 10px", fontSize: 16 }}>›</button>
+          </div>
+          {/* Day headers */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: `1px solid ${C.border}` }}>
+            {DAYS.map(d => <div key={d} style={{ padding: "8px 0", textAlign: "center", fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{d}</div>)}
+          </div>
+          {/* Calendar grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+            {days.map((day, i) => {
+              const isToday = day && today.getDate() === day && today.getMonth() === month.getMonth() && today.getFullYear() === month.getFullYear();
+              const dayEvents = day ? (eventsByDay[day] || []) : [];
+              return (
+                <div key={i} style={{ minHeight: 72, borderRight: i % 7 !== 6 ? `1px solid ${C.border}` : undefined, borderBottom: i < days.length - 7 ? `1px solid ${C.border}` : undefined, padding: "6px 8px", background: !day ? `${C.bg}80` : "transparent" }}>
+                  {day && (
+                    <>
+                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? C.blue : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : C.muted, marginBottom: 4 }}>{day}</div>
+                      {dayEvents.map(ev => (
+                        <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
+                          title={ev.name}
+                          style={{ fontSize: 10, fontWeight: 500, color: "#fff", background: C.blue, borderRadius: 3, padding: "2px 5px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", opacity: 0.9 }}>
+                          {ev.name}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sidebar — upcoming events */}
+        <div>
+          <Sec label="Upcoming events">
+            {upcomingEvents.length === 0 ? (
+              <div style={{ fontSize: 13, color: C.muted, textAlign: "center", padding: 20 }}>No upcoming events</div>
+            ) : upcomingEvents.map(ev => {
+              const d = new Date(ev.event_date);
+              const daysUntil = Math.ceil((d - today) / (1000*60*60*24));
+              const color = daysUntil <= 3 ? C.red : daysUntil <= 14 ? C.amber : C.green;
+              return (
+                <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
+                  style={{ padding: "11px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}`, marginBottom: 8, cursor: "pointer", transition: "border-color .12s" }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{ev.name}</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: C.muted }}>{d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color, background: color + "15", padding: "2px 6px", borderRadius: 3 }}>
+                      {daysUntil === 0 ? "TODAY" : daysUntil === 1 ? "TOMORROW" : `${daysUntil}d`}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </Sec>
+          <Sec label="All events">
+            {(events || []).map(ev => (
+              <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); }}
+                style={{ padding: "8px 10px", background: C.bg, borderRadius: 6, border: `1px solid ${C.border}`, marginBottom: 6, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
+                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{ev.name}</div>
+                  <div style={{ fontSize: 10, color: C.muted }}>{ev.event_date ? new Date(ev.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "No date"}</div>
+                </div>
+                <span style={{ fontSize: 10, color: ev.status === "draft" ? C.muted : C.green, background: ev.status === "draft" ? C.raised : C.green + "15", padding: "2px 6px", borderRadius: 3, textTransform: "capitalize" }}>{ev.status}</span>
+              </div>
+            ))}
+          </Sec>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── EVENT CALENDAR VIEW ──────────────────────────────────────
