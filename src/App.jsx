@@ -806,6 +806,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [loading, setLoading] = useState(true);
   const [filt, setFilt] = useState("all");
   const [formShareLink, setFormShareLink] = useState("");
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [newContact, setNewContact] = useState({ email: "", first_name: "", last_name: "", phone: "", company_name: "" });
   const [sending, setSending] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState(false);
@@ -1132,17 +1134,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
             <Download size={11}/>Export
           </button>
-          <button onClick={async () => {
-            const email = window.prompt("Contact email address:");
-            if (!email || !profile || !activeEvent) return;
-            const trimmed = email.trim().toLowerCase();
-            if (!trimmed.includes("@")) { fire("Invalid email", "err"); return; }
-            const { data: c } = await supabase.from("contacts").upsert({ email: trimmed, company_id: profile.company_id, source: "manual" }, { onConflict: "company_id,email" }).select().single();
-            if (c) {
-              const { data: ec } = await supabase.from("event_contacts").upsert({ contact_id: c.id, event_id: activeEvent.id, company_id: profile.company_id, status: "pending" }, { onConflict: "event_id,contact_id" }).select("*,contacts(*)").single();
-              if (ec) { setContacts(p => [ec, ...p]); fire("Contact added!"); }
-            }
-          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 6, padding: "5px 11px", color: C.blue, cursor: "pointer" }}>
+          <button onClick={() => setShowAddContact(true)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 6, padding: "5px 11px", color: C.blue, cursor: "pointer" }}>
             <Plus size={11} />Add contact
           </button>
           <button onClick={() => {
@@ -1303,6 +1295,56 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
       )}
       </div>
+      {showAddContact && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 420, animation: "fadeUp .2s ease" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text }}>Add contact</h2>
+              <button onClick={() => { setShowAddContact(false); setNewContact({ email: "", first_name: "", last_name: "", phone: "", company_name: "" }); }} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer" }}><X size={16} /></button>
+            </div>
+            {[
+              { key: "email", label: "Email *", ph: "name@company.com", type: "email" },
+              { key: "first_name", label: "First name", ph: "Jane", type: "text" },
+              { key: "last_name", label: "Last name", ph: "Smith", type: "text" },
+              { key: "phone", label: "Phone", ph: "+61 400 000 000", type: "text" },
+              { key: "company_name", label: "Company", ph: "Acme Corp", type: "text" },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 10 }}>
+                <label style={{ display: "block", fontSize: 11, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <input type={f.type} value={newContact[f.key]} onChange={e => setNewContact(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.ph} autoFocus={f.key === "email"}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border}
+                />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+              <button onClick={() => { setShowAddContact(false); setNewContact({ email: "", first_name: "", last_name: "", phone: "", company_name: "" }); }}
+                style={{ flex: 1, padding: "10px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={async () => {
+                if (!newContact.email?.includes("@")) { fire("Valid email required", "err"); return; }
+                const { data: c } = await supabase.from("contacts").upsert({ 
+                  email: newContact.email.trim().toLowerCase(), 
+                  first_name: newContact.first_name || null,
+                  last_name: newContact.last_name || null,
+                  phone: newContact.phone || null,
+                  company_name: newContact.company_name || null,
+                  company_id: profile.company_id, source: "manual" 
+                }, { onConflict: "company_id,email" }).select().single();
+                if (c) {
+                  const { data: ec } = await supabase.from("event_contacts").upsert({ contact_id: c.id, event_id: activeEvent.id, company_id: profile.company_id, status: "pending" }, { onConflict: "event_id,contact_id" }).select("*,contacts(*)").single();
+                  if (ec) { setContacts(p => [ec, ...p.filter(x => x.id !== ec.id)]); }
+                }
+                setShowAddContact(false);
+                setNewContact({ email: "", first_name: "", last_name: "", phone: "", company_name: "" });
+                fire(`✅ ${newContact.first_name || newContact.email} added!`);
+              }} style={{ flex: 2, padding: "10px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                Add Contact →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
