@@ -515,16 +515,33 @@ function MainApp({ session }) {
             })()}
           </div>
           {activeEvent ? (
-            <div style={{ position: "relative" }}>
-              <select value={activeEvent.id} onChange={e => {
-                const ev = events.find(x => x.id === e.target.value);
-                if (ev) setActiveEvent(ev);
-              }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
-                {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
-              </select>
-              <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-                <ChevronDown size={11} color={C.muted} />
+            <div>
+              <div style={{ position: "relative", marginBottom: 6 }}>
+                <select value={activeEvent.id} onChange={e => {
+                  const ev = events.find(x => x.id === e.target.value);
+                  if (ev) setActiveEvent(ev);
+                }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
+                  {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
+                </select>
+                <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
+                  <ChevronDown size={11} color={C.muted} />
+                </div>
               </div>
+              <button onClick={async () => {
+                const newName = window.prompt("Duplicate event as:", activeEvent.name + " (Copy)");
+                if (!newName || !profile) return;
+                const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
+                const { data } = await supabase.from("events").insert({
+                  name: newName, event_date: activeEvent.event_date,
+                  event_time: activeEvent.event_time, location: activeEvent.location,
+                  description: activeEvent.description,
+                  company_id: profile.company_id, status: "draft",
+                  created_by: profile.id, share_token: shareToken,
+                }).select().single();
+                if (data) { setEvents(p => [...p, data]); setActiveEvent(data); fire("✅ Event duplicated!"); }
+              }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
+                + Duplicate event
+              </button>
             </div>
           ) : (
             <button onClick={() => setShowNewEvent(true)} style={{ width: "100%", padding: "8px 11px", background: `${C.blue}12`, border: `1px dashed ${C.blue}40`, borderRadius: 8, color: C.blue, fontSize: 12, textAlign: "left", cursor: "pointer" }}>
