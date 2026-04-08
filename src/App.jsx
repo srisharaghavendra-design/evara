@@ -743,6 +743,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       setLoading(true);
       const { data: ec } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
       setContacts(ec || []);
+      // Load form share link for quick copy
+      supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
+        .then(({ data }) => { if (data?.share_token) setFormShareLink(`${window.location.origin}/form/${data.share_token}`); });
       const { data: m } = await supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single();
       setMetrics(m);
       const scoreMap = {};
@@ -826,6 +829,12 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+          {formShareLink && (
+            <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Registration link copied!"); }}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
+              📝 Reg Link
+            </button>
+          )}
           <button onClick={async () => {
             // Get or create share token for this event
             let token = activeEvent.share_token;
