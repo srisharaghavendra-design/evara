@@ -1378,7 +1378,9 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
-      .then(({ data }) => setCampaigns(data || []));
+      .then(({ data: d }) => setCampaigns(d || []));
+    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).single()
+      .then(({ data: d }) => setData(d));
   }, [activeEvent, profile]);
 
   // Upload image to Supabase Storage
@@ -3327,6 +3329,7 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
   const [generating, setGenerating] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [generated, setGenerated] = useState(null);
+  const [data, setData] = useState(null);
   const [config, setConfig] = useState({
     tone: "professional and exciting",
     highlights: "",
