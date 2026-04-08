@@ -13,7 +13,7 @@ serve(async (req) => {
     const { campaignId, contacts, subject, htmlContent, plainText, fromEmail, fromName } = await req.json();
     
     const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
-    const FROM_EMAIL = fromEmail || Deno.env.get("SENDGRID_FROM_EMAIL") || "hello@evarahq.com";
+    const FROM_EMAIL = fromEmail || Deno.env.get("FROM_EMAIL") || "hello@evarahq.com";
     const FROM_NAME = fromName || "evara";
 
     if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY not configured");

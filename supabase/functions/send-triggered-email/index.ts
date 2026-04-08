@@ -108,7 +108,7 @@ serve(async (req) => {
     const { contacts, triggerType, eventName, eventDate, eventTime, location, orgName, calendarUrl, feedbackUrl, eventUrl } = body;
     
     const SENDGRID_API_KEY = Deno.env.get("SENDGRID_API_KEY");
-    const FROM_EMAIL = Deno.env.get("SENDGRID_FROM_EMAIL") || "hello@evarahq.com";
+    const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "hello@evarahq.com";
     if (!SENDGRID_API_KEY) throw new Error("SENDGRID_API_KEY not configured in Supabase secrets");
     
     const templateFn = TEMPLATES[triggerType];
