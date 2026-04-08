@@ -1106,6 +1106,24 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: liveMode ? C.green : C.muted, animation: liveMode ? "pulse 1.5s infinite" : "none" }} />
             {liveMode ? "Live ✓ (10s refresh)" : "Enable Live Mode"}
           </button>
+          <button onClick={async () => {
+              fire("🤖 Generating AI report…");
+              const { data: { session } } = await supabase.auth.getSession();
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ eventId: activeEvent.id, companyId: profile?.company_id })
+              });
+              const data = await res.json();
+              if (data.success && data.html) {
+                const win = window.open("", "_blank");
+                win.document.write(data.html);
+                win.document.close();
+                fire("✅ Report ready — print or save as PDF!");
+              } else { fire("Report generation failed", "err"); }
+            }} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "7px 13px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer" }}>
+              <Sparkles size={11} />✨ AI Report
+          </button>
           {daysToEvent !== null && (
             <div style={{ textAlign: "center", background: C.card, border: `1px solid ${daysToEvent <= 3 ? C.red + "50" : daysToEvent <= 7 ? C.amber + "50" : C.border}`, borderRadius: 10, padding: "12px 20px" }}>
               <div style={{ fontSize: 32, fontWeight: 700, color: daysToEvent <= 3 ? C.red : daysToEvent <= 7 ? C.amber : C.text, lineHeight: 1 }}>{daysToEvent > 0 ? daysToEvent : "Today!"}</div>
