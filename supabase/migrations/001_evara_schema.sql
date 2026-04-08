@@ -295,3 +295,11 @@ create table if not exists polls (
 -- Add dietary requirements
 alter table event_contacts add column if not exists dietary text;
 alter table event_contacts add column if not exists notes text;
+
+-- Add share_token to events for read-only dashboard sharing
+alter table events add column if not exists share_token text unique;
+create index if not exists idx_events_share_token on events(share_token);
+
+-- Public read access for shared dashboards
+create policy "Public can view events by share token" on events for select
+  using (share_token is not null);

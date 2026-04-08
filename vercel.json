@@ -1,7 +1,20 @@
 {
   "rewrites": [
-    { "source": "/form/:token", "destination": "/index.html" },
-    { "source": "/checkin/:eventId", "destination": "/index.html" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/form/:token",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/checkin/:eventId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/share/:token",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }

@@ -317,6 +317,10 @@ export default function App() {
     const eventId = path.replace('/checkin/', '');
     return <PublicCheckInPage eventId={eventId} />;
   }
+  if (path.startsWith('/share/')) {
+    const shareToken = path.replace('/share/', '');
+    return <PublicDashboardPage token={shareToken} />;
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setBooting(false); });
@@ -475,12 +479,14 @@ function MainApp({ session }) {
 
   const createEvent = async () => {
     if (!newEventName.trim() || !profile) return;
+    const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
     const { data } = await supabase.from("events").insert({ 
       name: newEventName.trim(), 
       event_date: newEventExtra?.event_date || null, 
       event_time: newEventExtra?.event_time || null,
       location: newEventExtra?.location || null,
-      company_id: profile.company_id, status: "draft", created_by: profile.id 
+      company_id: profile.company_id, status: "draft", created_by: profile.id,
+      share_token: shareToken,
     }).select().single();
     if (data) { setEvents(p => [...p, data]); setActiveEvent(data); fire("Event created!"); }
     setNewEventExtra({ event_date: "", event_time: "", location: "" });
@@ -808,6 +814,19 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </p>
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+          <button onClick={async () => {
+            // Get or create share token for this event
+            let token = activeEvent.share_token;
+            if (!token) {
+              token = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
+              await supabase.from("events").update({ share_token: token }).eq("id", activeEvent.id);
+            }
+            const shareUrl = `${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/share/${token}`;
+            navigator.clipboard?.writeText(shareUrl);
+            fire("📊 Read-only dashboard link copied! Share with stakeholders.");
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
+            📊 Share Dashboard
+          </button>
           <button onClick={() => setLiveMode(p => !p)}
             style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${liveMode ? C.green + "60" : C.border}`, background: liveMode ? C.green + "12" : "transparent", color: liveMode ? C.green : C.muted, cursor: "pointer" }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: liveMode ? C.green : C.muted, animation: liveMode ? "pulse 1.5s infinite" : "none" }} />
@@ -4612,6 +4631,184 @@ function QAView({ supabase, profile, activeEvent, fire }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── PUBLIC SHARED DASHBOARD ──────────────────────────────────
+// Read-only view at /share/:token — no login needed
+function PublicDashboardPage({ token }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  const load = async () => {
+    try {
+      // Lookup event by share token stored in event metadata
+      const { data: event } = await supabase
+        .from("events")
+        .select("*,companies(*)")
+        .eq("share_token", token)
+        .single();
+
+      if (!event) { setError("Dashboard not found or link has expired."); setLoading(false); return; }
+
+      const [{ data: ecs }, { data: cams }] = await Promise.all([
+        supabase.from("event_contacts").select("status").eq("event_id", event.id),
+        supabase.from("email_campaigns").select("*").eq("event_id", event.id).eq("status", "sent")
+      ]);
+
+      const statusCounts = (ecs || []).reduce((acc, r) => {
+        acc[r.status] = (acc[r.status] || 0) + 1;
+        return acc;
+      }, {});
+
+      setData({
+        event,
+        total: (ecs || []).length,
+        confirmed: statusCounts.confirmed || 0,
+        attended: statusCounts.attended || 0,
+        declined: statusCounts.declined || 0,
+        pending: statusCounts.pending || 0,
+        totalSent: (cams || []).reduce((a, c) => a + (c.total_sent || 0), 0),
+        totalOpened: (cams || []).reduce((a, c) => a + (c.total_opened || 0), 0),
+        campaigns: cams || [],
+      });
+      setLastRefresh(new Date());
+    } catch(e) { setError(e.message); }
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, [token]);
+
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [token]);
+
+  if (loading) return (
+    <div style={{ minHeight: "100vh", background: "#080809", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui" }}>
+      <div style={{ color: "#636366" }}>Loading dashboard…</div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ minHeight: "100vh", background: "#080809", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui" }}>
+      <div style={{ textAlign: "center", color: "#636366" }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>🔒</div>
+        <div style={{ color: "#F5F5F7" }}>{error}</div>
+      </div>
+    </div>
+  );
+
+  const { event, total, confirmed, attended, declined, pending, totalSent, totalOpened, campaigns } = data;
+  const openRate = totalSent ? Math.round((totalOpened / totalSent) * 100) : 0;
+  const showRate = confirmed ? Math.round((attended / confirmed) * 100) : 0;
+
+  const METRICS = [
+    { label: "Total Registered", val: total, color: "#F5F5F7" },
+    { label: "Confirmed", val: confirmed, color: "#30D158" },
+    { label: "Attended", val: attended, color: "#0A84FF" },
+    { label: "Pending", val: pending, color: "#FF9F0A" },
+    { label: "Declined", val: declined, color: "#FF453A" },
+    { label: "Emails Sent", val: totalSent, color: "#5AC8FA" },
+    { label: "Open Rate", val: `${openRate}%`, color: "#5AC8FA" },
+    { label: "Show Rate", val: `${showRate}%`, color: "#30D158" },
+  ];
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#080809", fontFamily: "system-ui, -apple-system, sans-serif", color: "#F5F5F7" }}>
+      {/* Header */}
+      <div style={{ background: "#0D0D0F", borderBottom: "1px solid #1C1C1F", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 5, background: "#0A84FF", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <span style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>e</span>
+          </div>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "#F5F5F7" }}>evara</span>
+          <span style={{ fontSize: 12, color: "#636366" }}>/ Event Dashboard</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#30D158", animation: "pulse 2s infinite" }} />
+          <span style={{ fontSize: 11, color: "#636366" }}>Live · Updated {lastRefresh.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Event info */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "#0A84FF", textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 6 }}>
+            {event.companies?.name || "Event"}
+          </div>
+          <h1 style={{ fontSize: 28, fontWeight: 700, letterSpacing: "-0.8px", margin: "0 0 6px" }}>{event.name}</h1>
+          <div style={{ fontSize: 14, color: "#636366" }}>
+            {event.event_date && new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
+            {event.location && ` · ${event.location}`}
+          </div>
+        </div>
+
+        {/* Metric grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 24 }}>
+          {METRICS.map(m => (
+            <div key={m.label} style={{ background: "#111114", borderRadius: 10, padding: "16px 14px", border: "1px solid #1C1C1F" }}>
+              <div style={{ fontSize: 10, color: "#636366", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 8 }}>{m.label}</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: m.color, letterSpacing: "-0.5px" }}>{m.val}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Attendance funnel */}
+        <div style={{ background: "#111114", borderRadius: 10, border: "1px solid #1C1C1F", padding: 20, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: "#F5F5F7", marginBottom: 16 }}>Event Funnel</div>
+          {[
+            { label: "Emails Sent", val: totalSent, color: "#0A84FF" },
+            { label: "Opened", val: totalOpened, color: "#5AC8FA" },
+            { label: "Registered", val: total, color: "#AEAEB2" },
+            { label: "Confirmed", val: confirmed, color: "#FF9F0A" },
+            { label: "Attended", val: attended, color: "#30D158" },
+          ].map((s, i, arr) => {
+            const pct = arr[0].val ? Math.round((s.val / arr[0].val) * 100) : 0;
+            return (
+              <div key={s.label} style={{ marginBottom: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 12 }}>
+                  <span style={{ color: "#AEAEB2" }}>{s.label}</span>
+                  <span style={{ color: s.color, fontWeight: 600 }}>{s.val.toLocaleString()} {i > 0 && arr[0].val > 0 ? `(${pct}%)` : ""}</span>
+                </div>
+                <div style={{ height: 6, background: "#1C1C1F", borderRadius: 3 }}>
+                  <div style={{ height: "100%", background: s.color, width: `${pct}%`, borderRadius: 3, transition: "width .5s ease" }} />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Campaigns */}
+        {campaigns.length > 0 && (
+          <div style={{ background: "#111114", borderRadius: 10, border: "1px solid #1C1C1F", overflow: "hidden" }}>
+            <div style={{ padding: "13px 16px", borderBottom: "1px solid #1C1C1F", fontSize: 13, fontWeight: 500, color: "#F5F5F7" }}>
+              Email Campaigns
+            </div>
+            {campaigns.map((cam, i) => {
+              const or = cam.total_sent ? Math.round((cam.total_opened / cam.total_sent) * 100) : 0;
+              return (
+                <div key={cam.id} style={{ padding: "11px 16px", borderBottom: i < campaigns.length - 1 ? "1px solid #1C1C1F" : undefined, display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, color: "#F5F5F7" }}>{cam.subject || cam.name}</div>
+                    <div style={{ fontSize: 11, color: "#636366", marginTop: 2, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}</div>
+                  </div>
+                  <div style={{ fontSize: 12, color: "#636366" }}>{cam.total_sent} sent</div>
+                  <div style={{ fontSize: 12, color: or >= 30 ? "#30D158" : "#FF9F0A", fontWeight: 600 }}>{or}% open</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div style={{ textAlign: "center", marginTop: 32, fontSize: 11, color: "#2C2C30" }}>
+          Powered by evara · evara-tau.vercel.app
+        </div>
+      </div>
     </div>
   );
 }
