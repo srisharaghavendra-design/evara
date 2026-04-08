@@ -513,7 +513,10 @@ function MainApp({ session }) {
   useEffect(() => {
     if (!session) return;
     const checkSmartNotifs = async () => {
-      const { data: events } = await supabase.from("events").select("id,name,event_date,status").eq("company_id", session.user?.user_metadata?.company_id || "").order("event_date");
+      const { data: profileData } = await supabase.from("profiles").select("company_id").eq("id", session.user.id).single();
+      const compId = profileData?.company_id;
+      if (!compId) return;
+      const { data: events } = await supabase.from("events").select("id,name,event_date,status").eq("company_id", compId).order("event_date");
       if (!events?.length) return;
       const now = new Date();
       const newNotifs = [];
@@ -1254,6 +1257,21 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <button onClick={() => setLiveMode(false)} style={{ marginLeft: "auto", fontSize: 11, color: C.muted, background: "transparent", border: "none", cursor: "pointer" }}>✕ Stop</button>
         </div>
       )}
+      {/* ─── POST-EVENT NUDGE ─── */}
+      {activeEvent?.event_date && Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) < 0 && !campaigns.some(c => c.email_type === "thank_you" && c.status === "sent") && (
+        <div style={{ background: C.teal + "10", border: `1px solid ${C.teal}30`, borderRadius: 10, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 20 }}>🎉</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 2 }}>Event complete! Time to follow up.</div>
+            <div style={{ fontSize: 11.5, color: C.muted }}>Send your Thank You email and generate the AI post-event report while it's fresh.</div>
+          </div>
+          <button onClick={() => document.querySelector('button[data-view="schedule"]')?.click()}
+            style={{ fontSize: 11.5, padding: "6px 14px", background: C.teal, border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>
+            Send Thank You →
+          </button>
+        </div>
+      )}
+
       {/* ─── EVENT LIFECYCLE PROGRESS ─── */}
       {activeEvent?.event_date && (() => {
         const now = new Date();
@@ -2393,6 +2411,28 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   <button onClick={() => setPreviewCam(cam)}
                     style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.borderHi}`, background: "transparent", color: C.sec, cursor: "pointer" }}>
                     <Eye size={11} />Preview
+                  </button>
+                )}
+                {cam.html_content && cam.status !== "sent" && (
+                  <button onClick={async () => {
+                    const testEmail = window.prompt("Send test to:", profile?.email || "");
+                    if (!testEmail) return;
+                    fire("📨 Sending test…");
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                      body: JSON.stringify({
+                        contacts: [{ email: testEmail, first_name: "Test" }],
+                        subject: `[TEST] ${cam.subject}`,
+                        htmlContent: cam.html_content,
+                        plainText: cam.plain_text || cam.subject,
+                      })
+                    });
+                    const d = await res.json();
+                    fire(d.sent > 0 ? `✅ Test sent to ${testEmail}` : `Failed: ${d.error || "unknown"}`, d.sent > 0 ? "ok" : "err");
+                  }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer" }}>
+                    <Send size={11} />Test
                   </button>
                 )}
                 {cam.status !== "sent" && cam.html_content && (
