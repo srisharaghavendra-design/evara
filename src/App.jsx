@@ -1967,6 +1967,29 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text }}>Add contact</h2>
               <button onClick={() => { setShowAddContact(false); setNewContact({ email: "", first_name: "", last_name: "", phone: "", company_name: "" }); }} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer" }}><X size={16} /></button>
             </div>
+            <div style={{ marginBottom: 14, padding: "10px 12px", background: C.bg, borderRadius: 7, border: `1px solid ${C.border}` }}>
+              <div style={{ fontSize: 10, color: C.muted, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.6px" }}>Quick add — paste emails (one per line)</div>
+              <textarea placeholder={"alice@acme.com
+bob@corp.com"} rows={2}
+                onBlur={async (e) => {
+                  const emails = e.target.value.split(/[
+,;]+/).map(s => s.trim().toLowerCase()).filter(s => s.includes("@"));
+                  if (!emails.length) return;
+                  let added = 0;
+                  for (const email of emails) {
+                    const { data: c } = await supabase.from("contacts").upsert({ email, company_id: profile.company_id, source: "manual" }, { onConflict: "email,company_id" }).select().single();
+                    if (c) { await supabase.from("event_contacts").upsert({ event_id: activeEvent.id, contact_id: c.id, company_id: profile.company_id, status: "pending" }, { onConflict: "event_id,contact_id", ignoreDuplicates: true }); added++; }
+                  }
+                  if (added) {
+                    fire(`✅ ${added} contact${added !== 1 ? "s" : ""} added!`);
+                    e.target.value = "";
+                    const { data: fresh } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
+                    if (fresh) setContacts(fresh);
+                  }
+                }}
+                style={{ width: "100%", background: "transparent", border: "none", outline: "none", color: C.text, fontSize: 12, resize: "none", fontFamily: "inherit", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, textAlign: "center" }}>— or add one contact manually —</div>
             {[
               { key: "email", label: "Email *", ph: "name@company.com", type: "email" },
               { key: "first_name", label: "First name", ph: "Jane", type: "text" },
