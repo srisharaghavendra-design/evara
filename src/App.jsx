@@ -2326,11 +2326,33 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                     </div>
                   )}
                 </div>
-                <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: "100%", border: "none", minHeight: 600, transition: "width .3s ease" }} title="Email Preview" sandbox="allow-same-origin" />
+                <div style={{ background: "#f2f2f2", borderRadius: 8, overflow: "hidden" }}>
+                  {/* Inbox header mock */}
+                  <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1a73e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 600 }}>O</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: "#222" }}>{preview.subject}</div>
+                      <div style={{ fontSize: 10.5, color: "#888" }}>hello@evarahq.com · to me</div>
+                    </div>
+                    <div style={{ fontSize: 10, color: "#aaa" }}>{new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</div>
+                  </div>
+                  <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: "100%", border: "none", minHeight: 560, transition: "width .3s ease", display: "block" }} title="Email Preview" sandbox="allow-same-origin" />
+                </div>
               </div>
             )}
           </div>
-          {preview && <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          {preview && <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            <button onClick={() => {
+              const win = window.open("", "_blank");
+              win.document.write(preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"));
+              win.document.close();
+            }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+              🌐 Open in browser
+            </button>
+            <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied to clipboard"); }}
+              style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
+              📋 Copy HTML
+            </button>
             <button onClick={() => setPreview(null)} style={{ padding: "9px 14px", background: C.raised, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>Clear</button>
             <button onClick={() => {
               const w = window.open("", "_blank");
