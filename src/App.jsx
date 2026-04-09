@@ -920,6 +920,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
   const [selectedContact, setSelectedContact] = useState(null);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Escape key closes contact panel
   useEffect(() => {
