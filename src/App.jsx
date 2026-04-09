@@ -5927,9 +5927,9 @@ function PublicFormPage({ token }) {
   );
 
   if (submitted) return (
-    <div style={{ minHeight: "100vh", background: "#F2F2F7", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ textAlign: "center", maxWidth: 480, padding: 40, background: "#fff", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-        <div style={{ fontSize: 56, marginBottom: 16 }}>🎉</div>
+    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0A1628 0%, #1a2a4a 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", padding: 24 }}>
+      <div style={{ textAlign: "center", maxWidth: 460, width: "100%", padding: "48px 40px", background: "#fff", borderRadius: 20, boxShadow: "0 24px 64px rgba(0,0,0,.25)" }}>
+        <div style={{ width: 72, height: 72, background: "#E8F5E9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 20px" }}>✅</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 10 }}>You're confirmed!</div>
         <div style={{ fontSize: 15, color: "#666", lineHeight: 1.6, marginBottom: 16 }}>
           Thanks for registering for <strong>{event?.name}</strong>. A confirmation email is on its way to you.
@@ -5954,7 +5954,16 @@ function PublicFormPage({ token }) {
           </button>
         )}
         <div style={{ marginTop: 16, fontSize: 12, color: "#aaa" }}>A confirmation email will be sent to you shortly.</div>
-        <div style={{ marginTop: 8, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
+        <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
+          {event?.event_date && (
+            <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event?.name||"Event")}&dates=${(event.event_date||"").replace(/-/g,"")}&details=${encodeURIComponent((event?.description||"")+" "+window.location.href)}&location=${encodeURIComponent(event?.location||"")}`}
+              target="_blank" rel="noopener"
+              style={{ fontSize: 13, padding: "8px 20px", background: "#0A84FF", color: "#fff", borderRadius: 20, textDecoration: "none", fontWeight: 500 }}>
+              📅 Add to Calendar
+            </a>
+          )}
+        </div>
+        <div style={{ marginTop: 16, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
       </div>
     </div>
   );
