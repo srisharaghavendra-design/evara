@@ -1137,7 +1137,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
 
   // Apply NL filter first, then status filter on top
   const baseContacts = nlFiltered !== null ? nlFiltered : contacts;
-  const rows = (filt === "all" ? baseContacts : baseContacts.filter(c => c.status === filt)).filter(ec => {
+  const rows = (filt === "all" ? [...baseContacts].sort((a,b) => {
+    // Pending first, then confirmed, then rest
+    const order = { pending: 0, confirmed: 1, attended: 2, declined: 3 };
+    return (order[a.status] ?? 4) - (order[b.status] ?? 4);
+  }) : baseContacts.filter(c => c.status === filt)).filter(ec => {
     if (!scoreFilter) return true;
     const s = scores[ec.contacts?.id]?.score || 0;
     if (scoreFilter === "hot")  return s >= 15;
@@ -1451,7 +1455,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         const pct = Math.min(100, Math.round((daysPast / totalDays) * 100));
         
         const milestones = [
-          { label: "Save the Date", day: -90, done: campaigns?.some(c => c.email_type === "save_the_date" && c.status === "sent") },
+          { label: "Save the Date", day: -90, done: campaigns?.some(c => c.email_type === "save_the_date" && c.status === "sent"), openRate: (() => { const c = campaigns?.find(x => x.email_type === "save_the_date" && x.status === "sent"); return c?.total_sent > 0 ? Math.round((c.total_opened||0)/c.total_sent*100) : null; })() },
           { label: "Invitation", day: -60, done: campaigns?.some(c => c.email_type === "invitation" && c.status === "sent") },
           { label: "Reminder", day: -14, done: campaigns?.some(c => c.email_type === "reminder" && c.status === "sent") },
           { label: "Event Day", day: 0, done: daysLeft <= 0 },
@@ -1475,7 +1479,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               {milestones.map((m, i) => (
                 <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3, flex: 1 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: "50%", background: m.done ? C.green : C.raised, border: `2px solid ${m.done ? C.green : C.border}`, boxShadow: m.done ? `0 0 6px ${C.green}60` : "none" }} />
+                  <div title={m.done ? (m.openRate != null ? `${m.openRate}% opened` : "Sent ✓") : "Not sent"}
+                    style={{ width: 10, height: 10, borderRadius: "50%", background: m.done ? C.green : C.raised, border: `2px solid ${m.done ? C.green : C.border}`, boxShadow: m.done ? `0 0 6px ${C.green}60` : "none", cursor: m.done ? "help" : "default" }} />
+                  {m.done && m.openRate != null && <div style={{ fontSize: 9, color: m.openRate >= 30 ? C.green : m.openRate >= 20 ? C.amber : C.red }}>{m.openRate}%</div>}
                   <span style={{ fontSize: 9, color: m.done ? C.green : C.muted, textAlign: "center", lineHeight: 1.3 }}>{m.label}</span>
                 </div>
               ))}
@@ -4498,6 +4504,12 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
               {!activeForm && <Alert type="error">Save the form first to get a share link</Alert>}
               <Sec label="Shareable link">
                 <div style={{ fontSize: 12.5, color: C.muted, marginBottom: 10 }}>Anyone with this link can fill in the form. No login required.</div>
+                {activeForm?.share_token && (
+                  <button onClick={() => window.open(`${window.location.hostname==="localhost"?"https://evara-tau.vercel.app":window.location.origin}/form/${activeForm.share_token}`, "_blank")}
+                    style={{ fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.blue}40`, background:C.blue+"10", color:C.blue, cursor:"pointer", marginBottom:8 }}>
+                    🔗 Open form in new tab
+                  </button>
+                )}
                 <div style={{ display: "flex", gap: 8 }}>
                   <div style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, padding: "9px 12px", fontSize: 12, color: C.sec, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{shareLink}</div>
                   <button onClick={() => { navigator.clipboard?.writeText(shareLink); fire("Link copied!"); }} style={{ padding: "9px 14px", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Copy</button>
