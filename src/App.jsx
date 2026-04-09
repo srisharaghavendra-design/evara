@@ -1971,8 +1971,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               <div style={{ fontSize: 10, color: C.muted, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.6px" }}>Quick add — paste emails (one per line)</div>
               <textarea placeholder={"alice@acme.com\nbob@corp.com"} rows={2}
                 onBlur={async (e) => {
-                  const emails = e.target.value.split(/[
-,;]+/).map(s => s.trim().toLowerCase()).filter(s => s.includes("@"));
+                  const emails = e.target.value.split(/[\n\r,;]+/).map(s => s.trim().toLowerCase()).filter(s => s.includes("@"));
                   if (!emails.length) return;
                   let added = 0;
                   for (const email of emails) {
