@@ -703,7 +703,7 @@ function MainApp({ session }) {
               <div style={{ position: "relative", marginBottom: 6 }}>
                 <select value={activeEvent.id} onChange={e => {
                   const ev = events.find(x => x.id === e.target.value);
-                  if (ev) setActiveEvent(ev);
+                  if (ev) { setActiveEvent(ev); }
                 }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
                   {events.map(ev => {
                     const daysLeft = ev.event_date ? Math.ceil((new Date(ev.event_date) - new Date()) / (1000*60*60*24)) : null;
