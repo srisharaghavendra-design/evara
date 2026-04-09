@@ -2938,14 +2938,14 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(null);
   const [blocks, setBlocks] = useState({ hero: true, countdown: true, details: true, speakers: true, rsvp: true, sponsors: true });
-  const [info, setInfo] = useState({ title: "", tagline: "", description: "", cta_text: "Register Now", template: "corporate", slug: "" });
+  const [info, setInfo] = useState({ title: "", tagline: "", description: "", headline: "", subheadline: "", about_text: "", brand_color: "#0A84FF", cta_text: "Register Now", template: "corporate", slug: "" });
   const TMPLS = [{ id: "minimal", name: "Minimal", desc: "Clean, white & text-forward" }, { id: "corporate", name: "Corporate", desc: "Dark, professional & premium" }, { id: "bold", name: "Bold", desc: "Deep, vibrant & high-energy" }];
   const BLOCK_LIST = [{ id: "hero", label: "Hero Section" }, { id: "countdown", label: "Countdown Timer" }, { id: "details", label: "Event Details" }, { id: "speakers", label: "Speakers" }, { id: "rsvp", label: "RSVP Form" }, { id: "sponsors", label: "Sponsors" }];
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => {
-        if (data) { setPage(data); setInfo({ title: data.title || "", tagline: data.tagline || "", description: data.description || "", cta_text: data.cta_text || "Register Now", template: data.template || "corporate", slug: data.slug || "" }); setBlocks(data.blocks || blocks); setStep(2); }
+        if (data) { setPage(data); setInfo({ title: data.title || "", tagline: data.tagline || "", description: data.description || "", headline: data.headline || "", subheadline: data.subheadline || "", about_text: data.about_text || "", brand_color: data.brand_color || "#0A84FF", cta_text: data.cta_text || "Register Now", template: data.template || "corporate", slug: data.slug || "" }); setBlocks(data.blocks || blocks); setStep(2); }
         setLoading(false);
       });
     if (activeEvent) { setInfo(p => ({ ...p, title: p.title || activeEvent.name || "", description: p.description || activeEvent.description || "", slug: p.slug || (activeEvent.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-") })); }
@@ -3026,7 +3026,15 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
               </div>
             </Sec>
             <Sec label="Event info">
-              {[{ k: "title", ph: "Event name" }, { k: "tagline", ph: "Tagline" }, { k: "cta_text", ph: "Register Now" }].map(f => (
+              {[
+                { k: "title", ph: activeEvent?.name || "Event name" },
+                { k: "headline", ph: "Join 200 Leaders Driving Change" },
+                { k: "subheadline", ph: "An exclusive gathering for senior leaders" },
+                { k: "tagline", ph: "Short tagline for the page" },
+                { k: "about_text", ph: "Describe what attendees will experience..." },
+                { k: "brand_color", ph: "#0A84FF" },
+                { k: "cta_text", ph: "Register Now" },
+              ].map(f => (
                 <div key={f.k} style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 3, textTransform: "capitalize" }}>{f.k.replace(/_/g, " ")}</div>
                   <input value={info[f.k]} onChange={e => setInfo(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.ph} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 8px", fontSize: 12.5, outline: "none" }} />
