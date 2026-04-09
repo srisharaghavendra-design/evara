@@ -922,6 +922,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
   const [selectedContact, setSelectedContact] = useState(null);
+  const [selectedRows, setSelectedRows] = useState(new Set());
+  const toggleRow = (id) => setSelectedRows(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const toggleAll = (rows) => setSelectedRows(p => p.size === rows.length ? new Set() : new Set(rows.map(r => r.id)));
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Escape key closes contact panel
@@ -1682,9 +1685,54 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         {loading ? (
           <div style={{ padding: "40px", textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading contacts…</div>
         ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <>
+            {selectedRows.size > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", background: C.blue+"10", border: `1px solid ${C.blue}30`, borderRadius: 8, marginBottom: 8, flexWrap: "wrap" }}>
+                <span style={{ fontSize: 12, color: C.blue, fontWeight: 600 }}>{selectedRows.size} selected</span>
+                <span style={{ fontSize: 12, color: C.border }}>·</span>
+                <button onClick={async () => {
+                  const sel = rows.filter(ec => selectedRows.has(ec.id));
+                  for (const ec of sel) await supabase.from("event_contacts").update({ status: "confirmed" }).eq("id", ec.id);
+                  fire(`✅ ${sel.length} marked Confirmed`); setSelectedRows(new Set());
+                  const { data } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at",{ascending:false}); setContacts(data||[]);
+                }} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.green}40`, background: "transparent", color: C.green, cursor: "pointer" }}>✅ Confirm</button>
+                <button onClick={async () => {
+                  const sel = rows.filter(ec => selectedRows.has(ec.id));
+                  for (const ec of sel) await supabase.from("event_contacts").update({ status: "attended" }).eq("id", ec.id);
+                  fire(`🎟 ${sel.length} marked Attended`); setSelectedRows(new Set());
+                  const { data } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at",{ascending:false}); setContacts(data||[]);
+                }} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.blue}40`, background: "transparent", color: C.blue, cursor: "pointer" }}>🎟 Attended</button>
+                <button onClick={async () => {
+                  const sel = rows.filter(ec => selectedRows.has(ec.id));
+                  for (const ec of sel) await supabase.from("event_contacts").update({ status: "declined" }).eq("id", ec.id);
+                  fire(`❌ ${sel.length} marked Declined`); setSelectedRows(new Set());
+                  const { data } = await supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at",{ascending:false}); setContacts(data||[]);
+                }} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.red}40`, background: "transparent", color: C.red, cursor: "pointer" }}>❌ Decline</button>
+                <button onClick={async () => {
+                  const sel = rows.filter(ec => selectedRows.has(ec.id));
+                  const cList = sel.map(ec => ({ id: ec.contacts?.id, email: ec.contacts?.email, first_name: ec.contacts?.first_name, unsubscribed: ec.contacts?.unsubscribed })).filter(c => c.email && !c.unsubscribed);
+                  const draft = campaigns.find(c => c.html_content && c.status !== "sent");
+                  if (!draft) { fire("No draft email — generate one in eDM Builder first", "err"); return; }
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ campaignId: draft.id, contacts: cList, subject: draft.subject, htmlContent: draft.html_content, plainText: draft.plain_text, companyId: profile.company_id })
+                  });
+                  const d = await res.json();
+                  d.success ? (fire(`📧 Sent to ${d.sent} contacts`), setSelectedRows(new Set())) : fire(d.error||"Send failed","err");
+                }} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.amber}40`, background: "transparent", color: C.amber, cursor: "pointer" }}>📧 Email</button>
+                <button onClick={() => setSelectedRows(new Set())} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", marginLeft: "auto" }}>✕ Clear</button>
+              </div>
+            )}
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                <th style={{ padding: "9px 8px 9px 13px", width: 32 }}>
+                  <input type="checkbox"
+                    checked={selectedRows.size > 0 && selectedRows.size === rows.length}
+                    onChange={() => toggleAll(rows)}
+                    style={{ accentColor: C.blue, cursor: "pointer" }} />
+                </th>
                 {["Name", "Company", "Lead Score", "Status", "Phone", "Actions"].map(h => (
                   <th key={h} style={{ padding: "9px 13px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
                 ))}
@@ -1701,8 +1749,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                 const score = scores[c.id] || 0;
                 const isSending = sending === c.id;
                 return (
-                  <tr key={ec.id} className="rh" onClick={() => setSelectedContact(ec)} style={{ cursor: "pointer", borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : undefined, background: "transparent", transition: "background .08s" }}>
-                    <td style={{ padding: "11px 13px" }}>
+                  <tr key={ec.id} className="rh" style={{ borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : undefined, background: selectedRows.has(ec.id) ? C.blue+"08" : "transparent", transition: "background .08s" }}>
+                    <td style={{ padding: "11px 8px 11px 13px", width: 32 }} onClick={e => { e.stopPropagation(); toggleRow(ec.id); }}>
+                      <input type="checkbox" checked={selectedRows.has(ec.id)} onChange={() => toggleRow(ec.id)} style={{ accentColor: C.blue, cursor: "pointer" }} />
+                    </td>
+                    <td style={{ padding: "11px 13px" }} onClick={() => setSelectedContact(ec)}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         <div style={{ width: 29, height: 29, borderRadius: "50%", background: `${st.color}18`, border: `1px solid ${st.color}28`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: st.color, flexShrink: 0 }}>
                           {ini(`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email || "?")}
@@ -1763,6 +1814,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               })}
             </tbody>
           </table>
+          </>
         )}
       {/* EDIT EVENT MODAL */}
       {showEditEvent && activeEvent && (
@@ -2622,7 +2674,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-        body: JSON.stringify({ campaignId: sendModal.id, contacts, subject: sendModal.subject, htmlContent: sendModal.html_content, plainText: sendModal.plain_text })
+        body: JSON.stringify({ campaignId: sendModal.id, contacts, subject: sendModal.subject, htmlContent: sendModal.html_content, plainText: sendModal.plain_text, companyId: profile.company_id, fromEmail: "hello@evarahq.com", fromName: activeEvent?.name || "evara" })
       });
       const data = await res.json();
       if (data.success) {
@@ -3327,6 +3379,17 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 4 }}>Import Contacts</h2>
             <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Paste emails, CSV data, or "First Last &lt;email&gt;" format. Business emails only.</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 14px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, cursor: "pointer", fontWeight: 500 }}>
+                📁 Upload CSV
+                <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => {
+                  const f = e.target.files?.[0]; if (!f) return;
+                  const r = new FileReader(); r.onload = ev => setImportText(ev.target.result); r.readAsText(f);
+                  e.target.value = "";
+                }} />
+              </label>
+              <span style={{ fontSize: 11, color: C.muted }}>or paste below ↓</span>
+            </div>
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
               {[
                 { label: "CSV format", ex: `first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
@@ -4672,6 +4735,131 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
           </div>
         )}
         </>
+      )}
+    </div>
+  );
+}
+
+
+// ─── ENGAGEMENT BREAKDOWN ─────────────────────────────────────
+function EngagementBreakdown({ supabase, activeEvent, campaigns }) {
+  const [sends, setSends] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [selCam, setSelCam] = useState("all");
+
+  const load = async () => {
+    if (!activeEvent) return;
+    setLoading(true);
+    const sentIds = (campaigns || []).filter(c => c.status === "sent").map(c => c.id);
+    if (!sentIds.length) { setLoading(false); return; }
+    const q = supabase.from("email_sends")
+      .select("*, contacts(first_name,last_name,email,company_name)")
+      .order("sent_at", { ascending: false }).limit(200);
+    const { data } = await (selCam === "all" ? q.in("campaign_id", sentIds) : q.eq("campaign_id", selCam));
+    setSends(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { if (expanded) load(); }, [expanded, selCam, activeEvent]);
+
+  const sentCams = (campaigns || []).filter(c => c.status === "sent");
+  if (!sentCams.length) return null;
+
+  const opens  = sends.filter(s => s.opened_at);
+  const clicks = sends.filter(s => s.clicked_at);
+  const openPct = sends.length ? Math.round(opens.length / sends.length * 100) : 0;
+
+  const doExport = () => {
+    const csv = ["Name,Email,Company,Status,Sent,Opened,Clicked",
+      ...sends.map(s => [
+        `"${(s.contacts?.first_name||"")+" "+(s.contacts?.last_name||"")}"`,
+        `"${s.contacts?.email||""}"`, `"${s.contacts?.company_name||""}"`,
+        `"${s.status||""}"`,
+        `"${s.sent_at   ? new Date(s.sent_at  ).toLocaleDateString() : ""}"`,
+        `"${s.opened_at ? new Date(s.opened_at).toLocaleDateString() : ""}"`,
+        `"${s.clicked_at? new Date(s.clicked_at).toLocaleDateString(): ""}"`,
+      ].join(","))
+    ].join("\n");
+    const a = document.createElement("a");
+    a.href = "data:text/csv," + encodeURIComponent(csv);
+    a.download = `engagement_${(activeEvent?.name||"report").replace(/\s+/g,"_")}.csv`;
+    a.click();
+  };
+
+  return (
+    <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, marginTop: 12, overflow: "hidden" }}>
+      <div onClick={() => setExpanded(e => !e)}
+        style={{ padding: "13px 18px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: expanded ? `1px solid ${C.border}` : "none" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>👤 Per-Contact Engagement</span>
+          {!expanded && sends.length > 0 && <span style={{ fontSize: 11, color: C.muted }}>{sends.length} tracked · {openPct}% opened</span>}
+        </div>
+        <span style={{ fontSize: 11, color: C.muted }}>{expanded ? "▲ Collapse" : "▼ Expand"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "14px 18px" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <select value={selCam} onChange={e => setSelCam(e.target.value)}
+              style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.raised, color: C.text }}>
+              <option value="all">All sent campaigns</option>
+              {sentCams.map(c => <option key={c.id} value={c.id}>{c.name||c.email_type} ({c.total_sent||0} sent)</option>)}
+            </select>
+            <button onClick={load} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>↻ Refresh</button>
+            {sends.length > 0 && <button onClick={doExport} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.green}40`, background: "transparent", color: C.green, cursor: "pointer" }}>⬇ Export CSV</button>}
+          </div>
+          {loading ? (
+            <div style={{ padding: 24, textAlign: "center", color: C.muted, display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}><Spin />Loading…</div>
+          ) : sends.length === 0 ? (
+            <div style={{ padding: 24, textAlign: "center", color: C.muted, fontSize: 13 }}>No data yet — appears after emails are sent via evara.</div>
+          ) : (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8, marginBottom: 14 }}>
+                {[{ label:"Total Tracked", val:sends.length, color:C.text },
+                  { label:"Opened", val:`${opens.length} (${openPct}%)`, color:C.green },
+                  { label:"Clicked", val:`${clicks.length} (${sends.length?Math.round(clicks.length/sends.length*100):0}%)`, color:C.blue }
+                ].map(m => (
+                  <div key={m.label} style={{ background: C.raised, borderRadius: 8, padding: "10px 12px" }}>
+                    <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.7px" }}>{m.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: m.color, marginTop: 2 }}>{m.val}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ maxHeight: 320, overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                      {["Contact","Email","Status","Opened","Clicked"].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: C.muted, fontWeight: 500, fontSize: 10.5, textTransform: "uppercase", background: C.card, position: "sticky", top: 0 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sends.map(s => (
+                      <tr key={s.id} style={{ borderBottom: `1px solid ${C.border}` }}>
+                        <td style={{ padding: "8px 12px", color: C.text, whiteSpace: "nowrap" }}>{`${s.contacts?.first_name||""} ${s.contacts?.last_name||""}`.trim()||"—"}</td>
+                        <td style={{ padding: "8px 12px", color: C.muted, fontSize: 11 }}>{s.contacts?.email||"—"}</td>
+                        <td style={{ padding: "8px 12px" }}>
+                          <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4,
+                            background: s.clicked_at?C.blue+"20":s.opened_at?C.green+"20":C.raised,
+                            color: s.clicked_at?C.blue:s.opened_at?C.green:C.muted }}>
+                            {s.clicked_at?"Clicked":s.opened_at?"Opened":"Sent"}
+                          </span>
+                        </td>
+                        <td style={{ padding: "8px 12px", color: s.opened_at?C.green:C.muted, fontSize: 11 }}>
+                          {s.opened_at?new Date(s.opened_at).toLocaleString("en-AU",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"—"}
+                        </td>
+                        <td style={{ padding: "8px 12px", color: s.clicked_at?C.blue:C.muted, fontSize: 11 }}>
+                          {s.clicked_at?new Date(s.clicked_at).toLocaleString("en-AU",{day:"numeric",month:"short"}):"—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </div>
       )}
     </div>
   );
