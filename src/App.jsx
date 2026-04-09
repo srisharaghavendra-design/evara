@@ -2647,6 +2647,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     <div style={{ animation: "fadeUp .2s ease" }}>
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>eDM Builder</h1>
+        <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.blue+"12", color:C.blue, border:`1px solid ${C.blue}20` }}>✨ Claude claude-sonnet-4</span>
         <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>AI generates copy · your template renders it · world-class result every time.</p>
       </div>
       {activeEvent && (
@@ -4508,6 +4509,7 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
           <div style={{ width: 256, display: "flex", flexDirection: "column", gap: 10, overflow: "auto", flexShrink: 0 }}>
             <Sec label="Form name">
               <input value={formName} onChange={e => setFormName(e.target.value)} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 9px", fontSize: 13, outline: "none" }} />
+              {formName.length > 0 && <span style={{ fontSize:10, color:formName.length>60?C.red:C.muted, marginLeft:6 }}>{formName.length}/80</span>}
             </Sec>
             {tab === "builder" && <>
               <Sec label="Add field">
