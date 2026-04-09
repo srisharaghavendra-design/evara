@@ -4424,7 +4424,6 @@ Return ONLY valid JSON with this structure:
 // ─── ANALYTICS VIEW ───────────────────────────────────────────
 function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
   const [data, setData] = useState(null);
-  const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -4440,7 +4439,6 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
       supabase.from("event_contacts").select("status").eq("event_id", activeEvent.id),
     ]);
     setData(m);
-    setCampaigns(cams || []);
     const counts = (ecs || []).reduce((acc, r) => { acc[r.status] = (acc[r.status] || 0) + 1; return acc; }, {});
     setData(prev => ({ ...prev, ...counts, ec_total: (ecs || []).length }));
     setLoading(false);
