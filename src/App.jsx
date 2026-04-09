@@ -979,6 +979,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
     const handler = (e) => {
       if (e.key === "Escape") { setSelectedContact(null); setShowHelp(false); }
       if (e.key === "?" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) setShowHelp(p => !p);
+      if (e.key === "n" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName) && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setShowNewEvent(true); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -3765,12 +3766,35 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               setSelContacts(new Set());
               fire(`✅ ${n} added to ${activeEvent.name}`);
             }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.green}40`, background:"transparent", color:C.green, cursor:"pointer" }}>+ Add to event</button>}
+            <button onClick={() => {
+              const toExport = filtered.filter(c => selContacts.has(c.id));
+              if (!toExport.length) return;
+              const hdr = ["First Name","Last Name","Email","Company","Job Title","Phone","Tags","Source"];
+              const rows = toExport.map(c => [
+                c.first_name||"", c.last_name||"", c.email||"", c.company_name||"",
+                c.job_title||"", c.phone||"", (c.tags||[]).join(";"), c.source||""
+              ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(","));
+              const csv = [hdr.join(","), ...rows].join("\n");
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
+              a.download = `contacts-export-${new Date().toISOString().slice(0,10)}.csv`;
+              a.click();
+              fire(`✅ ${toExport.length} contacts exported`);
+            }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>⬇ Export CSV</button>
             <button onClick={() => setSelContacts(new Set())} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft:"auto" }}>✕ Clear</button>
           </div>
         )}
         {loading ? <div style={{ padding: "32px", textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading contacts…</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              <th style={{ padding: "10px 14px", width: 36 }}>
+                <input type="checkbox"
+                  checked={filtered.length > 0 && filtered.every(c => selContacts.has(c.id))}
+                  onChange={() => filtered.every(c => selContacts.has(c.id))
+                    ? setSelContacts(new Set())
+                    : setSelContacts(new Set(filtered.map(c => c.id)))}
+                  style={{ accentColor: C.blue, cursor: "pointer" }} />
+              </th>
               {["Name", "Email", "Company", "Phone", "Source", "Status"].map(h => (
                 <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.5px" }}>{h}</th>
               ))}
@@ -4486,6 +4510,7 @@ function SettingsView({ supabase, profile, fire }) {
         {[
           { key: "ANTHROPIC_API_KEY", desc: "AI email generation (required)", href: "https://console.anthropic.com", status: "✅" },
           { key: "SENDGRID_API_KEY", desc: "Email sending via SendGrid (required)", href: "https://app.sendgrid.com/settings/api_keys", status: "✅" },
+          { key: "Webhook URL", desc: `${window.location.hostname === "localhost" ? "https://sqddpjsgtwblmkgxqyxe.supabase.co" : "https://sqddpjsgtwblmkgxqyxe.supabase.co"}/functions/v1/email-webhook`, href: "https://app.sendgrid.com/settings/mail_settings/event_notification", status: "✅" },
           { key: "FROM_EMAIL", desc: "e.g. hello@evarahq.com", href: null, status: "✅" },
           { key: "FROM_NAME", desc: "e.g. Your Company Name", href: null, status: "✅" },
         ].map(s => (
@@ -7043,6 +7068,7 @@ function PublicFormPage({ token }) {
                 type={field.type}
                 value={answers[field.id] || ""}
                 onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))}
+                onKeyDown={e => { if (e.key === "Enter" && allFilled && !submitting) submit(); }}
                 placeholder={`Enter ${field.label.toLowerCase()}…`}
                 style={{ width: "100%", height: 44, borderRadius: 10, border: "1.5px solid #D1D1D6", padding: "0 14px", fontSize: 15, outline: "none", boxSizing: "border-box", transition: "border-color .15s" }}
                 onFocus={e => { e.target.style.borderColor = "#0A84FF"; setSubmitError(""); }}
