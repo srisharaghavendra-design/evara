@@ -2591,6 +2591,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [sendModal, setSendModal] = useState(null);
   const [previewCam, setPreviewCam] = useState(null); // ← NEW: email preview
   const [autoScheduling, setAutoScheduling] = useState(false);
+  const [camSearch, setCamSearch] = useState("");
   const [contactCount, setContactCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
@@ -2826,7 +2827,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               </div>
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>{cam.name}</span>
+                  <span style={{ fontSize: 14, fontWeight: 500, color: C.text, cursor: cam.html_content ? "pointer" : "default" }} onClick={() => cam.html_content && setPreviewCam(cam)}>{cam.name}{cam.html_content && <span style={{ fontSize: 9, color: C.blue, marginLeft: 5 }}>👁</span>}</span>
+                  {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>"{cam.subject}"</div>}
                   <span style={{ fontSize: 10.5, fontWeight: 500, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", background: cam.status === "sent" ? `${C.green}15` : cam.status === "scheduled" ? `${C.blue}15` : cam.status === "paused" ? `${C.amber}15` : `${C.raised}`, color: cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : cam.status === "paused" ? C.amber : C.muted }}>
                     {cam.status}{cam.status === "scheduled" && cam.scheduled_at ? ` · ${new Date(cam.scheduled_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : ""}
                   </span>
