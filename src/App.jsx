@@ -1249,6 +1249,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
               Edit
             </button>
+            <button onClick={() => {
+              const txt = [activeEvent.name, activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "", activeEvent.event_time || "", activeEvent.location ? "📍 " + activeEvent.location : ""].filter(Boolean).join("\n");
+              navigator.clipboard?.writeText(txt);
+              fire("📋 Event details copied");
+            }} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
+              📋 Copy
+            </button>
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}
@@ -2596,6 +2603,15 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             </div>
           </Sec>
 
+          <div style={{ fontSize: 11, color: C.muted, marginBottom: 10, padding: "6px 10px", background: C.raised, borderRadius: 6, borderLeft: `3px solid ${C.blue}40` }}>
+            {{"invitation":"📌 Date · Time · Venue · CTA · Key agenda highlight",
+              "save_the_date":"📅 Event name · Date only — build intrigue, no full details yet",
+              "reminder":"⚡ Urgency + logistics: venue, time, what to bring",
+              "thank_you":"🙏 Appreciation · Highlights · Tease next event",
+              "confirmation":"✅ Their confirmed spot + logistics + calendar link",
+              "byo":"🎒 What to wear · Bring · Know — parking, agenda, contact",
+            }[eType] || "✨ Generate with AI below"}
+          </div>
           <Sec label="Template style">
             <div style={{ display: "flex", gap: 6 }}>
               {["minimal", "branded", "vibrant"].map(t => (
