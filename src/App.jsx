@@ -1982,6 +1982,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [tmpl, setTmpl] = useState("branded");
   const [gen, setGen] = useState(false);
   const [preview, setPreview] = useState(null);
+  const [sendingTest, setSendingTest] = useState(false);
   const [previewWidth, setPreviewWidth] = useState("100%");
   const [subjectAlts, setSubjectAlts] = useState([]);
   const [loadingAlts, setLoadingAlts] = useState(false);
@@ -2376,6 +2377,22 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               win.document.close();
             }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               🌐 Open in browser
+            </button>
+            <button onClick={async () => {
+              const testEmail = (document.getElementById("test-email-input")?.value || profile?.email || "").trim();
+              if (!testEmail) { fire("Enter a test email address below", "err"); return; }
+              const { data: { session } } = await supabase.auth.getSession();
+              setSendingTest(true);
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ to: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), companyId: profile?.company_id }),
+              });
+              setSendingTest(false);
+              const d = await res.json();
+              fire(d.sent > 0 ? `✅ Test sent to ${testEmail}` : "Send failed — check email address", d.sent > 0 ? "ok" : "err");
+            }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+              {sendingTest ? "Sending…" : "📤 Send test"}
             </button>
             <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied to clipboard"); }}
               style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
