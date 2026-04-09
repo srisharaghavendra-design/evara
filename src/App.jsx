@@ -590,7 +590,7 @@ function MainApp({ session }) {
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
 
-  const fire = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 3500); };
+  const fire = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4500); };
 
   useEffect(() => {
     const load = async () => {
@@ -1462,7 +1462,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
           {!insights && !insightsLoading && !insightsError && (
             <div style={{ padding: "20px 16px", textAlign: "center", color: C.muted, fontSize: 12 }}>
-              Click "Analyse event" to get AI-powered recommendations based on your event data.
+              {(() => {
+                const pending = contacts.filter(c => c.status === "pending").length;
+                const drafts = campaigns.filter(c => c.status === "draft" && c.html_content).length;
+                const daysTogo = activeEvent?.event_date ? Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) : null;
+                if (pending > 0 && drafts > 0) return `💡 ${pending} contact${pending>1?"s":""} haven't responded — you have ${drafts} ready-to-send draft${drafts>1?"s":""}.`;
+                if (daysTogo !== null && daysTogo <= 7 && daysTogo > 0) return `⚡ ${daysTogo} day${daysTogo>1?"s":""} to go! Consider sending a reminder to ${contacts.filter(c=>c.status==="pending").length} pending contacts.`;
+                if (daysTogo !== null && daysTogo < 0 && !campaigns.some(c => c.email_type==="thank_you" && c.status==="sent")) return "🎉 Event complete! Send a thank you email and generate your AI post-event report.";
+                return 'Click "Analyse event" for AI-powered recommendations about this event.';
+              })()}
             </div>
           )}
           {insightsLoading && (
@@ -6943,6 +6951,31 @@ function PublicFormPage({ token }) {
                 <option value="">Select…</option>
                 {(field.options || []).map(o => <option key={o} value={o}>{o}</option>)}
               </select>
+            )}
+            {field.type === "dietary" && (
+              <select value={answers[field.id] || ""} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))}
+                style={{ width: "100%", height: 44, borderRadius: 10, border: "1.5px solid #D1D1D6", padding: "0 14px", fontSize: 15, outline: "none", background: "#fff", cursor: "pointer", boxSizing: "border-box" }}>
+                <option value="">No dietary requirements</option>
+                {["Vegetarian","Vegan","Gluten-free","Halal","Kosher","Nut allergy","Dairy-free","Other — please specify"].map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            )}
+            {field.type === "rating" && (
+              <div style={{ display: "flex", gap: 8 }}>
+                {[1,2,3,4,5].map(n => (
+                  <button key={n} type="button" onClick={() => setAnswers(p => ({ ...p, [field.id]: n }))}
+                    style={{ flex: 1, height: 44, borderRadius: 10, border: `2px solid ${answers[field.id] >= n ? "#0A84FF" : "#D1D1D6"}`, background: answers[field.id] >= n ? "#0A84FF10" : "#fff", fontSize: 20, cursor: "pointer", color: answers[field.id] >= n ? "#0A84FF" : "#C7C7CC", transition: "all .12s" }}>
+                    ★
+                  </button>
+                ))}
+              </div>
+            )}
+            {field.type === "date" && (
+              <input type="date" value={answers[field.id] || ""} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))}
+                style={{ width: "100%", height: 44, borderRadius: 10, border: "1.5px solid #D1D1D6", padding: "0 14px", fontSize: 15, outline: "none", background: "#fff", boxSizing: "border-box" }} />
+            )}
+            {field.type === "number" && (
+              <input type="number" value={answers[field.id] || ""} onChange={e => setAnswers(p => ({ ...p, [field.id]: e.target.value }))}
+                style={{ width: "100%", height: 44, borderRadius: 10, border: "1.5px solid #D1D1D6", padding: "0 14px", fontSize: 15, outline: "none", background: "#fff", boxSizing: "border-box" }} />
             )}
             {field.type === "checkbox" && (
               <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
