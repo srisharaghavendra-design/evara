@@ -4925,6 +4925,36 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
           }} style={{ padding: "10px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>
             📋 Copy ROI Report
           </button>
+          <button onClick={() => {
+            const csvRows = [
+              ["Metric", "Value"],
+              ["Event", activeEvent.name],
+              ["Date", activeEvent.event_date || ""],
+              ["Total Contacts", metrics?.total_contacts || 0],
+              ["Confirmed", metrics?.total_confirmed || 0],
+              ["Attended", metrics?.total_attended || 0],
+              ["", ""],
+              ["COSTS", ""],
+              ...Object.entries(costs).map(([k, v]) => [k.charAt(0).toUpperCase() + k.slice(1), v || 0]),
+              ["Total Cost", `$${totalCost.toLocaleString()}`],
+              ["", ""],
+              ["REVENUE", ""],
+              ...Object.entries(revenue).map(([k, v]) => [k.charAt(0).toUpperCase() + k.slice(1), v || 0]),
+              ["Total Revenue", `$${totalRevenue.toLocaleString()}`],
+              ["", ""],
+              ["ROI", `${roi}%`],
+              ["Cost per Attendee", `$${costPerAttendee}`],
+            ];
+            const csv = csvRows.map(r => r.join(",")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${activeEvent.name.replace(/\s+/g, "_")}_ROI_Report.csv`;
+            a.click();
+            fire("✅ ROI report downloaded!");
+          }} style={{ padding: "8px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>
+            ↓ Export CSV
+          </button>
         </div>
       </div>
     </div>
