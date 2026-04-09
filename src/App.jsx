@@ -1880,7 +1880,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                   {(c.first_name?.[0] || c.email?.[0] || "?").toUpperCase()}
                 </div>
                 <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{c.first_name} {c.last_name}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{c.email}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2, cursor: "pointer" }}
+                  onClick={() => { navigator.clipboard?.writeText(c.email || ""); fire("📋 Email copied"); }}
+                  title="Click to copy">
+                  {c.email} 📋
+                </div>
                 {(c.job_title || c.company_name) && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{[c.job_title, c.company_name].filter(Boolean).join(" · ")}</div>}
                 <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
                   <span style={{ fontSize: 10.5, padding: "2px 9px", borderRadius: 999, fontWeight: 600, textTransform: "capitalize", background: selectedContact.status === "confirmed" ? C.green + "20" : selectedContact.status === "declined" ? C.red + "20" : C.raised, color: selectedContact.status === "confirmed" ? C.green : selectedContact.status === "declined" ? C.red : C.muted }}>
@@ -1958,6 +1962,33 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                 }} style={{ padding: "8px 12px", background: "transparent", border: `1px solid ${C.red}30`, borderRadius: 6, color: C.red, cursor: "pointer", fontSize: 12, textAlign: "left" }}>
                   🗑️ Remove from event
                 </button>
+              </div>
+              {/* Tags */}
+              <div style={{ padding: "10px 18px", borderTop: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Tags</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>
+                  {(c.tags || []).map(tag => (
+                    <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 11, padding: "2px 8px", borderRadius: 999, background: C.raised, border: `1px solid ${C.border}`, color: C.text }}>
+                      {tag}
+                      <button onClick={async () => {
+                        const newTags = (c.tags||[]).filter(t => t !== tag);
+                        await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
+                        setSelectedContact(p => ({ ...p, contacts: { ...p.contacts, tags: newTags } }));
+                        fire("Tag removed");
+                      }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }}>×</button>
+                    </span>
+                  ))}
+                  <button onClick={async () => {
+                    const tag = window.prompt("Add tag (e.g. vip, speaker, sponsor):");
+                    if (!tag?.trim()) return;
+                    const newTags = [...new Set([...(c.tags||[]), tag.trim().toLowerCase()])];
+                    await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
+                    setSelectedContact(p => ({ ...p, contacts: { ...p.contacts, tags: newTags } }));
+                    fire(`Tag "${tag.trim()}" added`);
+                  }} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "transparent", border: `1px dashed ${C.border}`, color: C.muted, cursor: "pointer" }}>
+                    + Add tag
+                  </button>
+                </div>
               </div>
               {/* Notes */}
               <div style={{ padding: "12px 18px", borderTop: `1px solid ${C.border}` }}>
@@ -2646,6 +2677,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [camSearch, setCamSearch] = useState("");
   const [contactCount, setContactCount] = useState(0);
   const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
   const [followUpGenerating, setFollowUpGenerating] = useState(false);
 
@@ -2725,6 +2757,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const sendNow = async () => {
     if (!sendModal || !profile) return;
     setSending(true);
+    setSendProgress({ sent: 0, total: sendModal?.recipients?.length || 0 });
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const contacts = sendModal.recipients.map(ec => ({ id: ec.contacts?.id, email: ec.contacts?.email, first_name: ec.contacts?.first_name, company_id: profile.company_id })).filter(c => c.email);
@@ -2735,6 +2768,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       });
       const data = await res.json();
       if (data.success) {
+        setSendProgress({ sent: data.sent, total: sendModal?.recipients?.length || data.sent });
         fire(`✅ Sent to ${data.sent} contacts! ${data.failed > 0 ? `(${data.failed} failed)` : ""}`);
         if (addNotif) addNotif(`📧 "${sendModal.subject}" sent to ${data.sent} contacts`, "📧");
         setCampaigns(p => p.map(c => c.id === sendModal.id ? { ...c, status: "sent", sent_at: new Date().toISOString(), total_sent: data.sent } : c));
@@ -3151,7 +3185,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               <button onClick={() => setSendModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
               <button onClick={sendNow} disabled={sending || sendModal.recipientCount === 0}
                 style={{ flex: 2, padding: "11px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 8, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 500, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {sending ? <><Spin />Sending…</> : <><Send size={14} />Confirm & Send</>}
+                {sending ? <><Spin />{sendProgress.total > 1 ? `Sending ${sendProgress.sent}/${sendProgress.total}…` : "Sending…"}</> : <><Send size={14} />Confirm & Send ({sendModal.recipientCount})</>}
               </button>
             </div>
           </div>
@@ -3331,7 +3365,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         const existing = new Set(p.map(c => c.email));
         return [...p, ...newOnes.filter(c => !existing.has(c.email))];
       });
-      fire(`✅ ${rows.length} contacts imported! (${newOnes.length} new)`);
+      const skipped = rows.length - newOnes.length;
+    fire(`✅ ${newOnes.length} new contacts imported${skipped > 0 ? ` · ${skipped} already existed` : ""}${rows.length !== importText.split('\n').filter(Boolean).length ? ` · ${importText.split('\n').filter(Boolean).length - rows.length} skipped (personal email)` : ""}!`);
       setImportText('');
       setShowImport(false);
     }
