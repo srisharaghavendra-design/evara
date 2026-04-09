@@ -1392,6 +1392,24 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
       )}
       {/* ─── POST-EVENT NUDGE ─── */}
+      {activeEvent?.event_date && Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) < 0 && contacts.filter(c => c.status === "confirmed").length > 0 && (
+        <div style={{ background: C.blue+"10", border: `1px solid ${C.blue}25`, borderRadius: 10, padding: "12px 16px", marginBottom: 12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+          <div style={{ flex:1 }}>
+            <span style={{ fontSize:13, fontWeight:600, color:C.text }}>🎉 Event complete! </span>
+            <span style={{ fontSize:12, color:C.muted }}>{contacts.filter(c=>c.status==="confirmed").length} confirmed guests — mark as attended?</span>
+          </div>
+          <button onClick={async () => {
+            const conf = contacts.filter(c => c.status === "confirmed");
+            if (!window.confirm(`Mark all ${conf.length} confirmed guests as attended?`)) return;
+            const now = new Date().toISOString();
+            for (const ec of conf) await supabase.from("event_contacts").update({ status:"attended", attended_at:now }).eq("id", ec.id);
+            setContacts(p => p.map(ec => ec.status==="confirmed" ? {...ec,status:"attended",attended_at:now} : ec));
+            fire(`✅ ${conf.length} marked as attended`);
+          }} style={{ fontSize:12, padding:"6px 14px", borderRadius:6, background:C.green+"15", border:`1px solid ${C.green}30`, color:C.green, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
+            ✅ Mark all attended
+          </button>
+        </div>
+      )}
       {activeEvent?.event_date && Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) < 0 && !campaigns.some(c => c.email_type === "thank_you" && c.status === "sent") && (
         <div style={{ background: C.teal + "10", border: `1px solid ${C.teal}30`, borderRadius: 10, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ fontSize: 20 }}>🎉</span>
@@ -3247,7 +3265,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       </span>
                     );
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
-                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{cam.segment === "all" ? "Everyone" : cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1)}</span>
+                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{cam.segment === "all" ? `Everyone (${contactCount})` : cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1)}</span>
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
                 </div>
                 {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
@@ -4777,7 +4795,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
 
   const STAT_CARDS = [
     { label: "Expected", val: stats.total, color: C.muted },
-    { label: "Checked In", val: stats.attended, color: C.green },
+    { label: "Checked In", val: stats.attended, color: C.green, sub: stats.total > 0 ? `${Math.round(stats.attended/stats.total*100)}%` : null },
     { label: "Pending", val: stats.total - stats.attended, color: C.amber },
     { label: "Walk-ins", val: stats.walkin, color: C.blue },
     { label: "Last in", val: (() => {
