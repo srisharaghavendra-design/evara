@@ -2896,7 +2896,7 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
   }, [activeEvent, profile]);
   const save = async (publish = false) => {
     if (!activeEvent || !profile) return; setSaving(true);
-    const payload = { event_id: activeEvent.id, company_id: profile.company_id, ...info, blocks, is_published: publish };
+    const payload = { event_id: activeEvent.id, company_id: profile.company_id, ...info, blocks, is_published: publish, reg_url: formShareLink || info.reg_url || "" };
     const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id" }).select().single();
     if (error) { fire(error.message, "err"); }
     else {
@@ -5114,11 +5114,18 @@ function PublicLandingPage({ slug }) {
         </div>
       )}
 
-      {/* Second CTA */}
+      {/* Registration section */}
       <div style={{ textAlign: "center", padding: "32px 24px 64px" }}>
-        <a href={regUrl} style={{ display: "inline-block", padding: "14px 40px", background: accent, color: "#fff", textDecoration: "none", borderRadius: 8, fontSize: 15, fontWeight: 600 }}>
-          {page.cta_text || "Register Now"} →
-        </a>
+        {page.reg_url && page.reg_url.includes("/form/") ? (
+          <div style={{ maxWidth: 640, margin: "0 auto" }}>
+            <h2 style={{ fontSize: 24, fontWeight: 700, color: fg, marginBottom: 24 }}>Register Now</h2>
+            <iframe src={page.reg_url} style={{ width: "100%", minHeight: 480, border: "none", borderRadius: 12, background: "#fff" }} title="Registration Form" />
+          </div>
+        ) : (
+          <a href={regUrl} style={{ display: "inline-block", padding: "14px 40px", background: accent, color: "#fff", textDecoration: "none", borderRadius: 8, fontSize: 15, fontWeight: 600 }}>
+            {page.cta_text || "Register Now"} →
+          </a>
+        )}
       </div>
 
       <div style={{ borderTop: `1px solid ${page.template === "minimal" ? "#eee" : "rgba(255,255,255,0.1)"}`, padding: "20px 24px", textAlign: "center" }}>
