@@ -3436,7 +3436,15 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   {cam.status === "sent" && (
                     <span>
                       {` · ✅ ${cam.total_sent || 0} sent`}
-                      {cam.total_sent > 0 && ` · ${Math.round(((cam.total_opened||0)/cam.total_sent)*100)}% opened`}
+                      {cam.total_sent > 0 && (() => {
+                        const pct = Math.round(((cam.total_opened||0)/cam.total_sent)*100);
+                        return <span style={{ marginLeft:4 }}>
+                          <span style={{ color:pct>=30?C.green:pct>=20?C.amber:C.red }}>{pct}% opened</span>
+                          <span style={{ display:"inline-block", width:32, height:3, background:C.raised, borderRadius:2, marginLeft:4, verticalAlign:"middle" }}>
+                            <span style={{ display:"block", width:`${Math.min(pct,100)}%`, height:"100%", background:pct>=30?C.green:pct>=20?C.amber:C.red, borderRadius:2 }}/>
+                          </span>
+                        </span>;
+                      })()}
                       {cam.total_clicked > 0 && ` · ${cam.total_clicked} clicks`}
                       {cam.sent_at && (() => {
                         const d = new Date(cam.sent_at);
