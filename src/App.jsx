@@ -6191,6 +6191,7 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
             <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
               style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "4px 10px", fontSize: 16 }}>‹</button>
             <span style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</span>
+            <button onClick={() => setMonth(new Date())} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>Today</button>
             <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
               style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "4px 10px", fontSize: 16 }}>›</button>
           </div>
@@ -6253,6 +6254,26 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
                 </div>
               );
             })}
+          </Sec>
+          <Sec label="Scheduled emails">
+            {(campaigns || []).filter(c => c.scheduled_at && new Date(c.scheduled_at) > new Date()).sort((a,b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)).slice(0,5).map(cam => {
+              const d = new Date(cam.scheduled_at);
+              const daysUntil = Math.ceil((d - new Date()) / (1000*60*60*24));
+              return (
+                <div key={cam.id} style={{ padding: "10px 0", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{cam.name?.replace(/ — .*/, "") || cam.email_type}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
+                  </div>
+                  <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: C.amber + "20", color: C.amber, fontWeight: 500, flexShrink: 0 }}>
+                    {daysUntil <= 1 ? "Tomorrow" : `${daysUntil}d`}
+                  </span>
+                </div>
+              );
+            })}
+            {!(campaigns || []).some(c => c.scheduled_at && new Date(c.scheduled_at) > new Date()) && (
+              <div style={{ fontSize: 13, color: C.muted, textAlign: "center", padding: 20 }}>No scheduled emails</div>
+            )}
           </Sec>
           <Sec label="All events">
             {(events || []).map(ev => (
