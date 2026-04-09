@@ -1180,6 +1180,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 48, gap: 14, marginBottom: 40 }}>
         <div style={{ fontSize: 52, marginBottom: 4 }}>🚀</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: C.text, letterSpacing: "-0.5px" }}>Welcome to evara</div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", marginTop:8 }}>
+          {["📧 AI emails","📋 RSVP forms","📊 Analytics","📍 Check-in","🎤 Live Q&A"].map(f => (
+            <span key={f} style={{ fontSize:11, padding:"3px 10px", borderRadius:999, background:C.raised, color:C.muted, border:`1px solid ${C.border}` }}>{f}</span>
+          ))}
+        </div>
         <p style={{ fontSize: 14, color: C.muted, textAlign: "center", maxWidth: 400, lineHeight: 1.65 }}>
           Your all-in-one event marketing platform. Create your first event to get started — AI will generate your emails, forms and landing page.
         </p>
@@ -3239,6 +3244,16 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
       {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px", color: C.muted }}><Spin />Loading campaigns…</div> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {campaigns.length > 0 && (() => {
+            const types = new Set(campaigns.map(c => c.email_type));
+            const missing = ["save_the_date","invitation","reminder","confirmation","thank_you"].filter(t => !types.has(t));
+            if (!missing.length) return null;
+            return (
+              <div style={{ fontSize: 11, color: C.amber, marginTop: 4 }}>
+                💡 Missing email types: {missing.map(t => t.replace(/_/g," ")).join(", ")} — click + New campaign to add
+              </div>
+            );
+          })()}
           {campaigns.length === 0 && (
             <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "48px", textAlign: "center", color: C.muted }}>
               <div style={{ fontSize: 36, marginBottom: 10 }}>✉️</div>
@@ -3290,7 +3305,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       </span>
                     );
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
-                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{cam.segment === "all" ? `Everyone (${contactCount})` : cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1)}</span>
+                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{ {"all":`Everyone (${contactCount})`,"confirmed":"✅ Confirmed","pending":"⏳ Pending","attended":"📍 Attended","declined":"❌ Declined","vip":"⭐ VIP"}[cam.segment] || cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1) }</span>
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
                 </div>
                 {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
@@ -4875,10 +4890,10 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           </button>
           <button onClick={() => {
             const attended = contacts.filter(c => c.status === "attended");
-            const csv = ["Name,Email,Company,Checked In"].concat(
+            const csv = ["Name,Email,Company,Dietary,Checked In"].concat(
               attended.map(ec => {
                 const c = ec.contacts || {};
-                return `"${c.first_name||""} ${c.last_name||""}","${c.email||""}","${c.company_name||""}","${ec.attended_at ? new Date(ec.attended_at).toLocaleTimeString() : "yes"}"`;
+                return `"${c.first_name||""} ${c.last_name||""}","${c.email||""}","${c.company_name||""}","${ec.dietary||""}","${ec.attended_at ? new Date(ec.attended_at).toLocaleTimeString() : "yes"}"`;
               })
             ).join("\n");
             const blob = new Blob([csv], { type: "text/csv" });
@@ -5233,6 +5248,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
   const METRICS = [
     { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧" },
     { label: "Open Rate", val: data?.total_sent ? `${Math.round((data.total_opened / data.total_sent) * 100)}%` : "—", color: C.teal, icon: "👁" },
+    { label: "Click Rate", val: data?.total_sent && data?.total_clicked ? `${Math.round((data.total_clicked / data.total_sent) * 100)}%` : "—", color: C.blue, icon: "🖱" },
     { label: "Registered", val: data?.ec_total || 0, color: C.text, icon: "📋" },
     { label: "Confirmed", val: data?.confirmed || 0, color: C.green, icon: "✅" },
     { label: "Attended", val: data?.attended || 0, color: C.blue, icon: "🎟" },
