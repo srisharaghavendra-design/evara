@@ -2434,7 +2434,15 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [formLink, setFormLink] = useState("");
   const [uploadingZone, setUploadingZone] = useState(null);
   const [images, setImages] = useState({ header: null, body: null, footer: null });
-  const [info, setInfo] = useState({ eventName: "", eventDate: "", eventTime: "", location: "", description: "", tone: "professional and exciting", extra: "" });
+  const [info, setInfo] = useState({
+    eventName: activeEvent?.name || "",
+    eventDate: activeEvent?.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}) : "",
+    eventTime: activeEvent?.event_time || "",
+    location: activeEvent?.location || "",
+    description: activeEvent?.description || "",
+    tone: "professional and exciting",
+    extra: ""
+  });
   const [resources, setResources] = useState({ photos: "", slides: "", recording: "", nextEvent: "" });
   const [showResources, setShowResources] = useState(false);
 
@@ -4411,6 +4419,7 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
                 {fields.map((f, i) => (
                   <div key={f.id} style={{ background: C.raised, borderRadius: 7, border: `1px solid ${C.border}`, padding: "9px 10px", marginBottom: 6 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <span style={{ fontSize: 9.5, color: C.muted, fontWeight: 600, marginRight: 2 }}>{i+1}.</span>
                       <span style={{ fontSize: 9.5, color: C.muted, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 3, padding: "1px 5px", textTransform: "uppercase", fontWeight: 600 }}>{f.type}</span>
                       <div style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
                         <button onClick={() => moveUp(i)} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 13, padding: "0 3px", cursor: "pointer" }}>↑</button>
