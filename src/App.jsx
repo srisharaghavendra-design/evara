@@ -919,6 +919,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [contacts, setContacts] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
+  const [selectedContact, setSelectedContact] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filt, setFilt] = useState("all");
   const [formShareLink, setFormShareLink] = useState("");
@@ -1629,7 +1630,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                 const score = scores[c.id] || 0;
                 const isSending = sending === c.id;
                 return (
-                  <tr key={ec.id} className="rh" style={{ borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : undefined, background: "transparent", transition: "background .08s" }}>
+                  <tr key={ec.id} className="rh" onClick={() => setSelectedContact(ec)} style={{ cursor: "pointer", borderBottom: i < rows.length - 1 ? `1px solid ${C.border}` : undefined, background: "transparent", transition: "background .08s" }}>
                     <td style={{ padding: "11px 13px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         <div style={{ width: 29, height: 29, borderRadius: "50%", background: `${st.color}18`, border: `1px solid ${st.color}28`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: st.color, flexShrink: 0 }}>
