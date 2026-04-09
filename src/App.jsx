@@ -1927,7 +1927,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               <button onClick={() => { setShowEditEvent(false); setEditForm({}); }} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
               <button onClick={async () => {
                 const updates = {};
-                ["name","event_date","event_time","location","description"].forEach(k => {
+                ["name","event_date","event_time","location","description","capacity","rsvp_deadline","expected_attendees"].forEach(k => {
                   if (editForm[k] !== undefined) updates[k] = editForm[k] || null;
                 });
                 if (!updates.name && !activeEvent.name) return;
@@ -5006,7 +5006,11 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
               <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Email Campaign Performance</span>
             </div>
             {campaigns.length === 0 ? (
-              <div style={{ padding: 32, textAlign: "center", color: C.muted }}>No campaigns yet</div>
+              <div style={{ padding: 40, textAlign: "center" }}>
+                <div style={{ fontSize: 32, marginBottom: 10 }}>📧</div>
+                <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 6 }}>No email campaigns yet</div>
+                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>Generate an email in eDM Builder, then send from Scheduling.<br />Open rates and clicks appear here automatically.</div>
+              </div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -5732,8 +5736,11 @@ function LifecycleView({ supabase, profile, activeEvent, fire }) {
                     {(c.first_name?.[0] || c.email?.[0] || "?").toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email}
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: 13, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        {`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email}
+                      </div>
+                      {c.unsubscribed && <span style={{ fontSize: 9, padding: "1px 5px", borderRadius: 3, background: C.red+"15", color: C.red, flexShrink: 0 }}>unsub</span>}
                     </div>
                     <div style={{ fontSize: 11, color: C.muted }}>{c.company_name || c.email}</div>
                   </div>
@@ -5775,6 +5782,7 @@ function LifecycleView({ supabase, profile, activeEvent, fire }) {
                 {[
                   { label: "Events", val: [...new Set(activity.map(a => a.event_id))].length, color: C.blue },
                   { label: "Check-ins", val: activity.filter(a => a.activity_type === "checked_in").length, color: C.green },
+                  { label: "Emails opened", val: activity.filter(a => a.activity_type === "email_opened").length, color: C.teal },
                   { label: "Status changes", val: activity.filter(a => a.activity_type === "status_changed").length, color: C.amber },
                   { label: "Source", val: selected.source || "manual", color: C.teal },
                 ].map(s => (
@@ -5793,10 +5801,26 @@ function LifecycleView({ supabase, profile, activeEvent, fire }) {
                 <div style={{ textAlign: "center", color: C.muted, padding: 24 }}>No activity recorded yet</div>
               ) : activity.map((a, i) => (
                 <div key={a.id} style={{ display: "flex", gap: 12, marginBottom: 16, paddingBottom: 16, borderBottom: i < activity.length - 1 ? `1px solid ${C.border}` : undefined }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", background: a.activity_type === "checked_in" ? C.green : a.activity_type === "status_changed" ? C.amber : C.blue, flexShrink: 0, marginTop: 4 }} />
+                  <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 4,
+                    background: a.activity_type === "checked_in" ? C.green
+                      : a.activity_type === "status_changed" ? C.amber
+                      : a.activity_type === "email_opened" ? C.teal
+                      : a.activity_type === "email_clicked" ? C.blue
+                      : a.activity_type === "email_sent" ? C.muted
+                      : C.blue }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, color: C.text }}>{a.description}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <div style={{ fontSize: 13, color: C.text }}>
+                        {a.activity_type === "email_opened" ? "👁 Opened: " : a.activity_type === "email_clicked" ? "🖱 Clicked: " : a.activity_type === "email_sent" ? "📧 Sent: " : ""}{a.description}
+                      </div>
+                      {a._status && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3,
+                        background: a._status === "clicked" ? C.blue+"20" : a._status === "opened" ? C.teal+"20" : C.raised,
+                        color: a._status === "clicked" ? C.blue : a._status === "opened" ? C.teal : C.muted }}>
+                        {a._status}
+                      </span>}
+                    </div>
                     {a.events?.name && <div style={{ fontSize: 11, color: C.blue, marginTop: 2 }}>📅 {a.events.name}</div>}
+                    {a.metadata?.campaign && !a.events?.name && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Campaign: {a.metadata.campaign}</div>}
                     <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(a.created_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
                   </div>
                   <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "2px 7px", borderRadius: 3, height: "fit-content", textTransform: "capitalize" }}>
