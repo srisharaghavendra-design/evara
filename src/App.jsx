@@ -855,7 +855,7 @@ function MainApp({ session }) {
           {view === "social"    && profile && <SocialView key="social"   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "campaign"  && profile && <CampaignView key="campaign"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
-          {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} />}
+          {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} campaigns={campaigns} activeEvent={activeEvent} />}
           {view === "qa"        && <QAView      supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "seating"   && <SeatingView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "agenda"    && <AgendaView   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -6127,7 +6127,7 @@ function PublicCheckInPage({ eventId }) {
 }
 
 // ─── EVENT CALENDAR VIEW ──────────────────────────────────────
-function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire }) {
+function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire, campaigns, activeEvent }) {
   const [month, setMonth] = useState(new Date());
   const [hoveredEvent, setHoveredEvent] = useState(null);
 
@@ -6152,6 +6152,17 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
     const day = new Date(e.event_date).getDate();
     if (!eventsByDay[day]) eventsByDay[day] = [];
     eventsByDay[day].push(e);
+  });
+
+  // Build campaign-by-day map for scheduled emails
+  const campaignsByDay = {};
+  (campaigns || []).filter(c => c.scheduled_at || c.send_at).forEach(c => {
+    const d = new Date(c.scheduled_at || c.send_at);
+    if (d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear()) {
+      const day = d.getDate();
+      if (!campaignsByDay[day]) campaignsByDay[day] = [];
+      campaignsByDay[day].push(c);
+    }
   });
 
   const today = new Date();
@@ -6202,6 +6213,12 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
                           title={ev.name}
                           style={{ fontSize: 10, fontWeight: 500, color: "#fff", background: C.blue, borderRadius: 3, padding: "2px 5px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", opacity: 0.9 }}>
                           {ev.name}
+                        </div>
+                      ))}
+                      {(campaignsByDay[day] || []).map(cam => (
+                        <div key={cam.id} title={`${cam.name} · ${cam.status}`}
+                          style={{ fontSize: 9, fontWeight: 500, color: "#fff", background: cam.status === "sent" ? C.green : C.amber, borderRadius: 3, padding: "2px 5px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.85 }}>
+                          ✉️ {cam.subject?.slice(0, 20) || cam.name?.slice(0, 20)}
                         </div>
                       ))}
                     </>
