@@ -1071,10 +1071,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const noContactsYet = contacts.length === 0 && !loading;
   // Go Live checklist items
   const goLiveChecklist = activeEvent ? [
-    { id: "contacts", label: "Import contacts", done: contacts.length > 0, action: "contacts", icon: "👥" },
+    { id: "contacts", label: "Import contacts", done: contacts.length > 0 || (metrics?.total_contacts || 0) > 0, action: "contacts", icon: "👥" },
     { id: "form", label: "Create registration form", done: !!formShareLink, action: "forms", icon: "📋" },
-    { id: "email", label: "Draft invite email", done: campaigns.some(c => c.html_content), action: "edm", icon: "✉️" },
-    { id: "sent", label: "Send first email", done: campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
+    { id: "email", label: "Draft invite email", done: campaigns.length > 0 && campaigns.some(c => c.html_content), action: "edm", icon: "✉️" },
+    { id: "sent", label: "Send first email", done: (metrics?.total_sent || 0) > 0 || campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
   ] : [];
   const goLiveDone = goLiveChecklist.filter(i => i.done).length;
 
@@ -1314,6 +1314,27 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
         );
       })()}
+
+      {/* ─── QUICK ACTIONS ─── */}
+      {activeEvent && contacts.length > 0 && campaigns.filter(c => c.html_content && c.status !== "sent").length > 0 && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>⚡ Quick Actions</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button onClick={() => document.querySelector('button[data-view="schedule"]')?.click()}
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.green}40`, background: C.green + "10", color: C.green, cursor: "pointer", fontWeight: 500 }}>
+              📨 Send next email ({campaigns.filter(c => c.html_content && c.status !== "sent").length} ready)
+            </button>
+            <button onClick={() => document.querySelector('button[data-view="edm"]')?.click()}
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer", fontWeight: 500 }}>
+              ✨ Generate new email
+            </button>
+            <button onClick={() => document.querySelector('button[data-view="contacts"]')?.click()}
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+              👥 Add contacts ({contacts.length} total)
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── AI INSIGHTS PANEL ─── */}
       {activeEvent && (
