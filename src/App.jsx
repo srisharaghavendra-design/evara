@@ -2847,6 +2847,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
               📋 Copy HTML
             </button>
+            <button onClick={() => { navigator.clipboard?.writeText(preview.plain_text || preview.html?.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim() || ""); fire("✅ Plain text copied"); }}
+              style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
+              📄 Copy text
+            </button>
             <button onClick={() => {
               const name = window.prompt("Save template as:", preview.subject || "My Template");
               if (!name) return;
@@ -4815,7 +4819,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
       .toLowerCase().includes(search.toLowerCase()));
 
   const STAT_CARDS = [
-    { label: "Expected", val: stats.total, color: C.muted },
+    { label: "Expected", val: stats.total, color: C.muted, sub: stats.attended > 0 && stats.total > 0 ? `${Math.round(stats.attended/stats.total*100)}%` : null },
     { label: "Checked In", val: stats.attended, color: C.green, sub: stats.total > 0 ? `${Math.round(stats.attended/stats.total*100)}%` : null },
     { label: "Pending", val: stats.total - stats.attended, color: C.amber },
     { label: "Walk-ins", val: stats.walkin, color: C.blue },
