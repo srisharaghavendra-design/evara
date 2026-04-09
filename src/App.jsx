@@ -1266,7 +1266,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}{activeEvent.rsvp_deadline && (() => {
               const daysLeft = Math.ceil((new Date(activeEvent.rsvp_deadline) - new Date()) / (1000*60*60*24));
               if (daysLeft < 0) return "";
-              return <> · <span style={{ color: daysLeft <= 3 ? C.red : C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}{daysLeft <= 7 ? ` (${daysLeft}d left)` : ""}</span></>;
+              return <> · <span style={{ color: daysLeft <= 3 ? C.red : C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}{daysLeft === 0 ? " (TODAY!)" : daysLeft <= 3 ? ` (${daysLeft}d!)` : daysLeft <= 7 ? ` (${daysLeft}d left)` : ""}</span></>;
             })()}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
@@ -2815,7 +2815,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             {preview?.html && (() => {
               const words = preview.html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
               const mins = Math.max(1, Math.round(words / 200));
-              return <span style={{ fontSize: 10, color: C.muted }}>{words} words · ~{mins} min read</span>;
+              return <span style={{ fontSize: 10, color: C.muted }}>{words} words · ~{mins} min read{words < 50 ? " ⚠️ too short" : words > 500 ? " ⚠️ too long" : ""}</span>;
             })()}
           </div>
           <div style={{ display: "flex", gap: 5, marginBottom: 10, justifyContent: "space-between", alignItems: "center" }}>
@@ -2892,6 +2892,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                       </button>
                     ))}
                   </div>
+                  {preview?.subject && (
+                    <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:"9px 14px", display:"flex", gap:8, alignItems:"center" }}>
+                      <span style={{ fontSize:10, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.6px" }}>Subject</span>
+                      <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{preview.subject}</span>
+                    </div>
+                  )}
                   {preview?.subject && (
                     <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:"9px 14px", display:"flex", gap:8, alignItems:"center" }}>
                       <span style={{ fontSize:10, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.6px" }}>Subject</span>
@@ -3159,6 +3165,13 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Email Scheduling</h1>
+            {campaigns.length > 0 && (
+              <span style={{ fontSize:11, padding:"2px 8px", borderRadius:4,
+                background: campaigns.filter(c=>c.status==="sent").length===campaigns.length ? C.green+"15" : campaigns.filter(c=>c.status==="sent").length>0 ? C.blue+"15" : C.raised,
+                color: campaigns.filter(c=>c.status==="sent").length===campaigns.length ? C.green : campaigns.filter(c=>c.status==="sent").length>0 ? C.blue : C.muted }}>
+                {campaigns.filter(c=>c.status==="sent").length}/{campaigns.length} sent
+              </span>
+            )}
             {activeEvent?.event_date && campaigns.filter(c => c.status === "draft").length > 0 && (
               <button onClick={async () => {
                 if (!activeEvent?.event_date) { fire("Set an event date first", "err"); return; }
