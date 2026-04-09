@@ -1582,8 +1582,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Contacts</span>
           {scoreFilter && <button onClick={() => setScoreFilter("")} style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft: 4 }}>✕ {scoreFilter}</button>}
           <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>
-            {filtered.length !== contacts.length ? `${filtered.length} of ${contacts.length}` : contacts.length} contact{contacts.length !== 1 ? "s" : ""}
-            {contactSort !== "newest" ? ` · sorted by ${contactSort}` : ""}
+            {contacts.length} contact{contacts.length !== 1 ? "s" : ""}
+            {contactSort !== "newest" ? ` · by ${contactSort}` : ""}
           </span>
           {contacts.length > 0 && (
             <div style={{ display: "flex", gap: 3, fontSize: 10 }}>
