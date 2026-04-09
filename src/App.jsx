@@ -771,7 +771,7 @@ function MainApp({ session }) {
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
           <span>⌘N new · ⌘K search · ⌘, settings</span>
-          <span>v1.4</span>
+          <span>v1.5</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
@@ -1329,9 +1329,14 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.green}40`, background: C.green + "10", color: C.green, cursor: "pointer", fontWeight: 500 }}>
               📨 Send next email ({campaigns.filter(c => c.status === "draft").length} ready)
             </button>
-            <button onClick={() => document.querySelector('button[data-view="edm"]')?.click()}
-              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer", fontWeight: 500 }}>
+            <button onClick={() => {
+              document.querySelector('button[data-view="edm"]')?.click();
+            }} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer", fontWeight: 500 }}>
               ✨ Generate new email
+            </button>
+            <button onClick={() => document.querySelector('button[data-view="landing"]')?.click()}
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+              🌐 Edit landing page
             </button>
             <button onClick={() => document.querySelector('button[data-view="contacts"]')?.click()}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
