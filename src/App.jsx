@@ -1356,6 +1356,34 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
       )}
 
+      {/* ─── TODAY'S NUDGE ─── */}
+      {activeEvent && (() => {
+        const daysToGo = activeEvent.event_date ? Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) : null;
+        const pendingCount = contacts.filter(c => c.status === "pending").length;
+        const draftCount = campaigns.filter(c => c.status === "draft").length;
+        const scheduledToday = campaigns.filter(c => {
+          if (c.status !== "scheduled" || !c.scheduled_at) return false;
+          const d = new Date(c.scheduled_at);
+          const today = new Date();
+          return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+        });
+        if (!pendingCount && !draftCount && !scheduledToday.length) return null;
+        return (
+          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "12px 16px", marginBottom: 12, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 18 }}>📌</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>Today's focus</div>
+              <div style={{ fontSize: 12, color: C.muted, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                {pendingCount > 0 && <span>👥 {pendingCount} pending RSVP{pendingCount !== 1 ? "s" : ""}</span>}
+                {draftCount > 0 && <span>✉️ {draftCount} email draft{draftCount !== 1 ? "s" : ""} to review</span>}
+                {scheduledToday.length > 0 && <span style={{ color: C.blue }}>⏰ {scheduledToday.length} email{scheduledToday.length !== 1 ? "s" : ""} sending today</span>}
+                {daysToGo !== null && daysToGo <= 7 && daysToGo >= 0 && <span style={{ color: C.amber, fontWeight: 600 }}>🚨 Event in {daysToGo} day{daysToGo !== 1 ? "s" : ""}!</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ─── AI INSIGHTS PANEL ─── */}
       {activeEvent && (
         <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden", marginBottom: 12 }}>
