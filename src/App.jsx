@@ -1374,6 +1374,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, marginLeft: 6 }}>
               {goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " · ✅ Ready!" : ""}
             </span>
+            <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, marginLeft: 6 }}>
+              {goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " · ✅ Ready!" : ""}
+            </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 70, height: 4, background: C.raised, borderRadius: 2 }}>
                 <div style={{ width: `${Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%`, height: "100%", background: goLiveDone === goLiveChecklist.length ? C.green : C.blue, borderRadius: 2, transition: "width .4s" }} />
@@ -3189,7 +3192,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   const totalSent = sent.reduce((s,c)=>s+(c.total_sent||0),0);
                   const totalOpened = sent.reduce((s,c)=>s+(c.total_opened||0),0);
                   const openRate = totalSent > 0 ? Math.round(totalOpened/totalSent*100) : null;
-                  return openRate !== null ? <span style={{ marginLeft: 8, color: openRate >= 30 ? C.green : openRate >= 20 ? C.amber : C.muted }}>· {openRate}% avg open rate {openRate >= 30 ? "🟢" : openRate >= 20 ? "🟡" : "🔴"}</span> : null;
+                  return openRate !== null ? <span style={{ marginLeft: 8, color: openRate >= 30 ? C.green : openRate >= 20 ? C.amber : C.muted }}>· {openRate}% open rate {openRate >= 30 ? "🟢 On target!" : openRate >= 20 ? "🟡 Almost" : "🔴 Aim 30%+"}</span> : null;
                 })()}
               </span>
             ) : "Create and send email campaigns for this event."}
@@ -4527,6 +4530,25 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
           )}
           {tab === "responses" && (
             <div>
+              {submissions.length > 0 && (
+                <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+                  <button onClick={() => {
+                    const hdr = ["Submitted","Email",...fields.map(f=>f.label)];
+                    const rows = submissions.map(s => [
+                      new Date(s.submitted_at).toLocaleString("en-AU"),
+                      s.submitter_email||"",
+                      ...fields.map(f => String(s.responses?.[f.id]||""))
+                    ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","));
+                    const csv = [hdr.join(","),...rows].join("\n");
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+                    a.download = `form-responses-${new Date().toISOString().slice(0,10)}.csv`;
+                    a.click(); fire(`✅ Exported ${submissions.length} responses`);
+                  }} style={{ fontSize:12, padding:"6px 12px", borderRadius:6, border:`1px solid ${C.green}40`, background:"transparent", color:C.green, cursor:"pointer" }}>
+                    ⬇ Export responses CSV
+                  </button>
+                </div>
+              )}
               {submissions.length === 0 ? <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "48px", textAlign: "center", color: C.muted }}><FileText size={32} style={{ opacity: .3, marginBottom: 12 }} /><div style={{ fontSize: 14, marginBottom: 6 }}>No submissions yet</div><div style={{ fontSize: 13 }}>Share your form to collect registrations</div></div> : (
                 <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                   <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
