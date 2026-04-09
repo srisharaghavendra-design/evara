@@ -2919,7 +2919,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Contacts</h1>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Unified contact records across every event — {contacts.length.toLocaleString()} total</p>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Unified contact records across every event — {contacts.length.toLocaleString()} total · {contacts.filter(c => !c.unsubscribed).length} active</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={async () => {
@@ -3025,6 +3025,16 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                           fire(isVip ? "VIP tag removed" : "⭐ Marked as VIP");
                         }} title={c.tags?.includes("vip") ? "Remove VIP" : "Mark as VIP"}
                           style={{ fontSize: 13, background: "transparent", border: "none", cursor: "pointer", opacity: c.tags?.includes("vip") ? 1 : 0.3, lineHeight: 1 }}>⭐</button>
+                        {activeEvent && (
+                          <button onClick={async () => {
+                            const { error } = await supabase.from("event_contacts").upsert({ event_id: activeEvent.id, contact_id: c.id, company_id: profile.company_id, status: "pending" }, { onConflict: "event_id,contact_id", ignoreDuplicates: true });
+                            if (!error) fire(`✅ ${c.first_name || c.email} added to ${activeEvent.name}`);
+                            else fire("Already in this event", "err");
+                          }} title={`Add to ${activeEvent?.name}`}
+                          style={{ fontSize: 11, padding: "3px 8px", background: C.blue + "15", border: `1px solid ${C.blue}30`, borderRadius: 4, color: C.blue, cursor: "pointer", whiteSpace: "nowrap" }}>
+                            + Event
+                          </button>
+                        )}
                         <button onClick={async () => {
                           const note = window.prompt("Add note for " + (c.first_name || c.email) + ":", c.notes || "");
                           if (note === null) return;
@@ -3551,7 +3561,7 @@ function SettingsView({ supabase, profile, fire }) {
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 16 }}>Brand Kit</div>
         <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>From email address</label>
+          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>From email address <span style={{ color: C.green, fontSize: 10 }}>✓ Verified: hello@evarahq.com</span></label>
           <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
             style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
             onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
