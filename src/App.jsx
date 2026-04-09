@@ -1168,7 +1168,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         const lastSent = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0];
         if (!lastSent) return null;
         const d = Math.round((new Date()-new Date(lastSent.sent_at))/(1000*60*60*24));
-        return d === 0 ? "sent today" : `last sent ${d}d ago`;
+        return d === 0 ? "sent today" : d > 7 ? `⚠️ ${d}d ago` : `last sent ${d}d ago`;
       })()
     },
     { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "% open rate" : "No sends yet" },
@@ -2892,6 +2892,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                       </button>
                     ))}
                   </div>
+                  {preview?.subject && (
+                    <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:"9px 14px", display:"flex", gap:8, alignItems:"center" }}>
+                      <span style={{ fontSize:10, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.6px" }}>Subject</span>
+                      <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{preview.subject}</span>
+                    </div>
+                  )}
                   <div style={{ overflowX: "auto" }}>
                     <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 560, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 12 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }} title="Email Preview" sandbox="allow-same-origin" />
                   </div>
