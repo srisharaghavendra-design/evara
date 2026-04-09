@@ -3892,6 +3892,21 @@ function SettingsView({ supabase, profile, fire }) {
       <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "all .15s", cursor: "pointer" }}>
         {saving ? <><Spin />Saving…</> : "Save changes"}
       </button>
+      <button onClick={async () => {
+        const testTo = profile?.email || fromEmail;
+        if (!testTo) { fire("No email to send to", "err"); return; }
+        fire("📤 Sending test email…");
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ to: [{ email: testTo, first_name: "Test" }], subject: "✅ evara email test", htmlContent: `<h2>Your evara email is working!</h2><p>Sent from hello@evarahq.com via SendGrid.</p><p style="color:#888;font-size:12px">This is a test message.</p>`, companyId: profile?.company_id }),
+        });
+        const d = await res.json();
+        fire(d.sent > 0 ? `✅ Test email sent to ${testTo}` : `Failed: ${d.error || "check SendGrid"}`, d.sent > 0 ? "ok" : "err");
+      }} style={{ marginTop: 10, width: "100%", padding: "10px 0", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
+        📤 Send test email
+      </button>
     </div>
   );
 }
