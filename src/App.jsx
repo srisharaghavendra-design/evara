@@ -2859,30 +2859,28 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   </button>
                 )}
                 {cam.status !== "sent" && (
-                  <button onClick={async () => {
-                    const { data } = await supabase.from("email_campaigns").insert({
-                      event_id: cam.event_id, company_id: cam.company_id,
-                      name: `${cam.name} (copy)`, email_type: cam.email_type,
-                      subject: cam.subject ? `${cam.subject} (copy)` : null,
-                      html_content: cam.html_content, plain_text: cam.plain_text,
-                      status: "draft", segment: cam.segment || "all",
-                    }).select().single();
-                    if (data) { setCampaigns(p => [...p, data]); fire("✅ Campaign duplicated"); }
-                  }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", marginRight: 4 }}>
-                    ⧉ Dupe
-                  </button>
-                  <button onClick={async () => {
-                    if (!window.confirm("Delete this campaign?")) return;
-                    await supabase.from("email_campaigns").delete().eq("id", cam.id);
-                    setCampaigns(p => p.filter(c => c.id !== cam.id));
-                    fire("Campaign deleted");
-                  }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-                    Delete
-                  </button>
-                )}
-                {cam.status !== "sent" && (
-                  <button onClick={async () => { if (!confirm("Delete?")) return; await supabase.from("email_campaigns").delete().eq("id", cam.id); setCampaigns(p => p.filter(c => c.id !== cam.id)); fire("Deleted"); }}
-                    style={{ fontSize: 12, padding: "5px 11px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>Delete</button>
+                  <>
+                    <button onClick={async () => {
+                      const { data } = await supabase.from("email_campaigns").insert({
+                        event_id: cam.event_id, company_id: cam.company_id,
+                        name: `${cam.name} (copy)`, email_type: cam.email_type,
+                        subject: cam.subject ? `${cam.subject} (copy)` : null,
+                        html_content: cam.html_content, plain_text: cam.plain_text,
+                        status: "draft", segment: cam.segment || "all",
+                      }).select().single();
+                      if (data) { setCampaigns(p => [...p, data]); fire("✅ Campaign duplicated"); }
+                    }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", marginRight: 4 }}>
+                      ⧉ Dupe
+                    </button>
+                    <button onClick={async () => {
+                      if (!window.confirm("Delete this campaign?")) return;
+                      await supabase.from("email_campaigns").delete().eq("id", cam.id);
+                      setCampaigns(p => p.filter(c => c.id !== cam.id));
+                      fire("Campaign deleted");
+                    }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+                      Delete
+                    </button>
+                  </>
                 )}
               </div>
             </div>
