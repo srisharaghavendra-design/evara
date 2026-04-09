@@ -1492,7 +1492,20 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         ];
         
         return (
-          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "14px 18px", marginBottom: 12 }}>
+                <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "14px 18px", marginBottom: 12 }}>
+            {(() => {
+        const sent = campaigns.filter(c => c.status === "sent" && c.sent_at);
+        if (!sent.length || !contacts.length) return null;
+        const last = sent.sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0];
+        const days = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24));
+        if (days < 14) return null;
+        return (
+          <div style={{ background:C.amber+"10", border:`1px solid ${C.amber}30`, borderRadius:10, padding:"10px 16px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
+            <span style={{ fontSize:13, color:C.amber }}>💡 No email in {days} days — keep your audience warm</span>
+            <button onClick={() => setView("edm")} style={{ fontSize:12, padding:"4px 12px", borderRadius:6, background:"transparent", border:`1px solid ${C.amber}40`, color:C.amber, cursor:"pointer" }}>Draft →</button>
+          </div>
+        );
+      })()}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ fontSize: 12, fontWeight: 500, color: C.text }}>Event Lifecycle</span>
               <span style={{ fontSize: 11, color: daysLeft <= 7 ? C.red : daysLeft <= 21 ? C.amber : C.muted }}>
@@ -4724,7 +4737,7 @@ function SettingsView({ supabase, profile, fire }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Profile</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, color: C.muted }}>evara v2.0 · Supabase + SendGrid + Claude AI</span>
+          <span style={{ fontSize: 10, color: C.muted }}>evara v2.0 · Build 2026-04-09</span>
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { label: "Supabase", ok: true },
