@@ -1245,8 +1245,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               await supabase.from("events").update({ share_token: token }).eq("id", activeEvent.id);
             }
             const shareUrl = `${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/share/${token}`;
-            navigator.clipboard?.writeText(shareUrl);
-            fire("📊 Read-only dashboard link copied! Share with stakeholders.");
+            await navigator.clipboard?.writeText(shareUrl);
+            fire("📊 Read-only dashboard link copied — share with stakeholders!");
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
             📊 Share Dashboard
           </button>
@@ -3460,12 +3460,17 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
       .then(({ data }) => { setContacts(data || []); setLoading(false); });
   }, [profile]);
   const [contactFilter, setContactFilter] = useState("all"); // all | vip | unsubscribed | active
+  const [contactSort, setContactSort] = useState("newest"); // newest | name | company
   const filtered = contacts.filter(c => {
     if (search && !(c.email + (c.first_name||"") + (c.last_name||"") + (c.company_name||"")).toLowerCase().includes(search.toLowerCase())) return false;
     if (contactFilter === "vip" && !c.tags?.includes("vip")) return false;
     if (contactFilter === "unsubscribed" && !c.unsubscribed) return false;
     if (contactFilter === "active" && c.unsubscribed) return false;
     return true;
+  }).sort((a, b) => {
+    if (contactSort === "name") return (`${a.first_name||""} ${a.last_name||""}`).localeCompare(`${b.first_name||""} ${b.last_name||""}`);
+    if (contactSort === "company") return (a.company_name||"").localeCompare(b.company_name||"");
+    return new Date(b.created_at) - new Date(a.created_at);
   });
   const importCSV = () => { setShowImport(true); };
   const doImport = async () => {
@@ -3571,6 +3576,12 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
             <Sparkles size={12}/>AI Sales Brief
           </button>
+          <select value={contactSort} onChange={e => setContactSort(e.target.value)}
+            style={{ fontSize: 12, padding: "6px 10px", borderRadius: 7, border: `1px solid ${C.border}`, background: C.raised, color: C.muted, cursor: "pointer" }}>
+            <option value="newest">Newest first</option>
+            <option value="name">Name A–Z</option>
+            <option value="company">Company A–Z</option>
+          </select>
           <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
           {activeEvent && (
             <button onClick={async () => {
@@ -4607,6 +4618,10 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
     { label: "Checked In", val: stats.attended, color: C.green },
     { label: "Pending", val: stats.total - stats.attended, color: C.amber },
     { label: "Walk-ins", val: stats.walkin, color: C.blue },
+    { label: "Last in", val: (() => {
+      const last = contacts.filter(c => c.attended_at).sort((a,b) => new Date(b.attended_at)-new Date(a.attended_at))[0];
+      return last?.attended_at ? new Date(last.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—";
+    })(), color: C.muted },
   ];
 
   if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event</div>;
@@ -5091,7 +5106,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
                           )}
                           {cam.sent_at && (
                             <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>
-                              Sent {new Date(cam.sent_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}
+                              Sent {new Date(cam.sent_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                             </div>
                           )}
                         </td>
