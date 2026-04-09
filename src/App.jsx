@@ -2500,7 +2500,15 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               </button>
             )}
           </div>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Send campaigns or schedule them ahead. Every send is tracked in real time.</p>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
+            {campaigns.length > 0 ? (
+              <span>
+                {campaigns.filter(c=>c.status==="sent").length} sent ·{" "}
+                {campaigns.filter(c=>c.status==="scheduled").length} scheduled ·{" "}
+                {campaigns.filter(c=>c.status==="draft").length} drafts
+              </span>
+            ) : "Create and send email campaigns for this event."}
+          </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <button onClick={async () => {
@@ -2619,7 +2627,11 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: C.muted }}>
-                  {cam.scheduled_at ? `⏰ Scheduled: ${new Date(cam.scheduled_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}` : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
+                  {cam.status === "scheduled" && cam.scheduled_at ? (() => {
+                    const d = new Date(cam.scheduled_at);
+                    const daysLeft = Math.ceil((d - new Date()) / (1000*60*60*24));
+                    return daysLeft <= 0 ? `⚡ Sending soon` : daysLeft === 1 ? `⏰ Tomorrow · ${d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : `⏰ In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`;
+                  })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
                   {" · "}Segment: {cam.segment}
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
                 </div>
@@ -3547,7 +3559,10 @@ function SettingsView({ supabase, profile, fire }) {
       <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text, marginBottom: 6 }}>Settings</h1>
       <p style={{ color: C.muted, fontSize: 13, marginBottom: 24 }}>Manage your profile, company, branding and security settings.</p>
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 16 }}>Profile</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Profile</div>
+          <div style={{ fontSize: 10, color: C.muted }}>evara v1.5 · Supabase + SendGrid + Claude</div>
+        </div>
         {[{ label: "Full name", val: name, set: setName }, { label: "Company name", val: company, set: setComp }].map(f => (
           <div key={f.label} style={{ marginBottom: 14 }}>
             <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>{f.label}</label>
