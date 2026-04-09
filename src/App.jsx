@@ -1487,8 +1487,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                     campaignId: draft.id,
                     contacts: contacts.map(ec => ({ email: ec.contacts?.email, first_name: ec.contacts?.first_name, last_name: ec.contacts?.last_name, unsubscribed: ec.contacts?.unsubscribed })).filter(c => c.email && !c.unsubscribed),
                     subject: draft.subject,
-                    htmlContent: draft.html_content,
-                    plainText: draft.plain_text || draft.subject,
+                    htmlContent: (draft.html_content || "").replace(/{{UNSUBSCRIBE_URL}}/g, `${window.location.origin}/unsubscribe?email={{email}}`).replace(/{{REGISTRATION_URL}}/g, formShareLink || "#"),
+                    plainText: (draft.plain_text || draft.subject || "").replace(/{{UNSUBSCRIBE_URL}}/g, `${window.location.origin}/unsubscribe`),
                   })
                 }).then(r => r.json()).then(data => {
                   if (data.sent > 0) fire(`✅ Sent to ${data.sent} contacts!`);
@@ -3086,14 +3086,14 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(null);
   const [blocks, setBlocks] = useState({ hero: true, countdown: true, details: true, speakers: true, rsvp: true, sponsors: true });
-  const [info, setInfo] = useState({ title: "", tagline: "", description: "", headline: "", subheadline: "", about_text: "", brand_color: "#0A84FF", cta_text: "Register Now", template: "corporate", slug: "" });
+  const [info, setInfo] = useState({ title: "", tagline: "", description: "", headline: "", subheadline: "", about_text: "", brand_color: "#0A84FF", cta_text: "Register Now", template: "corporate", slug: (activeEvent?.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") });
   const TMPLS = [{ id: "minimal", name: "Minimal", desc: "Clean, white & text-forward" }, { id: "corporate", name: "Corporate", desc: "Dark, professional & premium" }, { id: "bold", name: "Bold", desc: "Deep, vibrant & high-energy" }];
   const BLOCK_LIST = [{ id: "hero", label: "Hero Section" }, { id: "countdown", label: "Countdown Timer" }, { id: "details", label: "Event Details" }, { id: "speakers", label: "Speakers" }, { id: "rsvp", label: "RSVP Form" }, { id: "sponsors", label: "Sponsors" }];
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => {
-        if (data) { setPage(data); setInfo({ title: data.title || "", tagline: data.tagline || "", description: data.description || "", headline: data.headline || "", subheadline: data.subheadline || "", about_text: data.about_text || "", brand_color: data.brand_color || "#0A84FF", cta_text: data.cta_text || "Register Now", template: data.template || "corporate", slug: data.slug || "" }); setBlocks(data.blocks || blocks); setStep(2); }
+        if (data) { setPage(data); setInfo({ title: data.title || "", tagline: data.tagline || "", description: data.description || "", headline: data.headline || "", subheadline: data.subheadline || "", about_text: data.about_text || "", brand_color: data.brand_color || "#0A84FF", cta_text: data.cta_text || "Register Now", template: data.template || "corporate", slug: data.slug || (activeEvent?.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "" }); setBlocks(data.blocks || blocks); setStep(2); }
         setLoading(false);
       });
     if (activeEvent) { setInfo(p => ({ ...p, title: p.title || activeEvent.name || "", description: p.description || activeEvent.description || "", slug: p.slug || (activeEvent.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-") })); }
