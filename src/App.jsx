@@ -637,6 +637,7 @@ function MainApp({ session }) {
       location: newEventExtra?.location || null,
       description: newEventExtra?.description || null,
       event_type: newEventExtra?.event_type || null,
+      event_format: newEventExtra?.event_format || null,
       capacity: newEventExtra?.capacity ? parseInt(newEventExtra.capacity) : null,
       company_id: profile.company_id, status: "draft", created_by: profile.id,
       share_token: shareToken,
@@ -879,7 +880,8 @@ function MainApp({ session }) {
             <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>New event</h2>
             {[
               { key: "name",        label: "Event name *",    ph: "e.g. Tech Summit 2026",              type: "text" },
-              { key: "event_type",  label: "Event type",      ph: "",                                    type: "select", options: ["Conference","Workshop","Dinner / Gala","Webinar","Product Launch","Awards","Team Event","Other"] },
+              { key: "event_type",   label: "Event type",      ph: "",                                    type: "select", options: ["Conference","Workshop","Dinner / Gala","Webinar","Product Launch","Awards","Team Event","Other"] },
+              { key: "event_format", label: "Format",          ph: "",                                    type: "select", options: ["In-person","Online / Webinar","Hybrid"] },
               { key: "event_date",  label: "Date",            ph: "",                                    type: "date" },
               { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
               { key: "location",    label: "Venue / Location", ph: "e.g. The Ritz-Carlton, Bangalore", type: "text" },
@@ -1195,7 +1197,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             </button>
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
-            {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
+            {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}
+            {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
             {activeEvent.expected_attendees ? ` · 👥 ${activeEvent.expected_attendees} expected` : ""}
@@ -1291,7 +1294,12 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>🚀 Go Live Checklist</span>
-            <span style={{ fontSize: 11, color: C.muted }}>{goLiveDone}/{goLiveChecklist.length} done</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 70, height: 4, background: C.raised, borderRadius: 2 }}>
+                <div style={{ width: `${Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%`, height: "100%", background: goLiveDone === goLiveChecklist.length ? C.green : C.blue, borderRadius: 2, transition: "width .4s" }} />
+              </div>
+              <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, fontWeight: goLiveDone === goLiveChecklist.length ? 600 : 400 }}>{goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " ✓" : ""}</span>
+            </div>
           </div>
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {goLiveChecklist.map(item => (
@@ -2603,7 +2611,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
         {/* PREVIEW PANEL */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Preview</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Preview</div>
+            {preview?.html && (() => {
+              const words = preview.html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
+              const mins = Math.max(1, Math.round(words / 200));
+              return <span style={{ fontSize: 10, color: C.muted }}>{words} words · ~{mins} min read</span>;
+            })()}
+          </div>
           <div style={{ display: "flex", gap: 5, marginBottom: 10, justifyContent: "space-between", alignItems: "center" }}>
             <div style={{ display: "flex", gap: 5 }}>
             {[{ label: "📱 Mobile", width: "375px" }, { label: "📧 Email (600px)", width: "600px" }, { label: "🖥 Desktop", width: "100%" }].map(v => (
@@ -4922,9 +4937,23 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Analytics</h1>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — full performance overview</p>
         </div>
-        <button onClick={load} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-          ↻ Refresh
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={async () => {
+            // Share a read-only public dashboard link
+            const { data: event } = await supabase.from("events").select("share_token").eq("id", activeEvent.id).single();
+            const token = event?.share_token;
+            if (token) {
+              const url = `${window.location.hostname === "localhost" ? "http://localhost:5173" : "https://evara-tau.vercel.app"}/share/${token}`;
+              navigator.clipboard?.writeText(url);
+              fire("📊 Analytics link copied — share with stakeholders!");
+            } else { fire("No share token found — generate one from Dashboard", "err"); }
+          }} style={{ fontSize: 12, padding: "7px 13px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            🔗 Share
+          </button>
+          <button onClick={load} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            ↻ Refresh
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -5516,6 +5545,29 @@ Keep all sessions, just reorder if needed and add a "tip" explaining any change.
             style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: generating ? C.raised : C.blue, color: generating ? C.muted : "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
             {generating ? <><Spin size={12} />Optimizing…</> : <><Sparkles size={13} />AI Optimize</>}
           </button>
+          <button onClick={() => {
+            const agendaData = buildAgenda();
+            const lines = [
+              `AGENDA — ${activeEvent?.name || "Event"}`,
+              `Date: ${activeEvent?.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "TBC"}`,
+              `Venue: ${activeEvent?.location || "TBC"}`,
+              "─".repeat(50),
+              ...agendaData.map(s => {
+                const t = SESSION_TYPES.find(t => t.id === s.type);
+                return `${s.startTime} – ${s.endTime}  ${t?.emoji || ""} ${s.title} (${s.duration} min)`;
+              }),
+              "─".repeat(50),
+              `Total duration: ${Math.floor(sessions.reduce((s,x)=>s+x.duration,0)/60)}h ${sessions.reduce((s,x)=>s+x.duration,0)%60}m`
+            ].join("\n");
+            const blob = new Blob([lines], { type: "text/plain" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `${(activeEvent?.name||"agenda").replace(/\s+/g,"_")}_agenda.txt`;
+            a.click();
+            fire("⬇ Agenda downloaded");
+          }} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            ⬇ Download
+          </button>
         </div>
       </div>
 
@@ -5737,6 +5789,12 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
   const [metrics, setMetrics] = useState(null);
 
   useEffect(() => {
+    if (!activeEvent) return;
+    if (activeEvent.roi_costs) try { setCosts(JSON.parse(activeEvent.roi_costs)); } catch {}
+    if (activeEvent.roi_revenue) try { setRevenue(JSON.parse(activeEvent.roi_revenue)); } catch {}
+  }, [activeEvent?.id]);
+
+  useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => {
@@ -5854,6 +5912,15 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
             fire("✅ ROI report downloaded!");
           }} style={{ padding: "8px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 13, cursor: "pointer" }}>
             ↓ Export CSV
+          </button>
+          <button onClick={async () => {
+            await supabase.from("events").update({
+              roi_costs: JSON.stringify(costs),
+              roi_revenue: JSON.stringify(revenue),
+            }).eq("id", activeEvent.id);
+            fire("✅ ROI data saved to event");
+          }} style={{ fontSize: 12, padding: "8px 14px", borderRadius: 7, border: `1px solid ${C.green}40`, background: C.green+"12", color: C.green, cursor: "pointer", fontWeight: 500 }}>
+            💾 Save ROI data
           </button>
         </div>
       </div>
@@ -5999,7 +6066,15 @@ Generated by evara
     <div style={{ animation: "fadeUp .2s ease" }}>
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Feedback Intelligence</h1>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Feedback Intelligence</h1>
+            {analysis?.nps !== undefined && (
+              <div style={{ background: analysis.nps >= 50 ? C.green+"20" : analysis.nps >= 0 ? C.amber+"20" : C.red+"20", border: `1px solid ${analysis.nps >= 50 ? C.green : analysis.nps >= 0 ? C.amber : C.red}40`, borderRadius: 8, padding: "4px 12px", textAlign: "center" }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: analysis.nps >= 50 ? C.green : analysis.nps >= 0 ? C.amber : C.red }}>{analysis.nps}</div>
+                <div style={{ fontSize: 9, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>NPS</div>
+              </div>
+            )}
+          </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Collect, analyse, and act on post-event feedback with AI.</p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
