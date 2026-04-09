@@ -1106,14 +1106,25 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   if (!activeEvent) return (
     <div style={{ animation: "fadeUp .2s ease" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 48, gap: 14, marginBottom: 40 }}>
-        <div style={{ fontSize: 48 }}>🚀</div>
-        <div style={{ fontSize: 20, fontWeight: 600, color: C.text, letterSpacing: "-0.4px" }}>Welcome to evara</div>
-        <p style={{ fontSize: 14, color: C.muted, textAlign: "center", maxWidth: 380, lineHeight: 1.6 }}>
-          Your all-in-one event marketing platform. Create your first event to get started.
+        <div style={{ fontSize: 52, marginBottom: 4 }}>🚀</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: C.text, letterSpacing: "-0.5px" }}>Welcome to evara</div>
+        <p style={{ fontSize: 14, color: C.muted, textAlign: "center", maxWidth: 400, lineHeight: 1.65 }}>
+          Your all-in-one event marketing platform. Create your first event to get started — AI will generate your emails, forms and landing page.
         </p>
-        <button onClick={() => setShowNewEvent(true)} style={{ padding: "10px 24px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", boxShadow: `0 4px 20px ${C.blue}40` }}>
-          + Create First Event
+        <button onClick={() => setShowNewEvent(true)} style={{ padding: "12px 32px", background: C.blue, border: "none", borderRadius: 10, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", boxShadow: `0 4px 20px ${C.blue}40` }}>
+          ✨ Create First Event
         </button>
+        <div style={{ display: "flex", gap: 24, marginTop: 16, flexWrap: "wrap", justifyContent: "center" }}>
+          {[
+            { icon: "🤖", label: "AI generates your emails" },
+            { icon: "📋", label: "Auto-builds registration forms" },
+            { icon: "📊", label: "Tracks every contact's journey" },
+          ].map(f => (
+            <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.muted }}>
+              <span>{f.icon}</span><span>{f.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
       <div style={{ maxWidth: 560, margin: "0 auto" }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Getting started checklist</div>
