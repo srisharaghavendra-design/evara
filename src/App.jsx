@@ -3141,6 +3141,19 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
           </p>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={() => {
+            if (!campaigns.length) return;
+            const hdr = ["Campaign","Type","Status","Sent","Opened","Clicked","Open Rate"];
+            const rows = campaigns.map(c => [
+              c.name, c.email_type, c.status, c.total_sent||0, c.total_opened||0, c.total_clicked||0,
+              c.total_sent ? Math.round((c.total_opened||0)/c.total_sent*100)+"%" : "—"
+            ].map(v=>`"${v}"`).join(","));
+            const csv = [hdr.join(","), ...rows].join("\n");
+            const a = document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${activeEvent?.name||"event"}-campaigns.csv`; a.click();
+            fire("✅ Campaign data exported");
+          }} style={{ fontSize: 12, padding:"7px 12px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+            ⬇ Export CSV
+          </button>
           <button onClick={async () => {
             const latestWithHtml = campaigns.find(c => c.html_content && c.status !== "sent");
             if (!latestWithHtml) { fire("No draft with content found — generate one in eDM Builder first", "err"); return; }
@@ -3913,7 +3926,12 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                         {c.unsubscribed && <span style={{ fontSize: 9, padding:"1px 5px", borderRadius:3, background:C.red+"15", color:C.red }}>unsub</span>}
                       </div>
                     </td>
-                    <td style={{ padding: "11px 14px", fontSize: 12.5, color: C.muted }}>{c.email}</td>
+                    <td style={{ padding: "11px 14px", fontSize: 12.5 }}>
+                      <a href={`mailto:${c.email}`} style={{ color: C.muted, textDecoration: "none" }}
+                        onClick={e => { e.stopPropagation(); navigator.clipboard?.writeText(c.email); e.preventDefault(); fire("📋 Email copied"); }}>
+                        {c.email}
+                      </a>
+                    </td>
                     <td style={{ padding: "11px 14px", fontSize: 12.5, color: C.muted }}>{c.company_name || "—"}</td>
                     <td style={{ padding: "11px 14px" }}>
                       <span style={{ fontSize: 11, fontWeight: 500, color: c.unsubscribed ? C.red : C.green, background: (c.unsubscribed ? C.red : C.green) + "12", padding: "2px 8px", borderRadius: 4 }}>
@@ -4337,6 +4355,11 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
                       <div style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
                         <button onClick={() => moveUp(i)} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 13, padding: "0 3px", cursor: "pointer" }}>↑</button>
                         <button onClick={() => moveDown(i)} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 13, padding: "0 3px", cursor: "pointer" }}>↓</button>
+                        <button onClick={() => setFields(p => p.map(x => x.id === f.id ? {...x, required: !x.required} : x))}
+                          title={f.required ? "Required — click to make optional" : "Optional — click to make required"}
+                          style={{ background:"transparent", border:"none", color: f.required ? C.blue : C.muted, fontSize:11, padding:"0 3px", cursor:"pointer", fontWeight: f.required ? 700 : 400 }}>
+                          {f.required ? "REQ" : "opt"}
+                        </button>
                         <button onClick={() => removeField(f.id)} style={{ background: "transparent", border: "none", color: C.red, fontSize: 14, padding: "0 3px", cursor: "pointer" }}>×</button>
                       </div>
                     </div>
@@ -4917,7 +4940,20 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
             const a = document.createElement("a"); a.href = url; a.download = `${activeEvent.name}-attended.csv`; a.click();
             fire(`✅ Exported ${attended.length} attendees`);
           }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-            ⬇ Export
+            ⬇ Export attended
+          </button>
+          <button onClick={() => {
+            const all = contacts.filter(c => c.contacts);
+            const csv = ["Name,Email,Company,Dietary,Status"].concat(
+              all.map(ec => {
+                const c = ec.contacts || {};
+                return `"${c.first_name||""} ${c.last_name||""}","${c.email||""}","${c.company_name||""}","${ec.dietary||""}","${ec.status||"pending"}"`;
+              })
+            ).join("\n");
+            const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = `${activeEvent.name}-all-guests.csv`; a.click();
+            fire(`✅ Exported ${all.length} guests`);
+          }} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            ⬇ All guests
           </button>
           <button onClick={() => setShowWalkin(true)}
             style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 500 }}>
