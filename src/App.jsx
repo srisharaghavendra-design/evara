@@ -1205,7 +1205,17 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           )}
           {activeEvent.capacity && (
             <p style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-              👥 Capacity: {activeEvent.capacity} · {contacts.length} registered ({Math.round((contacts.length / activeEvent.capacity) * 100)}% full)
+              {(() => {
+                const pct = Math.round((contacts.length / activeEvent.capacity) * 100);
+                const isOver = contacts.length >= activeEvent.capacity;
+                const isNear = pct >= 80 && !isOver;
+                return (
+                  <span style={{ color: isOver ? C.red : isNear ? C.amber : C.muted, fontWeight: isOver || isNear ? 600 : 400 }}>
+                    {isOver ? "🔴 SOLD OUT" : isNear ? "🟡 Nearly full" : "👥 Capacity"}: {contacts.length}/{activeEvent.capacity} ({pct}% full)
+                    {isOver && <span onClick={() => fire("Set up a Waitlist form in the Forms section")} style={{ color: C.blue, marginLeft: 8, cursor: "pointer", textDecoration: "underline", fontSize: 11 }}>Set up waitlist →</span>}
+                  </span>
+                );
+              })()}
             </p>
           )}
         </div>
@@ -2655,7 +2665,17 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                     </div>
                     <div style={{ fontSize: 10, color: "#aaa" }}>{new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</div>
                   </div>
-                  <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: "100%", border: "none", minHeight: 560, transition: "width .3s ease", display: "block" }} title="Email Preview" sandbox="allow-same-origin" />
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    {[{ label: "💻 Desktop", w: "100%" }, { label: "📱 Mobile", w: "375px" }].map(v => (
+                      <button key={v.label} onClick={() => setPreviewWidth(v.w)}
+                        style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: `1px solid ${previewWidth === v.w || (!previewWidth && v.w === "100%") ? C.blue : C.border}`, background: previewWidth === v.w || (!previewWidth && v.w === "100%") ? C.blue+"15" : "transparent", color: previewWidth === v.w || (!previewWidth && v.w === "100%") ? C.blue : C.muted, cursor: "pointer" }}>
+                        {v.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ overflowX: "auto" }}>
+                    <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 560, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 12 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }} title="Email Preview" sandbox="allow-same-origin" />
+                  </div>
                 </div>
               </div>
             )}
@@ -2923,8 +2943,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               <span>
                 {campaigns.filter(c=>c.status==="sent").length} sent ·{" "}
                 <span style={{ color: C.blue }}>{campaigns.filter(c=>c.status==="scheduled").length} scheduled</span> ·{" "}
-                {campaigns.filter(c=>c.status==="draft").length} drafts ·{" "}
-                {campaigns.length} total
+                {campaigns.filter(c=>c.status==="draft").length} drafts
+                {(() => {
+                  const sent = campaigns.filter(c=>c.status==="sent");
+                  const totalSent = sent.reduce((s,c)=>s+(c.total_sent||0),0);
+                  const totalOpened = sent.reduce((s,c)=>s+(c.total_opened||0),0);
+                  const openRate = totalSent > 0 ? Math.round(totalOpened/totalSent*100) : null;
+                  return openRate !== null ? <span style={{ marginLeft: 8, color: openRate >= 30 ? C.green : openRate >= 20 ? C.amber : C.muted }}>· {openRate}% avg open rate</span> : null;
+                })()}
               </span>
             ) : "Create and send email campaigns for this event."}
           </p>
@@ -3081,7 +3107,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   {cam.status === "scheduled" && cam.scheduled_at ? (() => {
                     const d = new Date(cam.scheduled_at);
                     const daysLeft = Math.ceil((d - new Date()) / (1000*60*60*24));
-                    return daysLeft <= 0 ? `⚡ Sending today!` : daysLeft === 1 ? `⏰ Tomorrow · ${d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : daysLeft <= 7 ? `🔶 In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : `⏰ In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`;
+                    const day = d.getDay(); const hour = d.getHours();
+                    const isOptimal = day >= 1 && day <= 4 && (hour >= 9 && hour <= 11 || hour >= 14 && hour <= 16);
+                    return (
+                      <span>
+                        {daysLeft <= 0 ? `⚡ Sending today!` : daysLeft === 1 ? `⏰ Tomorrow · ${d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : daysLeft <= 7 ? `🔶 In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : `⏰ In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`}
+                        {isOptimal ? <span style={{ color: C.green, marginLeft: 6, fontSize: 10 }}>✓ Optimal time</span> : <span style={{ color: C.amber, marginLeft: 6, fontSize: 10 }}>💡 Tue–Thu 9–11am gets best opens</span>}
+                      </span>
+                    );
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
                   {" · "}Segment: {cam.segment}
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
@@ -3495,6 +3528,11 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <Sparkles size={12}/>AI Sales Brief
           </button>
           <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
+          {contacts.filter(c => c.unsubscribed).length > 0 && (
+            <span style={{ fontSize: 11, color: C.muted, padding: "4px 10px", background: C.raised, borderRadius: 6, border: `1px solid ${C.border}` }}>
+              🚫 {contacts.filter(c => c.unsubscribed).length} unsubscribed — never emailed
+            </span>
+          )}
           {duplicates.length > 0 && (
             <button onClick={() => setShowDuplicates(p => !p)}
               style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
@@ -3538,6 +3576,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         {[
           { id: "all", label: `All (${contacts.length})` },
           { id: "vip", label: `⭐ VIP (${contacts.filter(c => c.tags?.includes("vip")).length})` },
+          { id: "unsubscribed", label: `🚫 Unsubscribed (${contacts.filter(c => c.unsubscribed).length})` },
           { id: "active", label: `✓ Active (${contacts.filter(c => !c.unsubscribed).length})` },
           { id: "unsubscribed", label: `🚫 Unsub (${contacts.filter(c => c.unsubscribed).length})` },
         ].map(f => (
