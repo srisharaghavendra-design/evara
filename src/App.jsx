@@ -1345,8 +1345,8 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </button>
           {daysToEvent !== null && (
             <div style={{ textAlign: "center", background: C.card, border: `1px solid ${daysToEvent <= 3 ? C.red + "50" : daysToEvent <= 7 ? C.amber + "50" : C.border}`, borderRadius: 10, padding: "12px 20px" }}>
-              <div style={{ fontSize: 32, fontWeight: 700, color: daysToEvent <= 3 ? C.red : daysToEvent <= 7 ? C.amber : C.text, lineHeight: 1 }}>{daysToEvent > 0 ? daysToEvent : "Today!"}</div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>{daysToEvent > 0 ? "Days to go" : ""}</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: daysToEvent <= 3 ? C.red : daysToEvent <= 7 ? C.amber : C.text, lineHeight: 1 }}>{daysToEvent > 0 ? daysToEvent : daysToEvent === 0 ? "🎉" : Math.abs(daysToEvent)}</div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>{daysToEvent > 0 ? "Days to go" : daysToEvent === 0 ? "Today!" : "Days ago"}</div>
             </div>
           )}
           {metrics && <div style={{ display: "flex", gap: 16 }}>
@@ -3857,6 +3857,13 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:C.blue+"10", borderBottom:`1px solid ${C.blue}25`, flexWrap:"wrap" }}>
             <span style={{ fontSize:12, color:C.blue, fontWeight:600 }}>{selContacts.size} selected</span>
             <button onClick={async () => {
+              const ids = [...selContacts];
+              await supabase.from("contacts").update({ unsubscribed: true }).in("id", ids);
+              setContacts(p => p.map(c => ids.includes(c.id) ? {...c, unsubscribed: true} : c));
+              setSelContacts(new Set());
+              fire(`🚫 ${ids.length} unsubscribed`);
+            }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.amber}40`, background:"transparent", color:C.amber, cursor:"pointer" }}>🚫 Unsub</button>
+            <button onClick={async () => {
               if (!window.confirm(`Delete ${selContacts.size} contact${selContacts.size>1?"s":""}? Cannot be undone.`)) return;
               for (const id of selContacts) {
                 await supabase.from("event_contacts").delete().eq("contact_id", id);
@@ -4360,6 +4367,11 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
                           style={{ background:"transparent", border:"none", color: f.required ? C.blue : C.muted, fontSize:11, padding:"0 3px", cursor:"pointer", fontWeight: f.required ? 700 : 400 }}>
                           {f.required ? "REQ" : "opt"}
                         </button>
+                        <button onClick={() => {
+                          const dup = { ...f, id: nextId };
+                          setNextId(p => p + 1);
+                          setFields(p => { const i = p.findIndex(x => x.id === f.id); const n=[...p]; n.splice(i+1,0,dup); return n; });
+                        }} title="Duplicate field" style={{ background:"transparent", border:"none", color:C.muted, fontSize:12, padding:"0 3px", cursor:"pointer" }}>⧉</button>
                         <button onClick={() => removeField(f.id)} style={{ background: "transparent", border: "none", color: C.red, fontSize: 14, padding: "0 3px", cursor: "pointer" }}>×</button>
                       </div>
                     </div>
@@ -4570,7 +4582,7 @@ function SettingsView({ supabase, profile, fire }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Profile</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, color: C.muted }}>evara v1.5 · Supabase + SendGrid + Claude</span>
+          <span style={{ fontSize: 10, color: C.muted }}>evara v2.0 · Supabase + SendGrid + Claude AI</span>
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { label: "Supabase", ok: true },
