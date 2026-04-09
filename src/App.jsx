@@ -1157,7 +1157,16 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const goLiveDone = goLiveChecklist.filter(i => i.done).length;
 
   const METRICS = [
-    { label: "Emails Sent", val: metrics?.total_sent || 0, sub: campaigns.filter(c=>c.status==="scheduled").length > 0 ? `${campaigns.filter(c=>c.status==="scheduled").length} scheduled` : null, color: C.blue },
+    { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue,
+      sub: (() => {
+        const sched = campaigns.filter(c => c.status === "scheduled").length;
+        if (sched > 0) return `${sched} scheduled`;
+        const lastSent = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0];
+        if (!lastSent) return null;
+        const d = Math.round((new Date()-new Date(lastSent.sent_at))/(1000*60*60*24));
+        return d === 0 ? "sent today" : `last sent ${d}d ago`;
+      })()
+    },
     { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "% open rate" : "No sends yet" },
     { label: "Registered", val: metrics?.total_contacts || metrics?.total_invited || 0, color: C.text },
     { label: "Confirmed", val: metrics?.total_confirmed || 0, color: C.green },
@@ -1419,8 +1428,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <span style={{ fontSize: 12, fontWeight: 500, color: C.text }}>Event Lifecycle</span>
               <span style={{ fontSize: 11, color: daysLeft <= 7 ? C.red : daysLeft <= 21 ? C.amber : C.muted }}>
-                {daysLeft > 0 ? `${daysLeft} days to go` : daysLeft === 0 ? "Today!" : `${Math.abs(daysLeft)} days ago`}
+                {daysLeft > 0 ? `${daysLeft} days to go` : daysLeft === 0 ? "🎉 Today!" : `${Math.abs(daysLeft)} days ago`}
               </span>
+              {activeEvent.status === "archived" && (
+                <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 3, background: C.raised, color: C.muted, marginLeft: 6 }}>📦 Archived</span>
+              )}
             </div>
             <div style={{ position: "relative", height: 6, background: C.raised, borderRadius: 999, marginBottom: 12 }}>
               <div style={{ position: "absolute", left: 0, top: 0, height: "100%", width: `${pct}%`, background: `linear-gradient(90deg, ${C.blue}, ${C.teal})`, borderRadius: 999, transition: "width .4s ease" }} />
@@ -1569,7 +1581,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Contacts</span>
           {scoreFilter && <button onClick={() => setScoreFilter("")} style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft: 4 }}>✕ {scoreFilter}</button>}
-          <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>{contacts.length} total</span>
+          <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>
+            {filtered.length !== contacts.length ? `${filtered.length} of ${contacts.length}` : contacts.length} contact{contacts.length !== 1 ? "s" : ""}
+            {contactSort !== "newest" ? ` · sorted by ${contactSort}` : ""}
+          </span>
           {contacts.length > 0 && (
             <div style={{ display: "flex", gap: 3, fontSize: 10 }}>
               {[["confirmed", C.green], ["attended", C.blue], ["pending", C.amber], ["declined", C.red]].map(([s, col]) => {
@@ -3237,6 +3252,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
                 </div>
                 {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
+                {cam.html_content && (() => {
+                  const words = cam.html_content.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
+                  return <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{words} words · ~{Math.max(1, Math.round(words/200))} min read</div>;
+                })()}
               </div>
               <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                 {/* ← NEW: Preview button */}
