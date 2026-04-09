@@ -2647,6 +2647,63 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [contactCount, setContactCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
+  const [followUpGenerating, setFollowUpGenerating] = useState(false);
+
+  const generateFollowUpSequence = async () => {
+    if (!activeEvent || !profile) return;
+    const eventDate = activeEvent.event_date ? new Date(activeEvent.event_date) : null;
+    const hasThankyou = campaigns.some(c => c.email_type === "thank_you");
+    setFollowUpGenerating(true);
+    try {
+      // Create 3 post-event follow-up emails: Thank You, Feedback Request, Next Event
+      const followUps = [
+        {
+          email_type: "thank_you",
+          name: `Thank You — ${activeEvent.name}`,
+          subject: `Thank you for attending ${activeEvent.name} 🙏`,
+          offset: 1,
+          html_content: `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f2f2f7"><tr><td align="center" style="padding:32px 16px"><table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#fff;border-radius:14px;overflow:hidden"><tr><td bgcolor="#0A1628" style="padding:40px"><h1 style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#fff">Thank you for joining us! 🙏</h1><p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:rgba(255,255,255,0.65)">${activeEvent.name}</p></td></tr><tr><td style="padding:36px 40px"><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">Dear [First Name],</p><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">Thank you so much for attending <strong>${activeEvent.name}</strong>. It was a privilege to have you there, and we hope the experience was valuable and inspiring.</p><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">We'd love to hear your thoughts on the event — your feedback helps us make each one better than the last.</p></td></tr><tr><td bgcolor="#f8f8f8" style="padding:18px 40px;border-top:1px solid #eee;font-family:Arial,sans-serif;font-size:11px;color:#aaa;text-align:center">© ${new Date().getFullYear()} evara · <a href="{{UNSUBSCRIBE_URL}}" style="color:#aaa;text-decoration:underline">Unsubscribe</a></td></tr></table></td></tr></table>`,
+        },
+        {
+          email_type: "thank_you",
+          name: `Feedback Request — ${activeEvent.name}`,
+          subject: `Your feedback on ${activeEvent.name} matters to us`,
+          offset: 3,
+          html_content: `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f2f2f7"><tr><td align="center" style="padding:32px 16px"><table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#fff;border-radius:14px;overflow:hidden"><tr><td bgcolor="#0A1628" style="padding:40px"><h1 style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#fff">We'd love your feedback ⭐</h1><p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:rgba(255,255,255,0.65)">${activeEvent.name}</p></td></tr><tr><td style="padding:36px 40px"><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">Dear [First Name],</p><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">A few days have passed since <strong>${activeEvent.name}</strong>, and we'd really value your perspective on the experience.</p><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">Your honest feedback — what worked well and what could be improved — helps us design better events in the future.</p><table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0"><tr><td align="center"><a href="#" style="display:inline-block;padding:14px 36px;background:#0A84FF;color:#fff;font-family:Arial,sans-serif;font-size:15px;font-weight:700;text-decoration:none;border-radius:8px">Share Your Feedback →</a></td></tr></table></td></tr><tr><td bgcolor="#f8f8f8" style="padding:18px 40px;border-top:1px solid #eee;font-family:Arial,sans-serif;font-size:11px;color:#aaa;text-align:center">© ${new Date().getFullYear()} evara · <a href="{{UNSUBSCRIBE_URL}}" style="color:#aaa;text-decoration:underline">Unsubscribe</a></td></tr></table></td></tr></table>`,
+        },
+        {
+          email_type: "save_the_date",
+          name: `Stay Connected — ${activeEvent.name}`,
+          subject: `More great events coming your way 🎯`,
+          offset: 14,
+          html_content: `<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f2f2f7"><tr><td align="center" style="padding:32px 16px"><table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#fff;border-radius:14px;overflow:hidden"><tr><td bgcolor="#0A1628" style="padding:40px"><h1 style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#fff">Stay in the loop 🎯</h1><p style="margin:0;font-family:Arial,sans-serif;font-size:15px;color:rgba(255,255,255,0.65)">From the team behind ${activeEvent.name}</p></td></tr><tr><td style="padding:36px 40px"><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">Dear [First Name],</p><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">We're already planning more events and would love to have you join us again. Attendees like you make these experiences worthwhile.</p><p style="font-family:Arial,sans-serif;font-size:16px;color:#333;line-height:1.65;margin:0 0 16px">Keep an eye on your inbox — we'll be sharing our next event details soon. In the meantime, feel free to connect with us.</p></td></tr><tr><td bgcolor="#f8f8f8" style="padding:18px 40px;border-top:1px solid #eee;font-family:Arial,sans-serif;font-size:11px;color:#aaa;text-align:center">© ${new Date().getFullYear()} evara · <a href="{{UNSUBSCRIBE_URL}}" style="color:#aaa;text-decoration:underline">Unsubscribe</a></td></tr></table></td></tr></table>`,
+        },
+      ];
+
+      const savedCampaigns = [];
+      for (const fu of followUps) {
+        const sendAt = eventDate ? new Date(new Date(eventDate).setDate(new Date(eventDate).getDate() + fu.offset)).toISOString() : null;
+        const { data } = await supabase.from("email_campaigns").insert({
+          event_id: activeEvent.id,
+          company_id: profile.company_id,
+          name: fu.name,
+          email_type: fu.email_type,
+          template_style: "branded",
+          subject: fu.subject,
+          html_content: fu.html_content,
+          plain_text: `Dear [First Name],\n\n${fu.subject}\n\nKind regards,\nevara`,
+          send_at: sendAt,
+          scheduled_at: sendAt,
+          status: sendAt && new Date(sendAt) > new Date() ? "scheduled" : "draft",
+          segment: "attended",
+        }).select().single();
+        if (data) savedCampaigns.push(data);
+      }
+      setCampaigns(p => [...p, ...savedCampaigns]);
+      fire(`✅ ${savedCampaigns.length} follow-up emails created and scheduled for attended guests!`);
+    } catch (err) { fire(err.message || "Failed to generate follow-ups", "err"); }
+    finally { setFollowUpGenerating(false); }
+  };
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
@@ -2841,6 +2898,12 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
           }} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             ⚡ Run Scheduler
           </button>
+          {activeEvent?.event_date && new Date(activeEvent.event_date) < new Date() && (
+            <button onClick={generateFollowUpSequence} disabled={followUpGenerating}
+              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.teal}40`, background: C.teal+"12", color: C.teal, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
+              {followUpGenerating ? <><Spin size={11}/>Creating…</> : <>🎉 Post-event Follow-ups</>}
+            </button>
+          )}
           <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
         </div>
       </div>
@@ -3144,6 +3207,47 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [showDuplicates, setShowDuplicates] = useState(false);
+  const [mergingDup, setMergingDup] = useState(false);
+
+  // Find duplicates: same email or same name+company
+  const duplicates = (() => {
+    const emailMap = {};
+    const nameMap = {};
+    const dups = [];
+    contacts.forEach(c => {
+      const email = c.email?.toLowerCase().trim();
+      const nameKey = `${(c.first_name||"").toLowerCase()}_${(c.last_name||"").toLowerCase()}_${(c.company_name||"").toLowerCase()}`;
+      if (email && emailMap[email]) {
+        dups.push({ type: "email", contacts: [emailMap[email], c], key: email });
+      } else if (email) { emailMap[email] = c; }
+      if (nameKey.length > 2 && nameMap[nameKey]) {
+        if (!dups.find(d => d.contacts.some(dc => dc.id === c.id))) {
+          dups.push({ type: "name", contacts: [nameMap[nameKey], c], key: nameKey });
+        }
+      } else if (nameKey.length > 2) { nameMap[nameKey] = c; }
+    });
+    return dups;
+  })();
+
+  const mergeDuplicate = async (keep, remove) => {
+    setMergingDup(true);
+    try {
+      // Move all event_contacts from remove to keep
+      await supabase.from("event_contacts").update({ contact_id: keep.id }).eq("contact_id", remove.id);
+      // Move all email_sends
+      await supabase.from("email_sends").update({ contact_id: keep.id }).eq("contact_id", remove.id);
+      // Move all contact_activity
+      await supabase.from("contact_activity").update({ contact_id: keep.id }).eq("contact_id", remove.id);
+      // Delete the duplicate
+      await supabase.from("contacts").delete().eq("id", remove.id);
+      // Refresh contacts
+      const { data } = await supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false });
+      setContacts(data || []);
+      fire(`✅ Merged: ${remove.email || remove.first_name} → ${keep.email || keep.first_name}`);
+    } catch (err) { fire(err.message || "Merge failed", "err"); }
+    setMergingDup(false);
+  };
   useEffect(() => {
     if (!profile) return;
     supabase.from("contacts").select("*").eq("company_id", profile.company_id).order("created_at", { ascending: false })
@@ -3261,6 +3365,12 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <Sparkles size={12}/>AI Sales Brief
           </button>
           <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
+          {duplicates.length > 0 && (
+            <button onClick={() => setShowDuplicates(p => !p)}
+              style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} found
+            </button>
+          )}
         <button onClick={async () => {
           // Find duplicates by email
           const seen = {};
@@ -3372,6 +3482,52 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           </table>
         )}
       {/* IMPORT MODAL */}
+      {showDuplicates && duplicates.length > 0 && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}
+          onClick={() => setShowDuplicates(false)}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 540, maxHeight: "80vh", overflowY: "auto", animation: "fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <div>
+                <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: 0 }}>⚠️ Duplicate Contacts</h2>
+                <p style={{ fontSize: 12, color: C.muted, margin: "4px 0 0" }}>Review and merge duplicate contacts. The selected record is kept, the other is removed.</p>
+              </div>
+              <button onClick={() => setShowDuplicates(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>×</button>
+            </div>
+            {duplicates.slice(0, 10).map((dup, i) => {
+              const [a, b] = dup.contacts;
+              return (
+                <div key={i} style={{ background: C.raised, borderRadius: 10, border: `1px solid ${C.amber}25`, padding: "14px 16px", marginBottom: 10 }}>
+                  <div style={{ fontSize: 10.5, color: C.amber, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10 }}>
+                    {dup.type === "email" ? "Same email address" : "Same name & company"}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                    {[a, b].map((c, ci) => (
+                      <div key={c.id} style={{ background: C.card, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                          {`${c.first_name||""} ${c.last_name||""}`.trim() || "—"}
+                        </div>
+                        <div style={{ fontSize: 11, color: C.muted, marginBottom: 2 }}>{c.email || "—"}</div>
+                        <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{c.company_name || "—"}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Added {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}</div>
+                        <button
+                          onClick={() => mergeDuplicate(c, ci === 0 ? b : a)}
+                          disabled={mergingDup}
+                          style={{ width: "100%", fontSize: 11, padding: "5px 8px", borderRadius: 5, border: `1px solid ${C.green}40`, background: "transparent", color: C.green, cursor: "pointer" }}>
+                          {mergingDup ? "Merging…" : "✅ Keep this one"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+            {duplicates.length > 10 && (
+              <p style={{ textAlign: "center", fontSize: 12, color: C.muted }}>…and {duplicates.length - 10} more. Merge these first.</p>
+            )}
+          </div>
+        </div>
+      )}
       {showImport && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
           onClick={() => setShowImport(false)}>
