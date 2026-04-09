@@ -1179,10 +1179,16 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           {formShareLink && (
-            <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }}
-              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
-              📝 Reg Link
-            </button>
+            <div style={{ display: "flex", gap: 5 }}>
+              <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }}
+                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
+                📝 Reg Link
+              </button>
+              <button onClick={() => window.open(formShareLink, "_blank")}
+                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.blue}40`, borderRadius: 7, padding: "7px 13px", color: C.blue, cursor: "pointer" }}>
+                👁 View Form
+              </button>
+            </div>
           )}
           <button onClick={async () => {
             // Get or create share token for this event
@@ -4726,8 +4732,13 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
           })()}
           <button onClick={generateCampaign} disabled={generating}
             style={{ padding: 12, borderRadius: 8, border: "none", background: generating ? C.raised : `linear-gradient(135deg, ${C.blue}, #6366f1)`, color: generating ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, cursor: "pointer", boxShadow: generating ? "none" : `0 4px 20px ${C.blue}40` }}>
-            {generating ? <><Spin />Building campaign…</> : <><Sparkles size={14} />Generate 7-Email Campaign</>}
+            {generating ? <><Spin />Building campaign… (15-30s)</> : <><Sparkles size={14} />⚡ Generate 7-Email Campaign</>}
           </button>
+          {!generating && campaigns.length === 0 && (
+            <div style={{ fontSize: 11, color: C.muted, textAlign: "center", marginTop: 8 }}>
+              Creates: Save the Date · Invitation · Reminder · Day-of · Confirmation · What to Bring · Thank You
+            </div>
+          )}
           <div style={{ background: C.card, borderRadius: 8, border: `1px solid ${C.border}`, padding: 14 }}>
             <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10 }}>What gets generated</div>
             {EMAIL_SEQUENCE.map((e, i) => (
