@@ -586,6 +586,7 @@ function MainApp({ session }) {
   const [activeEvent, setActiveEvent] = useState(null);
   const [toast, setToast] = useState(null);
   const [showNewEvent, setShowNewEvent] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const [newEventName, setNewEventName] = useState("");
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
@@ -709,7 +710,7 @@ function MainApp({ session }) {
                   const ev = events.find(x => x.id === e.target.value);
                   if (ev) { setActiveEvent(ev); }
                 }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
-                  {events.filter(ev => ev.status !== "archived").map(ev => {
+                  {events.filter(ev => showArchived || ev.status !== "archived").map(ev => {
                     const daysLeft = ev.event_date ? Math.ceil((new Date(ev.event_date) - new Date()) / (1000*60*60*24)) : null;
                     const suffix = daysLeft === null ? "" : daysLeft === 0 ? " (TODAY)" : daysLeft > 0 ? ` (${daysLeft}d)` : " (past)";
                     return <option key={ev.id} value={ev.id}>{ev.name}{suffix}</option>;
@@ -2770,6 +2771,16 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied to clipboard"); }}
               style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
               📋 Copy HTML
+            </button>
+            <button onClick={() => {
+              const name = window.prompt("Save template as:", preview.subject || "My Template");
+              if (!name) return;
+              const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
+              templates.unshift({ name, subject: preview.subject, html: preview.html, plain_text: preview.plain_text, savedAt: new Date().toISOString() });
+              localStorage.setItem("evara_templates", JSON.stringify(templates.slice(0, 20)));
+              fire(`✅ Template "${name}" saved — available in Email Type → Saved Templates`);
+            }} style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
+              💾 Save template
             </button>
             <button onClick={() => setPreview(null)} style={{ padding: "9px 14px", background: C.raised, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>Clear</button>
             <button onClick={() => {
