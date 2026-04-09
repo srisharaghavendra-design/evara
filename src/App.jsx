@@ -3470,6 +3470,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   }, [profile]);
   const [contactFilter, setContactFilter] = useState("all"); // all | vip | unsubscribed | active
   const [contactSort, setContactSort] = useState("newest"); // newest | name | company
+  const [selContacts, setSelContacts] = useState(new Set());
+  const toggleSel = (id) => setSelContacts(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const filtered = contacts.filter(c => {
     if (search && !(c.email + (c.first_name||"") + (c.last_name||"") + (c.company_name||"")).toLowerCase().includes(search.toLowerCase())) return false;
     if (contactFilter === "vip" && !c.tags?.includes("vip")) return false;
@@ -3617,6 +3619,12 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           )}
           {duplicates.length > 0 && (
             <button onClick={() => setShowDuplicates(p => !p)}
+              style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer" }}>
+              ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} — merge
+            </button>
+          )}
+          {duplicates.length > 0 && (
+            <button onClick={() => setShowDuplicates(p => !p)}
               style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
               ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} found
             </button>
@@ -3669,6 +3677,34 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         ))}
       </div>
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        {selContacts.size > 0 && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:C.blue+"10", borderBottom:`1px solid ${C.blue}25`, flexWrap:"wrap" }}>
+            <span style={{ fontSize:12, color:C.blue, fontWeight:600 }}>{selContacts.size} selected</span>
+            <button onClick={async () => {
+              if (!window.confirm(`Delete ${selContacts.size} contact${selContacts.size>1?"s":""}? Cannot be undone.`)) return;
+              for (const id of selContacts) {
+                await supabase.from("event_contacts").delete().eq("contact_id", id);
+                await supabase.from("contacts").delete().eq("id", id);
+              }
+              setContacts(p => p.filter(c => !selContacts.has(c.id)));
+              setSelContacts(new Set());
+              fire(`🗑 Deleted ${selContacts.size}`);
+            }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.red}40`, background:"transparent", color:C.red, cursor:"pointer" }}>🗑 Delete</button>
+            {activeEvent && <button onClick={async () => {
+              let n = 0;
+              for (const id of selContacts) {
+                const {error} = await supabase.from("event_contacts").upsert(
+                  {contact_id:id, event_id:activeEvent.id, company_id:profile.company_id, status:"pending"},
+                  {onConflict:"event_id,contact_id", ignoreDuplicates:true}
+                );
+                if (!error) n++;
+              }
+              setSelContacts(new Set());
+              fire(`✅ ${n} added to ${activeEvent.name}`);
+            }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.green}40`, background:"transparent", color:C.green, cursor:"pointer" }}>+ Add to event</button>}
+            <button onClick={() => setSelContacts(new Set())} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft:"auto" }}>✕ Clear</button>
+          </div>
+        )}
         {loading ? <div style={{ padding: "32px", textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading contacts…</div> : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
@@ -3682,9 +3718,13 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                   <tr key={c.id} className="rh" style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : undefined, background: "transparent", transition: "background .08s" }}>
                     <td style={{ padding: "11px 14px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                        <input type="checkbox" checked={selContacts.has(c.id)}
+                          onChange={() => toggleSel(c.id)} onClick={e => e.stopPropagation()}
+                          style={{ accentColor: C.blue, cursor:"pointer", flexShrink:0 }} />
                         <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: C.blue, flexShrink: 0 }}>{ini(`${c.first_name || ""} ${c.last_name || ""}`)}</div>
                         <span style={{ fontSize: 13, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</span>
                         {c.tags?.includes("vip") && <span style={{ fontSize: 10, color: "#FFB800", marginLeft: 4 }}>⭐ VIP</span>}
+                        {c.unsubscribed && <span style={{ fontSize: 9, padding:"1px 5px", borderRadius:3, background:C.red+"15", color:C.red }}>unsub</span>}
                       </div>
                     </td>
                     <td style={{ padding: "11px 14px", fontSize: 12.5, color: C.muted }}>{c.email}</td>
@@ -5924,6 +5964,11 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
     if (!activeEvent) return;
     if (activeEvent.roi_costs) try { setCosts(JSON.parse(activeEvent.roi_costs)); } catch {}
     if (activeEvent.roi_revenue) try { setRevenue(JSON.parse(activeEvent.roi_revenue)); } catch {}
+    if (activeEvent.id) {
+      supabase.from("event_contacts").select("id", { count: "exact" })
+        .eq("event_id", activeEvent.id).eq("status", "attended")
+        .then(({ count }) => setMetrics(p => p ? { ...p, actual_attended: count || 0 } : { actual_attended: count || 0 }));
+    }
   }, [activeEvent?.id]);
 
   useEffect(() => {
