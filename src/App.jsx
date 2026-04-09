@@ -1107,7 +1107,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
 
   // Apply NL filter first, then status filter on top
   const baseContacts = nlFiltered !== null ? nlFiltered : contacts;
-  const rows = filt === "all" ? baseContacts : baseContacts.filter(c => c.status === filt);
+  const rows = (filt === "all" ? baseContacts : baseContacts.filter(c => c.status === filt)).filter(ec => {
+    if (!scoreFilter) return true;
+    const s = scores[ec.contacts?.id]?.score || 0;
+    if (scoreFilter === "hot")  return s >= 15;
+    if (scoreFilter === "warm") return s >= 8 && s < 15;
+    if (scoreFilter === "cool") return s >= 3 && s < 8;
+    if (scoreFilter === "cold") return s < 3;
+    return true;
+  });
   const noContactsYet = contacts.length === 0 && !loading;
   // Go Live checklist items
   const goLiveChecklist = activeEvent ? [
@@ -1518,6 +1526,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap" }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Contacts</span>
+          {scoreFilter && <button onClick={() => setScoreFilter("")} style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft: 4 }}>✕ {scoreFilter}</button>}
           <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>{contacts.length} total</span>
           {contacts.length > 0 && (
             <div style={{ display: "flex", gap: 3, fontSize: 10 }}>
@@ -1544,10 +1553,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 10.5, color: C.muted, alignItems: "center" }}>
             <Star size={10} color={C.amber} />
-            <span style={{ color: C.green }}>●Hot 15+</span>
-            <span style={{ color: C.amber }}>●Warm 8+</span>
-            <span style={{ color: C.blue }}>●Cool 3+</span>
-            <span style={{ color: C.muted }}>●Cold</span>
+            <span onClick={() => setScoreFilter(f => f==="hot"?"":"hot")} title="Filter by hot leads" style={{ color: C.green, cursor:"pointer", fontWeight: scoreFilter==="hot" ? 700 : 400 }}>●Hot 15+</span>
+            <span onClick={() => setScoreFilter(f => f==="warm"?"":"warm")} title="Filter by warm leads" style={{ color: C.amber, cursor:"pointer", fontWeight: scoreFilter==="warm" ? 700 : 400 }}>●Warm 8+</span>
+            <span onClick={() => setScoreFilter(f => f==="cool"?"":"cool")} title="Filter by cool leads" style={{ color: C.blue, cursor:"pointer", fontWeight: scoreFilter==="cool" ? 700 : 400 }}>●Cool 3+</span>
+            <span onClick={() => setScoreFilter(f => f==="cold"?"":"cold")} title="Filter by cold leads" style={{ color: C.muted, cursor:"pointer", fontWeight: scoreFilter==="cold" ? 700 : 400 }}>●Cold</span>
           </div>
           <button onClick={async () => {
             const pending = contacts.filter(c => c.status === "pending");
