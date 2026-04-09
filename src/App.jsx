@@ -2739,7 +2739,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     <Send size={11} />Send Now
                   </button>
                   <button onClick={async () => {
-                    const dateStr = window.prompt(`Schedule "${cam.subject}" — enter date & time (YYYY-MM-DD HH:MM):`, new Date(Date.now() + 86400000).toISOString().slice(0, 16).replace("T", " "));
+                    const dateStr = window.prompt("Schedule email — enter date & time (YYYY-MM-DD HH:MM):", new Date(Date.now() + 86400000).toISOString().slice(0, 16).replace("T", " "));
                     if (!dateStr) return;
                     const schedDate = new Date(dateStr);
                     if (isNaN(schedDate)) { fire("Invalid date format", "err"); return; }
