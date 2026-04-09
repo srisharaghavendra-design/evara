@@ -920,6 +920,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
   const [selectedContact, setSelectedContact] = useState(null);
+
+  // Escape key closes contact panel
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape" && selectedContact) setSelectedContact(null); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selectedContact]);
   const [loading, setLoading] = useState(true);
   const [filt, setFilt] = useState("all");
   const [formShareLink, setFormShareLink] = useState("");
@@ -1820,6 +1827,18 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                   ✉️ Send Confirmation
                 </button>
                 <button onClick={async () => {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ contacts: [c], triggerType: "reminder", eventName: activeEvent.name, eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", orgName: profile?.companies?.name || "evara", eventUrl: formShareLink || "" })
+                  });
+                  const d = await res.json();
+                  fire(d.sent > 0 ? `✅ Reminder sent to ${c.email}` : "Send failed", d.sent > 0 ? "ok" : "err");
+                }} style={{ padding: "8px 12px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", fontSize: 12, textAlign: "left" }}>
+                  ⏰ Send Reminder
+                </button>
+                <button onClick={async () => {
                   if (!window.confirm(`Remove ${c.first_name || c.email} from this event?`)) return;
                   await supabase.from("event_contacts").delete().eq("id", selectedContact.id);
                   setContacts(p => p.filter(ec => ec.id !== selectedContact.id));
@@ -2562,8 +2581,15 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {campaigns.length === 0 && (
             <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "48px", textAlign: "center", color: C.muted }}>
-              <Calendar size={32} style={{ opacity: .3, marginBottom: 12 }} />
-              <div style={{ fontSize: 14, marginBottom: 6 }}>No campaigns yet</div>
+              <div style={{ fontSize: 36, marginBottom: 10 }}>✉️</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>No email drafts yet</div>
+              <div style={{ fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>Describe your event above and click Generate — AI writes a polished invite in seconds.</div>
+              <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 16 }}>
+                {["Save the Date","Invitation","Reminder","Day-of","Thank You"].map(t => (
+                  <span key={t} style={{ fontSize: 11, padding: "3px 10px", background: C.raised, borderRadius: 12, color: C.muted }}>{t}</span>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: C.muted }}>💡 Or use Campaigns → Generate 7-Email Campaign for a full sequence</div>
               <div style={{ fontSize: 13 }}>Generate emails in eDM Builder, then send or schedule them here</div>
             </div>
           )}
