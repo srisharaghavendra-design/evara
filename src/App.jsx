@@ -377,6 +377,9 @@ export default function App() {
   if (path === '/unsubscribe' || path.startsWith('/unsubscribe')) {
     return <UnsubscribePage />;
   }
+  if (path === '/pricing' || path === '/waitlist') {
+    return <PricingPage />;
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setBooting(false); });
@@ -764,7 +767,7 @@ function MainApp({ session }) {
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
           <span>⌘N new · ⌘K search · ⌘, settings</span>
-          <span>v1.3</span>
+          <span>v1.4</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
@@ -1070,7 +1073,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const goLiveChecklist = activeEvent ? [
     { id: "contacts", label: "Import contacts", done: contacts.length > 0, action: "contacts", icon: "👥" },
     { id: "form", label: "Create registration form", done: !!formShareLink, action: "forms", icon: "📋" },
-    { id: "email", label: "Draft invite email", done: campaigns.some(c => c.email_type === "invitation"), action: "edm", icon: "✉️" },
+    { id: "email", label: "Draft invite email", done: campaigns.some(c => c.html_content), action: "edm", icon: "✉️" },
     { id: "sent", label: "Send first email", done: campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
   ] : [];
   const goLiveDone = goLiveChecklist.filter(i => i.done).length;
@@ -5120,6 +5123,127 @@ function PublicLandingPage({ slug }) {
 
       <div style={{ borderTop: `1px solid ${page.template === "minimal" ? "#eee" : "rgba(255,255,255,0.1)"}`, padding: "20px 24px", textAlign: "center" }}>
         <span style={{ fontSize: 11, color: page.template === "minimal" ? "#bbb" : "rgba(255,255,255,0.3)" }}>Powered by evara · evarahq.com</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── PRICING / WAITLIST PAGE ─────────────────────────────────
+function PricingPage() {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [company, setCompany] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const PLANS = [
+    { name: "Starter", price: "$49", period: "/mo", desc: "For small businesses running 1–2 events per month", color: "#0A84FF", features: ["Up to 500 contacts", "3 email templates per type", "AI email generation", "Registration forms", "Basic analytics", "Email support"] },
+    { name: "Growth", price: "$199", period: "/mo", desc: "For SMBs managing 3–10 events", color: "#30D158", badge: "Most Popular", features: ["Up to 5,000 contacts", "Unlimited email drafts", "AI drip campaigns", "Landing page builder", "Advanced analytics + ROI", "Priority support", "Custom export formats"] },
+    { name: "Pro", price: "$599", period: "/mo", desc: "For agencies managing multiple clients", color: "#FF9F0A", features: ["Unlimited contacts", "Multi-client / white-label", "Brand kit per client", "Salesforce export", "Team access & roles", "Dedicated onboarding", "SLA support"] },
+  ];
+
+  const handleSubmit = async () => {
+    if (!email || !email.includes("@")) return;
+    setSubmitting(true);
+    try {
+      await supabase.from("waitlist").insert({ email, name, company, created_at: new Date().toISOString() });
+    } catch {}
+    setSubmitted(true);
+    setSubmitting(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0a0a0f", fontFamily: "Arial,Helvetica,sans-serif", color: "#fff" }}>
+      {/* Header */}
+      <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "16px 32px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 28, height: 28, background: "#0A84FF", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700 }}>e</div>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>evara</span>
+          <span style={{ fontSize: 10, background: "rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: 4, color: "rgba(255,255,255,0.5)", marginLeft: 4 }}>BETA</span>
+        </div>
+        <a href="/" style={{ fontSize: 13, color: "rgba(255,255,255,0.5)", textDecoration: "none" }}>← Back to app</a>
+      </div>
+
+      {/* Hero */}
+      <div style={{ textAlign: "center", padding: "72px 24px 48px" }}>
+        <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 3, textTransform: "uppercase", color: "#0A84FF", marginBottom: 16 }}>Simple Pricing</div>
+        <h1 style={{ fontSize: "clamp(32px,5vw,56px)", fontWeight: 800, margin: "0 0 16px", letterSpacing: "-1px", lineHeight: 1.1 }}>
+          Replace 6 tools with one.
+        </h1>
+        <p style={{ fontSize: 18, color: "rgba(255,255,255,0.55)", maxWidth: 520, margin: "0 auto 48px", lineHeight: 1.6 }}>
+          Mailchimp + Eventbrite + Typeform + Unbounce + Zapier + reporting — all in evara, at a fraction of the cost.
+        </p>
+
+        {/* Plans */}
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", maxWidth: 1000, margin: "0 auto 80px" }}>
+          {PLANS.map((plan, i) => (
+            <div key={plan.name} style={{ background: i === 1 ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${i === 1 ? plan.color + "40" : "rgba(255,255,255,0.1)"}`, borderRadius: 16, padding: "28px 24px", width: 280, textAlign: "left", position: "relative", flexShrink: 0 }}>
+              {plan.badge && <div style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: plan.color, color: "#fff", fontSize: 10, fontWeight: 700, padding: "3px 12px", borderRadius: 999, letterSpacing: 1, textTransform: "uppercase", whiteSpace: "nowrap" }}>{plan.badge}</div>}
+              <div style={{ fontSize: 12, fontWeight: 600, color: plan.color, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>{plan.name}</div>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 6 }}>
+                <span style={{ fontSize: 40, fontWeight: 800, letterSpacing: "-1px" }}>{plan.price}</span>
+                <span style={{ fontSize: 14, color: "rgba(255,255,255,0.4)" }}>{plan.period}</span>
+              </div>
+              <p style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginBottom: 20, lineHeight: 1.5 }}>{plan.desc}</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 24 }}>
+                {plan.features.map(f => (
+                  <div key={f} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "rgba(255,255,255,0.75)" }}>
+                    <span style={{ color: plan.color, fontSize: 14, flexShrink: 0 }}>✓</span>{f}
+                  </div>
+                ))}
+              </div>
+              <a href="#waitlist" onClick={e => { e.preventDefault(); document.getElementById("waitlist-email")?.focus(); }}
+                style={{ display: "block", textAlign: "center", padding: "11px", background: i === 1 ? plan.color : "transparent", border: `1px solid ${i === 1 ? "transparent" : "rgba(255,255,255,0.2)"}`, borderRadius: 8, color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
+                Join Waitlist →
+              </a>
+            </div>
+          ))}
+        </div>
+
+        {/* Waitlist CTA */}
+        <div id="waitlist" style={{ maxWidth: 480, margin: "0 auto", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "36px 32px" }}>
+          {submitted ? (
+            <>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+              <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 8 }}>You're on the list!</h2>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>We'll be in touch soon with early access. You'll be one of the first to know when we launch.</p>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, textTransform: "uppercase", color: "#0A84FF", marginBottom: 10 }}>Early Access</div>
+              <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Join the waitlist</h2>
+              <p style={{ fontSize: 14, color: "rgba(255,255,255,0.45)", marginBottom: 24, lineHeight: 1.6 }}>Get early access + 3 months free on any plan when we launch.</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <input id="waitlist-name" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#fff", padding: "11px 14px", fontSize: 14, outline: "none" }} />
+                <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Company name" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#fff", padding: "11px 14px", fontSize: 14, outline: "none" }} />
+                <input id="waitlist-email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Work email" style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#fff", padding: "11px 14px", fontSize: 14, outline: "none" }} />
+                <button onClick={handleSubmit} disabled={submitting || !email}
+                  style={{ padding: "13px", background: submitting ? "rgba(10,132,255,0.5)" : "#0A84FF", border: "none", borderRadius: 8, color: "#fff", fontSize: 15, fontWeight: 700, cursor: submitting ? "not-allowed" : "pointer" }}>
+                  {submitting ? "Joining…" : "Request Early Access →"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Social proof */}
+        <div style={{ marginTop: 64, padding: "0 24px" }}>
+          <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", marginBottom: 24 }}>Replacing tools that cost</p>
+          <div style={{ display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap" }}>
+            {[["Mailchimp", "$350"], ["Eventbrite", "$299"], ["Typeform", "$99"], ["Zapier", "$200"], ["Unbounce", "$200"]].map(([tool, cost]) => (
+              <div key={tool} style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 13, color: "rgba(255,255,255,0.3)", textDecoration: "line-through" }}>{cost}/mo</div>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.2)", marginTop: 2 }}>{tool}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 24, fontSize: 13, color: "rgba(255,255,255,0.3)" }}>= $1,148/month → replaced by evara from $49/month</div>
+        </div>
+      </div>
+
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 32px", textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
+        © {new Date().getFullYear()} evara · evarahq.com · hello@evarahq.com
       </div>
     </div>
   );
