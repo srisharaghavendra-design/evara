@@ -3204,7 +3204,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   const next = campaigns.filter(c=>c.status==="scheduled"&&c.scheduled_at&&new Date(c.scheduled_at)>new Date()).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))[0];
                   if (!next) return null;
                   const h = Math.round((new Date(next.scheduled_at)-new Date())/(1000*60*60));
-                  return <span style={{ marginLeft:8, color:h<24?C.amber:C.muted }}>· next in {h<24?`${h}h`:`${Math.round(h/24)}d`}</span>;
+                  return <span style={{ marginLeft:8, color:h<24?C.amber:C.muted }}>· 📅 next in {h<24?`${h}h`:`${Math.round(h/24)}d`}</span>;
                 })()}
                 {(() => {
                   const sent = campaigns.filter(c=>c.status==="sent");
@@ -3764,6 +3764,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   }).sort((a, b) => {
     if (contactSort === "name") return (`${a.first_name||""} ${a.last_name||""}`).localeCompare(`${b.first_name||""} ${b.last_name||""}`);
     if (contactSort === "company") return (a.company_name||"").localeCompare(b.company_name||"");
+    if (contactSort === "email") return (a.email||"").localeCompare(b.email||"");
     return new Date(b.created_at) - new Date(a.created_at);
   });
   const importCSV = () => { setShowImport(true); };
@@ -3875,6 +3876,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <option value="newest">Newest first</option>
             <option value="name">Name A–Z</option>
             <option value="company">Company A–Z</option>
+            <option value="email">Email A–Z</option>
           </select>
           <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
           {activeEvent && (
@@ -5480,7 +5482,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
 
   const METRICS = [
     { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧" },
-    { label: "Open Rate", val: data?.total_sent ? `${Math.round((data.total_opened / data.total_sent) * 100)}%` : "—", color: C.teal, icon: "👁" },
+    { label: "Open Rate", val: data?.total_sent ? `${Math.round((data.total_opened / data.total_sent) * 100)}%` : "—", color: data?.total_sent && Math.round((data.total_opened/data.total_sent)*100) >= 25 ? C.green : C.teal, icon: "👁", sub: "25%+ = great" },
     { label: "Click Rate", val: data?.total_sent && data?.total_clicked ? `${Math.round((data.total_clicked / data.total_sent) * 100)}%` : "—", color: C.blue, icon: "🖱" },
     { label: "Registered", val: data?.ec_total || 0, color: C.text, icon: "📋" },
     { label: "Confirmed", val: data?.confirmed || 0, color: C.green, icon: "✅" },
