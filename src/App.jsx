@@ -1352,7 +1352,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               🌐 Edit landing page
             </button>
-            <button onClick={() => document.querySelector('button[data-view="contacts"]'setShowAddContact(true)}
+            <button onClick={() => setShowAddContact(true)}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               👥 Add contacts ({contacts.length} total)
             </button>
