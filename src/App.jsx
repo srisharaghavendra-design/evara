@@ -709,7 +709,7 @@ function MainApp({ session }) {
                   const ev = events.find(x => x.id === e.target.value);
                   if (ev) { setActiveEvent(ev); }
                 }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
-                  {events.map(ev => {
+                  {events.filter(ev => ev.status !== "archived").map(ev => {
                     const daysLeft = ev.event_date ? Math.ceil((new Date(ev.event_date) - new Date()) / (1000*60*60*24)) : null;
                     const suffix = daysLeft === null ? "" : daysLeft === 0 ? " (TODAY)" : daysLeft > 0 ? ` (${daysLeft}d)` : " (past)";
                     return <option key={ev.id} value={ev.id}>{ev.name}{suffix}</option>;
@@ -751,6 +751,26 @@ function MainApp({ session }) {
                 }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
                 + Duplicate event
               </button>
+              {activeEvent.status !== "archived" ? (
+                <button onClick={async () => {
+                  if (!window.confirm("Archive this event? It will be hidden from the sidebar.")) return;
+                  await supabase.from("events").update({ status: "archived" }).eq("id", activeEvent.id);
+                  setActiveEvent(p => ({ ...p, status: "archived" }));
+                  setEvents(p => p.map(e => e.id === activeEvent.id ? { ...e, status: "archived" } : e));
+                  fire("📦 Event archived");
+                }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center", marginTop: 4 }}>
+                  📦 Archive event
+                </button>
+              ) : (
+                <button onClick={async () => {
+                  await supabase.from("events").update({ status: "draft" }).eq("id", activeEvent.id);
+                  setActiveEvent(p => ({ ...p, status: "draft" }));
+                  setEvents(p => p.map(e => e.id === activeEvent.id ? { ...e, status: "draft" } : e));
+                  fire("✅ Event unarchived");
+                }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.amber}40`, borderRadius: 6, color: C.amber, fontSize: 11, cursor: "pointer", textAlign: "center", marginTop: 4 }}>
+                  ↩ Unarchive event
+                </button>
+              )}
             </div>
           ) : (
             <button onClick={() => setShowNewEvent(true)} style={{ width: "100%", padding: "8px 11px", background: `${C.blue}12`, border: `1px dashed ${C.blue}40`, borderRadius: 8, color: C.blue, fontSize: 12, textAlign: "left", cursor: "pointer" }}>
@@ -3616,6 +3636,12 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <span style={{ fontSize: 11, color: C.muted, padding: "4px 10px", background: C.raised, borderRadius: 6, border: `1px solid ${C.border}` }}>
               🚫 {contacts.filter(c => c.unsubscribed).length} unsubscribed — never emailed
             </span>
+          )}
+          {duplicates.length > 0 && (
+            <button onClick={() => setShowDuplicates(p => !p)}
+              style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer" }}>
+              ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} — merge
+            </button>
           )}
           {duplicates.length > 0 && (
             <button onClick={() => setShowDuplicates(p => !p)}
