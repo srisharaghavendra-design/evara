@@ -4304,6 +4304,32 @@ function AnalyticsView({ supabase, profile, activeEvent, fire }) {
               </div>
             </div>
           )}
+            {/* ── Engagement funnel ── */}
+          {data && (
+            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "16px 18px", marginTop: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 14 }}>Engagement Funnel</div>
+              {[
+                { label: "Invited", val: data.total_contacts || 0, color: C.blue },
+                { label: "Opened Email", val: data.total_opened || 0, color: C.teal },
+                { label: "Registered", val: data.total_invited || 0, color: "#AF52DE" },
+                { label: "Confirmed", val: data.total_confirmed || 0, color: C.green },
+                { label: "Attended", val: data.total_attended || 0, color: "#FF9F0A" },
+              ].map((step, i, arr) => {
+                const pct = i === 0 ? 100 : arr[0].val > 0 ? Math.round((step.val / arr[0].val) * 100) : 0;
+                return (
+                  <div key={step.label} style={{ marginBottom: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: C.muted }}>{step.label}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: step.color }}>{step.val} <span style={{ color: C.muted, fontWeight: 400 }}>({pct}%)</span></span>
+                    </div>
+                    <div style={{ height: 6, background: C.raised, borderRadius: 999 }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: step.color, borderRadius: 999, transition: "width .5s ease", opacity: 0.8 }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
     </div>
