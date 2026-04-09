@@ -1739,6 +1739,96 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
       )}
       </div>
+      {/* ─── CONTACT PROFILE SIDE PANEL ─── */}
+      {selectedContact && (() => {
+        const c = selectedContact.contacts || {};
+        const scoreData = scores[c.id] || {};
+        const tempColor = scoreData.temp === "hot" ? C.red : scoreData.temp === "warm" ? C.amber : scoreData.temp === "cool" ? C.blue : C.muted;
+        return (
+          <div style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex" }} onClick={() => setSelectedContact(null)}>
+            <div style={{ flex: 1, background: "rgba(0,0,0,.4)" }} />
+            <div style={{ width: 340, background: C.card, borderLeft: `1px solid ${C.border}`, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: "18px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>Contact Profile</span>
+                <button onClick={() => setSelectedContact(null)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20, lineHeight: 1 }}>×</button>
+              </div>
+              <div style={{ padding: "18px", textAlign: "center", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.blue + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, margin: "0 auto 10px", fontWeight: 700, color: C.blue }}>
+                  {(c.first_name?.[0] || c.email?.[0] || "?").toUpperCase()}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{c.first_name} {c.last_name}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{c.email}</div>
+                {(c.job_title || c.company_name) && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{[c.job_title, c.company_name].filter(Boolean).join(" · ")}</div>}
+                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 10.5, padding: "2px 9px", borderRadius: 999, fontWeight: 600, textTransform: "capitalize", background: selectedContact.status === "confirmed" ? C.green + "20" : selectedContact.status === "declined" ? C.red + "20" : C.raised, color: selectedContact.status === "confirmed" ? C.green : selectedContact.status === "declined" ? C.red : C.muted }}>
+                    {selectedContact.status || "pending"}
+                  </span>
+                  {scoreData.score > 0 && <span style={{ fontSize: 10.5, padding: "2px 9px", borderRadius: 999, background: tempColor + "20", color: tempColor, fontWeight: 600 }}>{scoreData.temp} · {scoreData.score}pts</span>}
+                </div>
+              </div>
+              <div style={{ padding: "14px 18px", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Details</div>
+                {[
+                  { label: "Email", val: c.email }, { label: "Phone", val: c.phone },
+                  { label: "Company", val: c.company_name }, { label: "Title", val: c.job_title },
+                  { label: "Registered", val: selectedContact.created_at ? new Date(selectedContact.created_at).toLocaleDateString("en-AU") : null },
+                  { label: "Confirmed", val: selectedContact.confirmed_at ? new Date(selectedContact.confirmed_at).toLocaleDateString("en-AU") : null },
+                ].filter(f => f.val).map(f => (
+                  <div key={f.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span style={{ fontSize: 11.5, color: C.muted }}>{f.label}</span>
+                    <span style={{ fontSize: 11.5, color: C.text }}>{f.val}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 7 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Actions</div>
+                {selectedContact.status !== "confirmed" && (
+                  <button onClick={async () => {
+                    await supabase.from("event_contacts").update({ status: "confirmed", confirmed_at: new Date().toISOString() }).eq("id", selectedContact.id);
+                    setContacts(p => p.map(ec => ec.id === selectedContact.id ? { ...ec, status: "confirmed", confirmed_at: new Date().toISOString() } : ec));
+                    setSelectedContact(p => ({ ...p, status: "confirmed" }));
+                    fire("✅ Marked confirmed");
+                  }} style={{ padding: "8px 12px", background: C.green + "14", border: `1px solid ${C.green}30`, borderRadius: 6, color: C.green, cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left" }}>
+                    ✅ Mark Confirmed
+                  </button>
+                )}
+                {selectedContact.status !== "attended" && (
+                  <button onClick={async () => {
+                    await supabase.from("event_contacts").update({ status: "attended", attended_at: new Date().toISOString() }).eq("id", selectedContact.id);
+                    setContacts(p => p.map(ec => ec.id === selectedContact.id ? { ...ec, status: "attended", attended_at: new Date().toISOString() } : ec));
+                    setSelectedContact(p => ({ ...p, status: "attended" }));
+                    fire("✅ Marked attended");
+                  }} style={{ padding: "8px 12px", background: C.blue + "14", border: `1px solid ${C.blue}30`, borderRadius: 6, color: C.blue, cursor: "pointer", fontSize: 12, fontWeight: 500, textAlign: "left" }}>
+                    📍 Mark Attended
+                  </button>
+                )}
+                <button onClick={async () => {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ contacts: [c], triggerType: "confirmation", eventName: activeEvent.name, eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", orgName: profile?.companies?.name || "evara" })
+                  });
+                  const d = await res.json();
+                  fire(d.sent > 0 ? `✅ Confirmation sent to ${c.email}` : `Send failed`, d.sent > 0 ? "ok" : "err");
+                }} style={{ padding: "8px 12px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", fontSize: 12, textAlign: "left" }}>
+                  ✉️ Send Confirmation
+                </button>
+                <button onClick={async () => {
+                  if (!window.confirm(`Remove ${c.first_name || c.email} from this event?`)) return;
+                  await supabase.from("event_contacts").delete().eq("id", selectedContact.id);
+                  setContacts(p => p.filter(ec => ec.id !== selectedContact.id));
+                  setSelectedContact(null);
+                  fire("Removed from event");
+                }} style={{ padding: "8px 12px", background: "transparent", border: `1px solid ${C.red}30`, borderRadius: 6, color: C.red, cursor: "pointer", fontSize: 12, textAlign: "left" }}>
+                  🗑️ Remove from event
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {showAddContact && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 420, animation: "fadeUp .2s ease" }}>
