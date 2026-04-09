@@ -2311,7 +2311,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Preview</div>
           <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
-            {[{ label: "📱 Mobile", width: "375px" }, { label: "🖥 Desktop", width: "100%" }].map(v => (
+            {[{ label: "📱 Mobile", width: "375px" }, { label: "📧 Email (600px)", width: "600px" }, { label: "🖥 Desktop", width: "100%" }].map(v => (
               <button key={v.width} onClick={() => setPreviewWidth(v.width)}
                 style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, border: `1px solid ${(previewWidth || "100%") === v.width ? C.blue : C.border}`, background: (previewWidth || "100%") === v.width ? C.blue + "14" : "transparent", color: (previewWidth || "100%") === v.width ? C.blue : C.muted, cursor: "pointer" }}>
                 {v.label}
@@ -4490,7 +4490,7 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
       setGenerated(data);
-      fire(`✅ 7 emails generated! View in Scheduling →`);
+      fire(`✅ ${Object.keys(data.savedIds || {}).length || 7} emails generated and saved! Check Scheduling →`);
       const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
       setCampaigns(cams || []);
     } catch (err) { fire("Generation failed: " + err.message, "err"); }
