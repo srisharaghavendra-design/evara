@@ -3907,6 +3907,21 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
           Copy Emails
         </button>
+        <button onClick={() => {
+          const hdr = ["First Name","Last Name","Email","Company","Job Title","Phone","Tags","Source"];
+          const rows = filtered.map(c => [
+            c.first_name||"", c.last_name||"", c.email||"", c.company_name||"",
+            c.job_title||"", c.phone||"", (c.tags||[]).join(";"), c.source||""
+          ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","));
+          const csv = [hdr.join(","), ...rows].join("\n");
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
+          a.download = `contacts-${new Date().toISOString().slice(0,10)}.csv`;
+          a.click();
+          fire(`✅ Exported ${filtered.length} contact${filtered.length!==1?"s":""}`);
+        }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+          ⬇ Export CSV
+        </button>
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: "7px 12px", marginBottom: 14, maxWidth: 320 }}>
