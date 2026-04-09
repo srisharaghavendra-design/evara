@@ -1427,6 +1427,14 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
         );
       })()}
+      {activeEvent && contacts.length === 0 && (
+        <div style={{ background:C.card, border:`1px solid ${C.amber}25`, borderRadius:10, padding:"12px 16px", marginBottom:12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12 }}>
+          <div style={{ fontSize:13, color:C.muted }}>👥 No contacts in this event yet — add people to start sending emails</div>
+          <button onClick={() => setView("contacts")} style={{ fontSize:12, padding:"6px 14px", borderRadius:6, background:C.blue+"10", border:`1px solid ${C.blue}30`, color:C.blue, cursor:"pointer", whiteSpace:"nowrap" }}>
+            + Add contacts
+          </button>
+        </div>
+      )}
       {/* ─── POST-EVENT NUDGE ─── */}
       {activeEvent?.event_date && Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) < 0 && contacts.filter(c => c.status === "confirmed").length > 0 && (
         <div style={{ background: C.blue+"10", border: `1px solid ${C.blue}25`, borderRadius: 10, padding: "12px 16px", marginBottom: 12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
@@ -2622,6 +2630,13 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>eDM Builder</h1>
         <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>AI generates copy · your template renders it · world-class result every time.</p>
       </div>
+      {activeEvent && (
+        <div style={{ padding:"7px 12px", background:C.blue+"08", borderRadius:7, border:`1px solid ${C.blue}18`, marginBottom:10, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
+          <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>✉️ {activeEvent.name}</span>
+          {activeEvent.event_date && <span style={{ fontSize:11, color:C.muted }}>📅 {new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</span>}
+          {activeEvent.location && <span style={{ fontSize:11, color:C.muted }}>📍 {activeEvent.location}</span>}
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, minHeight: "70vh" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, overflow: "auto" }}>
           <Sec label="Email type">
@@ -3320,7 +3335,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {campaigns.length > 0 && (() => {
             const types = new Set(campaigns.map(c => c.email_type));
-            const missing = ["save_the_date","invitation","reminder","confirmation","thank_you"].filter(t => !types.has(t));
+            const missing = ["save_the_date","invitation","reminder","confirmation","thank_you","byo"].filter(t => !types.has(t));
             if (!missing.length) return null;
             return (
               <div style={{ fontSize: 11, color: C.amber, marginTop: 4 }}>
@@ -4097,7 +4112,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease" }}
             onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 4 }}>Import Contacts</h2>
-            <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Paste emails, CSV data, or "First Last &lt;email&gt;" format. Business emails only.</p>
+            <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Paste emails, CSV data, LinkedIn export, or "First Last &lt;email&gt;" format. Business emails only.</p>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
               <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 14px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, cursor: "pointer", fontWeight: 500 }}>
                 📁 Upload CSV
@@ -5479,7 +5494,10 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
                     return (
                       <tr key={cam.id} className="rh" style={{ borderBottom: i < campaigns.length - 1 ? `1px solid ${C.border}` : undefined }}>
                         <td style={{ padding: "11px 14px", fontSize: 13, color: C.text, maxWidth: 200 }}>
-                          <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</div>
+                          <div style={{ display:"flex", alignItems:"center", gap:4, overflow: "hidden" }}>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex:1 }}>{cam.name}</span>
+                            {cam.total_sent > 0 && Math.round((cam.total_opened||0)/cam.total_sent*100) >= 40 && <span title="Top performer">⭐</span>}
+                          </div>
                           {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontStyle: "italic" }}>"{cam.subject}"</div>}
                         </td>
                         <td style={{ padding: "11px 14px", fontSize: 12, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}</td>
