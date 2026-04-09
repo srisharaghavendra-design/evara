@@ -2756,7 +2756,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
           <BrandVoiceBadge supabase={supabase} profile={profile} />
           <button onClick={generate} disabled={gen} style={{ padding: "11px", borderRadius: 8, border: "none", background: gen ? C.raised : C.blue, color: gen ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s", boxShadow: gen ? "none" : `0 4px 20px ${C.blue}35`, cursor: "pointer" }}>
-            {gen ? <><Spin />AI is writing…</> : <><Sparkles size={14} strokeWidth={1.5} />Generate with AI</>}
+            {gen ? <><Spin />Claude is writing… (~15s)</> : <><Sparkles size={14} strokeWidth={1.5} />Generate with AI</>}
           </button>
 
           {campaigns.length > 0 && (
@@ -3171,7 +3171,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 setAutoScheduling(false);
                 fire(`✅ ${scheduled} emails auto-scheduled based on your event date!`);
               }} disabled={autoScheduling} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 7, color: C.blue, cursor: "pointer", fontWeight: 500 }}>
-                {autoScheduling ? <><Spin />Scheduling…</> : <><Sparkles size={11} />Auto-schedule sequence</>}
+                {autoScheduling ? <><Spin />Scheduling…</> : <><Sparkles size={11} />Auto-schedule {campaigns.filter(c=>c.status==="draft").length} drafts</>}
               </button>
             )}
           </div>
@@ -4057,6 +4057,14 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                     <td style={{ padding: "11px 14px" }}>
                       <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
                         {c.phone && <a href={`tel:${c.phone}`} style={{ fontSize: 11, color: C.blue, textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}><Phone size={10} />{c.phone}</a>}
+                        {c.linkedin_url && (
+                          <a href={c.linkedin_url.startsWith("http") ? c.linkedin_url : `https://${c.linkedin_url}`}
+                            target="_blank" rel="noopener noreferrer"
+                            style={{ fontSize: 11, color: "#0A66C2", textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}
+                            onClick={e => e.stopPropagation()}>
+                            🔗 LinkedIn
+                          </a>
+                        )}
                         <button onClick={async () => {
                           const isVip = c.tags?.includes("vip");
                           const newTags = isVip ? (c.tags||[]).filter(t=>t!=="vip") : [...(c.tags||[]), "vip"];
@@ -5778,6 +5786,10 @@ function EngagementBreakdown({ supabase, activeEvent, campaigns }) {
             </select>
             <button onClick={load} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>↻ Refresh</button>
             {sends.length > 0 && <button onClick={doExport} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.green}40`, background: "transparent", color: C.green, cursor: "pointer" }}>⬇ Export CSV</button>}
+          <button onClick={() => window.print()}
+            style={{ fontSize: 12, padding:"5px 12px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+            🖨 Print
+          </button>
           <button onClick={async () => {
             const token = activeEvent.share_token || Math.random().toString(36).slice(2);
             if (!activeEvent.share_token) {
