@@ -1619,7 +1619,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                 <button onClick={() => { setNlFiltered(null); setNlLabel(""); setNlQuery(""); }} style={{ background: "transparent", border: "none", color: C.blue, cursor: "pointer", padding: "0 2px", fontSize: 12, lineHeight: 1 }}>✕</button>
               </span>
             )}
-            {["all", "confirmed", "pending", "declined", "attended"].map(f => (
+            {["all", "confirmed", "pending", "declined", "attended", "vip"].map(f => (
               <button key={f} onClick={() => setFilt(f)} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 4, border: `1px solid ${filt === f ? C.blue + "70" : C.border}`, background: filt === f ? C.blue + "14" : "transparent", color: filt === f ? C.blue : C.muted, fontWeight: filt === f ? 500 : 400, textTransform: "capitalize", transition: "all .12s" }}>
                 {f}
               </button>
@@ -2739,7 +2739,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               <div>
                 <div style={{ padding: "12px 16px", background: "white", borderBottom: "1px solid #E5E5EA", fontFamily: "Arial,sans-serif" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                    <div style={{ fontSize: 11, color: "#999" }}>Subject</div>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                      <div style={{ fontSize: 11, color: "#999" }}>Subject</div>
+                      {preview?.subject && <span style={{ fontSize: 10, color: preview.subject.length > 60 ? "#FF453A" : preview.subject.length > 40 ? "#FF9F0A" : "#30D158" }}>
+                        {preview.subject.length}/60 chars
+                      </span>}
+                    </div>
                     <button onClick={async () => {
                       setLoadingAlts(true); setSubjectAlts([]);
                       const { data: { session: s } } = await supabase.auth.getSession();
@@ -3004,7 +3009,12 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
     if (cam.segment === "confirmed") q = q.eq("status", "confirmed");
     if (cam.segment === "pending") q = q.eq("status", "pending");
     if (cam.segment === "declined") q = q.eq("status", "declined");
-    const { data, count } = await q;
+    if (cam.segment === "attended") q = q.eq("status", "attended");
+    const { data: rawData, count } = await q;
+    // VIP filter: contacts with vip tag
+    const data = cam.segment === "vip"
+      ? (rawData || []).filter(r => r.contacts?.tags?.includes("vip"))
+      : rawData;
     setSendModal({ ...cam, recipients: data || [], recipientCount: count || 0 });
   };
 
