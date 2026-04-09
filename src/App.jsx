@@ -1904,6 +1904,47 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         );
       })()}
 
+      {/* ─── EDIT EVENT MODAL ─── */}
+      {showEditEvent && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 480, animation: "fadeUp .2s ease" }}>
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 20 }}>Edit event</h2>
+            {[
+              { key: "name", label: "Event name *", ph: "e.g. Tech Summit 2026", type: "text" },
+              { key: "event_date", label: "Date", ph: "", type: "date" },
+              { key: "event_time", label: "Time", ph: "e.g. 6:30 PM", type: "text" },
+              { key: "location", label: "Venue / Location", ph: "e.g. The Ritz-Carlton", type: "text" },
+              { key: "expected_attendees", label: "Expected attendees", ph: "e.g. 150", type: "text" },
+              { key: "description", label: "Description", ph: "Brief description of the event", type: "text" },
+            ].map(f => (
+              <div key={f.key} style={{ marginBottom: 12 }}>
+                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
+                <input type={f.type} value={editForm[f.key] ?? activeEvent[f.key] ?? ""} placeholder={f.ph}
+                  onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+              </div>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+              <button onClick={async () => {
+                const updates = { ...editForm };
+                if (!updates.name && !activeEvent.name) { fire("Event name required", "err"); return; }
+                await supabase.from("events").update(updates).eq("id", activeEvent.id);
+                setActiveEvent(p => ({ ...p, ...updates }));
+                setShowEditEvent(false);
+                setEditForm({});
+                fire("✅ Event updated");
+              }} style={{ flex: 1, padding: "10px 0", borderRadius: 8, border: "none", background: C.blue, color: "#fff", fontWeight: 600, fontSize: 14, cursor: "pointer" }}>
+                Save changes
+              </button>
+              <button onClick={() => { setShowEditEvent(false); setEditForm({}); }}
+                style={{ padding: "10px 20px", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", fontSize: 14 }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddContact && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 420, animation: "fadeUp .2s ease" }}>
