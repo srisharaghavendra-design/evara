@@ -1619,6 +1619,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           {scoreFilter && <button onClick={() => setScoreFilter("")} style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft: 4 }}>✕ {scoreFilter}</button>}
           <span style={{ fontSize: 10.5, background: C.raised, color: C.muted, padding: "2px 7px", borderRadius: 4, fontWeight: 500 }}>
             {contacts.length} contact{contacts.length !== 1 ? "s" : ""}
+            {contacts.filter(c=>c.status==="pending").length > 0 && <span style={{ color:C.amber }}> · {contacts.filter(c=>c.status==="pending").length} pending</span>}
           </span>
           {contacts.length > 0 && (
             <div style={{ display: "flex", gap: 3, fontSize: 10 }}>
@@ -2742,6 +2743,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Preview</div>
+            <div style={{ display:"flex", gap:3 }}>
+              <button onClick={() => setPreviewWidth("100%")} title="Desktop"
+                style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${previewWidth==="100%"?C.blue:C.border}`, background:"transparent", color:previewWidth==="100%"?C.blue:C.muted, cursor:"pointer" }}>🖥 Desktop</button>
+              <button onClick={() => setPreviewWidth("375px")} title="Mobile"
+                style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${previewWidth==="375px"?C.blue:C.border}`, background:"transparent", color:previewWidth==="375px"?C.blue:C.muted, cursor:"pointer" }}>📱 Mobile</button>
+            </div>
             {preview?.html && (() => {
               const words = preview.html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
               const mins = Math.max(1, Math.round(words / 200));
@@ -3268,6 +3275,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
           }} style={{ fontSize: 11, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             🗑 Clear empty drafts
           </button>
+          <button onClick={() => {
+            const drafts = campaigns.filter(c => c.status === "draft" && c.subject);
+            if (!drafts.length) { fire("No draft emails with subjects"); return; }
+            navigator.clipboard?.writeText(drafts.map(c => `${c.name}: ${c.subject}`).join("\n"));
+            fire(`📋 ${drafts.length} draft subjects copied`);
+          }} style={{ fontSize:12, padding:"5px 11px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+            📋 Copy subjects
+          </button>
           <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
         </div>
       </div>
@@ -3442,7 +3457,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     }).then(r => r.json()).catch(e => ({ error: e.message }));
                     res.success ? fire(`✅ Resent to ${res.sent} unopened contacts`) : fire(res.error || "Failed", "err");
                   }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.amber}40`, background: C.amber + "10", color: C.amber, cursor: "pointer" }}>
-                    Resend Unopened
+                    {cam.total_sent > 0 && cam.total_opened < cam.total_sent ? `Resend Unopened (${cam.total_sent - cam.total_opened})` : "Resend Unopened"}
                   </button>
                 )}
                 {cam.status !== "sent" && (
@@ -5413,7 +5428,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
               <div style={{ padding: 40, textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 10 }}>📧</div>
                 <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 6 }}>No email campaigns yet</div>
-                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>Generate an email in eDM Builder, then send from Scheduling.<br />Open rates and clicks appear here automatically.</div>
+                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>📧 No emails sent yet · Build in eDM Builder → send from Scheduling → stats appear here automatically</div>
               </div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
