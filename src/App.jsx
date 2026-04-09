@@ -995,7 +995,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       try {
         const [ecRes, camRes, metricsRes, formRes] = await Promise.all([
           supabase.from("event_contacts").select("*,contacts(*)").eq("event_id", activeEvent.id).order("created_at", { ascending: false }),
-          supabase.from("email_campaigns").select("id,email_type,status,total_sent").eq("event_id", activeEvent.id).limit(50),
+          supabase.from("email_campaigns").select("id,name,email_type,status,total_sent,html_content,subject,scheduled_at").eq("event_id", activeEvent.id).limit(20),
           supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle(),
           supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle(),
         ]);
@@ -1320,13 +1320,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       })()}
 
       {/* ─── QUICK ACTIONS ─── */}
-      {activeEvent && contacts.length > 0 && campaigns.filter(c => c.html_content && c.status !== "sent").length > 0 && (
+      {activeEvent && contacts.length > 0 && campaigns.filter(c => c.status === "draft").length > 0 && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>⚡ Quick Actions</div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button onClick={() => document.querySelector('button[data-view="schedule"]')?.click()}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.green}40`, background: C.green + "10", color: C.green, cursor: "pointer", fontWeight: 500 }}>
-              📨 Send next email ({campaigns.filter(c => c.html_content && c.status !== "sent").length} ready)
+              📨 Send next email ({campaigns.filter(c => c.status === "draft").length} ready)
             </button>
             <button onClick={() => document.querySelector('button[data-view="edm"]')?.click()}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer", fontWeight: 500 }}>
