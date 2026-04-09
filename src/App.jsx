@@ -720,6 +720,13 @@ function MainApp({ session }) {
                   <ChevronDown size={11} color={C.muted} />
                 </div>
               </div>
+              {events.filter(e => e.status === "archived").length > 0 && (
+                <button onClick={() => setShowArchived(p => !p)}
+                  style={{ fontSize: 10, color: C.muted, background:"transparent", border:"none",
+                    cursor:"pointer", padding:"2px 0 4px", textDecoration:"underline", display:"block" }}>
+                  {showArchived ? "↑ Hide archived" : `+ ${events.filter(e=>e.status==="archived").length} archived event${events.filter(e=>e.status==="archived").length>1?"s":""}`}
+                </button>
+              )}
               <button onClick={async () => {
                 const newName = window.prompt("Duplicate event as:", activeEvent.name + " (Copy)");
                 if (!newName || !profile) return;
@@ -909,7 +916,7 @@ function MainApp({ session }) {
               { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
               { key: "location",    label: "Venue / Location", ph: "e.g. The Ritz-Carlton, Bangalore", type: "text" },
               { key: "expected_attendees", label: "Expected attendees", ph: "e.g. 150",                type: "text" },
-              { key: "description", label: "Description",     ph: "Brief description for AI to use when generating emails", type: "text" },
+              { key: "description", label: "Description (helps AI write better emails)", ph: "e.g. Annual leadership forum for senior managers. Smart casual attire. Drinks and canapés.", type: "text" },
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
@@ -1232,6 +1239,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}{activeEvent.rsvp_deadline && new Date(activeEvent.rsvp_deadline) > new Date() ? <> · <span style={{ color: C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span></> : ""}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
+            {(() => {
+              const sent = campaigns.filter(c => c.status === "sent" && c.sent_at);
+              if (!sent.length) return null;
+              const last = sent.sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0];
+              const daysAgo = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24));
+              return <span style={{ marginLeft:6, fontSize:11, color:C.muted }}>· 📧 {daysAgo===0?"emailed today":`last email ${daysAgo}d ago`}</span>;
+            })()}
             {activeEvent.expected_attendees ? ` · 👥 ${activeEvent.expected_attendees} expected` : ""}
           </p>
           {activeEvent.description && (
@@ -2767,6 +2781,18 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               fire(d.sent > 0 ? `✅ Test sent to ${testEmail}` : "Send failed — check email address", d.sent > 0 ? "ok" : "err");
             }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               {sendingTest ? "Sending…" : "📤 Send test"}
+            </button>
+            <button onClick={() => {
+              const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
+              if (!templates.length) { fire("No saved templates yet — generate an email and save it first"); return; }
+              const choice = window.prompt(templates.map((t, i) => `${i+1}. ${t.name}`).join("\n") + "\n\nEnter number:", "1");
+              const idx = parseInt(choice) - 1;
+              if (isNaN(idx) || idx < 0 || idx >= templates.length) return;
+              const t = templates[idx];
+              setPreview(p => ({ ...p, subject: t.subject || p.subject, html: t.html, plain_text: t.plain_text }));
+              fire(`✅ Template "${t.name}" loaded`);
+            }} style={{ padding: "9px 14px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
+              📂 Load template
             </button>
             <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied to clipboard"); }}
               style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
