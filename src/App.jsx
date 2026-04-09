@@ -2067,6 +2067,18 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [preview, setPreview] = useState(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [previewWidth, setPreviewWidth] = useState("100%");
+
+  // Cmd+S shortcut saves draft
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        if (generatedHtml && !saving) saveDraft();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [generatedHtml, saving]);
   const [subjectAlts, setSubjectAlts] = useState([]);
   const [loadingAlts, setLoadingAlts] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
@@ -2393,13 +2405,16 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         {/* PREVIEW PANEL */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Preview</div>
-          <div style={{ display: "flex", gap: 5, marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 10, justifyContent: "space-between", alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 5 }}>
             {[{ label: "📱 Mobile", width: "375px" }, { label: "📧 Email (600px)", width: "600px" }, { label: "🖥 Desktop", width: "100%" }].map(v => (
               <button key={v.width} onClick={() => setPreviewWidth(v.width)}
                 style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, border: `1px solid ${(previewWidth || "100%") === v.width ? C.blue : C.border}`, background: (previewWidth || "100%") === v.width ? C.blue + "14" : "transparent", color: (previewWidth || "100%") === v.width ? C.blue : C.muted, cursor: "pointer" }}>
                 {v.label}
               </button>
             ))}
+            </div>
+            <span style={{ fontSize: 10, color: C.muted }}>⌘S to save</span>
           </div>
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
             {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
@@ -2423,7 +2438,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                       {loadingAlts ? "…" : "✨ Alt subjects"}
                     </button>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "#111" }}>{preview.subject}</div>
+                  <input
+                  value={preview.subject || ""}
+                  onChange={e => setPreview(p => ({ ...p, subject: e.target.value }))}
+                  style={{ fontSize: 14, fontWeight: 600, color: "#111", border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }} />
                   {subjectAlts.length > 0 && (
                     <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                       <div style={{ fontSize: 10, color: "#999", marginBottom: 2 }}>Alternative subject lines — click to use:</div>
@@ -2805,7 +2823,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   {cam.status === "scheduled" && cam.scheduled_at ? (() => {
                     const d = new Date(cam.scheduled_at);
                     const daysLeft = Math.ceil((d - new Date()) / (1000*60*60*24));
-                    return daysLeft <= 0 ? `⚡ Sending soon` : daysLeft === 1 ? `⏰ Tomorrow · ${d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : `⏰ In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`;
+                    return daysLeft <= 0 ? `⚡ Sending today!` : daysLeft === 1 ? `⏰ Tomorrow · ${d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : daysLeft <= 7 ? `🔶 In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : `⏰ In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`;
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
                   {" · "}Segment: {cam.segment}
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
