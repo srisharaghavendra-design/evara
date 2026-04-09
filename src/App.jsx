@@ -3010,8 +3010,21 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             )}
             </div>
             <div style={{ background: `${C.blue}10`, border: `1px solid ${C.blue}25`, borderRadius: 8, padding: "12px 14px", marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.blue, marginBottom: 4 }}>📬 Sending to {sendModal.recipientCount} contacts</div>
-              <div style={{ fontSize: 11.5, color: C.muted }}>Segment: {sendModal.segment} contacts for {activeEvent?.name}</div>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.blue, marginBottom: 6 }}>📬 Sending to {sendModal.recipientCount} contacts</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, color: C.muted }}>Segment:</span>
+                <select value={sendModal.segment || "all"} onChange={async (e) => {
+                  const seg = e.target.value;
+                  const { data: ecs } = await supabase.from("event_contacts").select("*").eq("event_id", activeEvent.id).eq("company_id", profile.company_id);
+                  const filtered = (ecs || []).filter(ec => seg === "all" ? true : ec.status === seg);
+                  setSendModal(p => ({ ...p, segment: seg, recipientCount: filtered.length }));
+                }} style={{ fontSize: 11, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "3px 8px", outline: "none", cursor: "pointer" }}>
+                  <option value="all">All contacts</option>
+                  <option value="confirmed">Confirmed only</option>
+                  <option value="pending">Pending</option>
+                  <option value="declined">Declined</option>
+                </select>
+              </div>
               <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>Each email is personalised with the recipient's first name.</div>
             </div>
             {sendModal.recipientCount === 0 && (
