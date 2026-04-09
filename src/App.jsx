@@ -1086,15 +1086,15 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const noContactsYet = contacts.length === 0 && !loading;
   // Go Live checklist items
   const goLiveChecklist = activeEvent ? [
-    { id: "contacts", label: "Import contacts", done: contacts.length > 0 || (metrics?.total_contacts || 0) > 0, action: "contacts", icon: "👥" },
+    { id: "contacts", label: contacts.length > 0 ? `Contacts added (${contacts.length})` : "Import contacts", done: contacts.length > 0 || (metrics?.total_contacts || 0) > 0, action: "contacts", icon: "👥" },
     { id: "form", label: "Create registration form", done: !!formShareLink, action: "forms", icon: "📋" },
-    { id: "email", label: "Draft invite email", done: campaigns.length > 0 && campaigns.some(c => c.html_content), action: "edm", icon: "✉️" },
+    { id: "email", label: "Draft invite email", done: campaigns.length > 0 && campaigns.some(c => c.html_content && c.html_content.length > 200), action: "edm", icon: "✉️" },
     { id: "sent", label: campaigns.filter(c => c.status === "draft").length > 0 ? `Send first email (${campaigns.filter(c => c.status === "draft").length} ready)` : "Send first email", done: (metrics?.total_sent || 0) > 0 || campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
   ] : [];
   const goLiveDone = goLiveChecklist.filter(i => i.done).length;
 
   const METRICS = [
-    { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue },
+    { label: "Emails Sent", val: metrics?.total_sent || 0, sub: campaigns.filter(c=>c.status==="scheduled").length > 0 ? `${campaigns.filter(c=>c.status==="scheduled").length} scheduled` : null, color: C.blue },
     { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "%" : null },
     { label: "Registered", val: metrics?.total_contacts || metrics?.total_invited || 0, color: C.text },
     { label: "Confirmed", val: metrics?.total_confirmed || 0, color: C.green },
