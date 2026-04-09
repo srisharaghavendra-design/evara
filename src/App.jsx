@@ -875,8 +875,9 @@ function MainApp({ session }) {
               { key: "name",        label: "Event name *",    ph: "e.g. Tech Summit 2026",              type: "text" },
               { key: "event_date",  label: "Date",            ph: "",                                    type: "date" },
               { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
-              { key: "location",    label: "Venue / Location", ph: "e.g. Marina Bay Sands, Singapore", type: "text" },
-              { key: "description", label: "Description",     ph: "Brief description of the event",     type: "text" },
+              { key: "location",    label: "Venue / Location", ph: "e.g. The Ritz-Carlton, Bangalore", type: "text" },
+              { key: "expected_attendees", label: "Expected attendees", ph: "e.g. 150",                type: "text" },
+              { key: "description", label: "Description",     ph: "Brief description for AI to use when generating emails", type: "text" },
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
@@ -1161,6 +1162,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             {activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
+            {activeEvent.expected_attendees ? ` · 👥 ${activeEvent.expected_attendees} expected` : ""}
           </p>
           {activeEvent.description && (
             <p style={{ color: C.muted, fontSize: 12, marginTop: 3, fontStyle: "italic", opacity: 0.75 }}>{activeEvent.description}</p>
@@ -5535,8 +5537,15 @@ function PricingPage() {
           )}
         </div>
 
+        {/* Trust signals */}
+        <div style={{ display: "flex", gap: 24, justifyContent: "center", flexWrap: "wrap", marginTop: 48, opacity: 0.5 }}>
+          {["🔒 GDPR Compliant", "🚀 No agency needed", "✉️ Powered by SendGrid", "🤖 Built with Claude AI"].map(t => (
+            <span key={t} style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{t}</span>
+          ))}
+        </div>
+
         {/* Social proof */}
-        <div style={{ marginTop: 64, padding: "0 24px" }}>
+        <div style={{ marginTop: 48, padding: "0 24px" }}>
           <p style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", marginBottom: 24 }}>Replacing tools that cost</p>
           <div style={{ display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap" }}>
             {[["Mailchimp", "$350"], ["Eventbrite", "$299"], ["Typeform", "$99"], ["Zapier", "$200"], ["Unbounce", "$200"]].map(([tool, cost]) => (
@@ -5550,8 +5559,13 @@ function PricingPage() {
         </div>
       </div>
 
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 32px", textAlign: "center", fontSize: 11, color: "rgba(255,255,255,0.2)" }}>
-        © {new Date().getFullYear()} evara · evarahq.com · hello@evarahq.com
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "20px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.2)" }}>© {new Date().getFullYear()} evara · evarahq.com · hello@evarahq.com</span>
+        <div style={{ display: "flex", gap: 16 }}>
+          <a href="/" style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textDecoration: "none" }}>← Back to app</a>
+          <a href="mailto:hello@evarahq.com" style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textDecoration: "none" }}>Contact us</a>
+          <a href="/unsubscribe" style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", textDecoration: "none" }}>Unsubscribe</a>
+        </div>
       </div>
     </div>
   );
