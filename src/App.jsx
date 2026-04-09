@@ -2683,8 +2683,9 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             {campaigns.length > 0 ? (
               <span>
                 {campaigns.filter(c=>c.status==="sent").length} sent ·{" "}
-                {campaigns.filter(c=>c.status==="scheduled").length} scheduled ·{" "}
-                {campaigns.filter(c=>c.status==="draft").length} drafts
+                <span style={{ color: C.blue }}>{campaigns.filter(c=>c.status==="scheduled").length} scheduled</span> ·{" "}
+                {campaigns.filter(c=>c.status==="draft").length} drafts ·{" "}
+                {campaigns.length} total
               </span>
             ) : "Create and send email campaigns for this event."}
           </p>
@@ -3799,7 +3800,20 @@ function SettingsView({ supabase, profile, fire }) {
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Profile</div>
-          <div style={{ fontSize: 10, color: C.muted }}>evara v1.5 · Supabase + SendGrid + Claude</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 10, color: C.muted }}>evara v1.5 · Supabase + SendGrid + Claude</span>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[
+              { label: "Supabase", ok: true },
+              { label: "SendGrid", ok: !!fromEmail },
+              { label: "AI", ok: true },
+            ].map(s => (
+              <span key={s.label} style={{ fontSize: 9.5, padding: "1px 7px", borderRadius: 3, background: s.ok ? C.green + "18" : C.red + "18", color: s.ok ? C.green : C.red }}>
+                {s.ok ? "✓" : "✗"} {s.label}
+              </span>
+            ))}
+          </div>
+        </div>
         </div>
         {[{ label: "Full name", val: name, set: setName }, { label: "Company name", val: company, set: setComp }].map(f => (
           <div key={f.label} style={{ marginBottom: 14 }}>
