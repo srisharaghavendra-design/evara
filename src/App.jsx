@@ -2330,7 +2330,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </button>
 
           {campaigns.length > 0 && (
-            <Sec label={`Saved drafts (${campaigns.length})`}>
+            <Sec label={`Saved drafts (${campaigns.length}) · ${campaigns.filter(c=>c.status==="scheduled").length} scheduled`}>
               {campaigns.map(cam => (
                 <div key={cam.id} onClick={() => {
                     if (cam.html_content) {
@@ -2744,6 +2744,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 ))}
               </div>
               <div style={{ fontSize: 11, color: C.muted }}>💡 Or use Campaigns → Generate 7-Email Campaign for a full sequence</div>
+              {campaigns.length > 0 && (
+                <button onClick={() => {
+                  const latest = campaigns.find(c => c.html_content);
+                  if (latest) setPreview({ subject: latest.subject, html: latest.html_content, plain_text: latest.plain_text, campaign_id: latest.id });
+                }} style={{ marginTop: 14, fontSize: 12, padding: "7px 18px", borderRadius: 20, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer" }}>
+                  📧 Load latest draft
+                </button>
+              )}
               <div style={{ fontSize: 13 }}>Generate emails in eDM Builder, then send or schedule them here</div>
             </div>
           )}
