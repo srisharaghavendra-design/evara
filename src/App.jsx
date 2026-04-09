@@ -1371,6 +1371,9 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>🚀 Go Live Checklist</span>
+            <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, marginLeft: 6 }}>
+              {goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " · ✅ Ready!" : ""}
+            </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 70, height: 4, background: C.raised, borderRadius: 2 }}>
                 <div style={{ width: `${Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%`, height: "100%", background: goLiveDone === goLiveChecklist.length ? C.green : C.blue, borderRadius: 2, transition: "width .4s" }} />
@@ -3525,6 +3528,17 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       fire("Campaign deleted");
                     }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
                       Delete
+                    </button>
+                    <button onClick={async () => {
+                      const {name, email_type, template_style, subject, html_content, plain_text, segment} = cam;
+                      const { data } = await supabase.from("email_campaigns").insert({
+                        event_id: activeEvent.id, company_id: profile.company_id,
+                        name: name + " (copy)", email_type, template_style, subject, html_content, plain_text,
+                        status: "draft", segment: segment || "all", total_sent: 0, total_opened: 0, total_clicked: 0
+                      }).select().single();
+                      if (data) { setCampaigns(p => [data, ...p]); fire("📋 Campaign duplicated"); }
+                    }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+                      📋 Duplicate
                     </button>
                   </>
                 )}
