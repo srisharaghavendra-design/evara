@@ -1761,7 +1761,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
                 <input type={f.type}
-                  value={editForm[f.key] ?? activeEvent[f.key] ?? ""}
+                  value={editForm[f.key] !== undefined ? editForm[f.key] : (f.key === "event_date" && activeEvent[f.key] ? activeEvent[f.key].slice(0,10) : activeEvent[f.key] ?? "")}
                   onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
                   placeholder={f.ph}
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
@@ -1924,11 +1924,22 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
               </div>
             ))}
-            <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>Status</label>
+              <select value={editForm.status ?? activeEvent.status ?? "draft"}
+                onChange={e => setEditForm(p => ({ ...p, status: e.target.value }))}
+                style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", cursor: "pointer" }}>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
               <button onClick={async () => {
                 const updates = { ...editForm };
                 if (!updates.name && !activeEvent.name) { fire("Event name required", "err"); return; }
-                await supabase.from("events").update(updates).eq("id", activeEvent.id);
+                const { error } = await supabase.from("events").update(updates).eq("id", activeEvent.id);
+                if (error) { fire(error.message, "err"); return; }
                 setActiveEvent(p => ({ ...p, ...updates }));
                 setShowEditEvent(false);
                 setEditForm({});
@@ -2848,6 +2859,18 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   </button>
                 )}
                 {cam.status !== "sent" && (
+                  <button onClick={async () => {
+                    const { data } = await supabase.from("email_campaigns").insert({
+                      event_id: cam.event_id, company_id: cam.company_id,
+                      name: `${cam.name} (copy)`, email_type: cam.email_type,
+                      subject: cam.subject ? `${cam.subject} (copy)` : null,
+                      html_content: cam.html_content, plain_text: cam.plain_text,
+                      status: "draft", segment: cam.segment || "all",
+                    }).select().single();
+                    if (data) { setCampaigns(p => [...p, data]); fire("✅ Campaign duplicated"); }
+                  }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", marginRight: 4 }}>
+                    ⧉ Dupe
+                  </button>
                   <button onClick={async () => {
                     if (!window.confirm("Delete this campaign?")) return;
                     await supabase.from("email_campaigns").delete().eq("id", cam.id);
