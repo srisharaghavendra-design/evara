@@ -2738,6 +2738,17 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   <button onClick={() => openSendModal(cam)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.green}50`, background: `${C.green}12`, color: C.green, cursor: "pointer", fontWeight: 500 }}>
                     <Send size={11} />Send Now
                   </button>
+                  <button onClick={async () => {
+                    const dateStr = window.prompt(`Schedule "${cam.subject}" — enter date & time (YYYY-MM-DD HH:MM):`, new Date(Date.now() + 86400000).toISOString().slice(0, 16).replace("T", " "));
+                    if (!dateStr) return;
+                    const schedDate = new Date(dateStr);
+                    if (isNaN(schedDate)) { fire("Invalid date format", "err"); return; }
+                    await supabase.from("email_campaigns").update({ status: "scheduled", scheduled_at: schedDate.toISOString() }).eq("id", cam.id);
+                    setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "scheduled", scheduled_at: schedDate.toISOString() } : c));
+                    fire(`✅ Scheduled for ${schedDate.toLocaleDateString("en-AU", { day: "numeric", month: "short" })} at ${schedDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`);
+                  }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+                    ⏰ Schedule
+                  </button>
                 )}
                 {cam.status === "draft" && !cam.html_content && (
                   <span style={{ fontSize: 11, color: C.muted, fontStyle: "italic" }}>Generate email first in eDM Builder</span>
