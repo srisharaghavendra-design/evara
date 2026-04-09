@@ -817,6 +817,10 @@ function MainApp({ session }) {
             <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
               <Plus size={12} />New Event
             </button>
+            <button onClick={() => setShowHelp(p => !p)} title="Keyboard shortcuts & tips (?)"
+              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "5px 10px", color: C.muted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+              ?
+            </button>
             <div style={{ position: "relative", cursor: "pointer", padding: 4 }} onClick={() => setShowNotifs(p => !p)}>
             <Bell size={15} color={C.muted} />
             {notifCount > 0 && <div style={{ position: "absolute", top: 2, right: 2, width: 7, height: 7, borderRadius: "50%", background: C.red, boxShadow: `0 0 0 1.5px ${C.sidebar}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -933,13 +937,17 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [scores, setScores] = useState({});
   const [selectedContact, setSelectedContact] = useState(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
+  const [showHelp, setShowHelp] = useState(false);
   const toggleRow = (id) => setSelectedRows(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = (rows) => setSelectedRows(p => p.size === rows.length ? new Set() : new Set(rows.map(r => r.id)));
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Escape key closes contact panel
   useEffect(() => {
-    const handler = (e) => { if (e.key === "Escape" && selectedContact) setSelectedContact(null); };
+    const handler = (e) => {
+      if (e.key === "Escape") { setSelectedContact(null); setShowHelp(false); }
+      if (e.key === "?" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) setShowHelp(p => !p);
+    };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [selectedContact]);
@@ -2062,7 +2070,40 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         );
       })()}
 
-      {/* ─── EDIT EVENT MODAL ─── */}
+      {showHelp && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+          onClick={() => setShowHelp(false)}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease", maxHeight: "85vh", overflowY: "auto" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: 0 }}>⌨️ Keyboard Shortcuts</h2>
+              <button onClick={() => setShowHelp(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>×</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 20 }}>
+              {[["?", "Toggle this help"], ["Esc", "Close panels"], ["⌘K", "Search contacts"], ["Tab", "Navigate sections"]].map(([key, desc]) => (
+                <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.raised, borderRadius: 7 }}>
+                  <kbd style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 7px", fontSize: 11, fontFamily: "monospace", color: C.sec, flexShrink: 0 }}>{key}</kbd>
+                  <span style={{ fontSize: 12, color: C.muted }}>{desc}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Quick Tips</div>
+            {[
+              "✅ Click any contact row to open their profile side panel",
+              "☑️ Tick checkboxes to bulk mark or email selected contacts",
+              "🤖 Click 'Analyse event' for AI-powered recommendations",
+              "🎉 After event date, click 'Post-event Follow-ups' in Scheduling",
+              "📋 Click any email address in a contact panel to copy it",
+              "🎓 Certificates button generates print-ready PDFs for attendees",
+              "📷 Copy Kiosk URL in Check-in → let guests self-scan at venue",
+              "⚙️ Set your From Name in Settings so recipients see your brand",
+            ].map((tip, i) => (
+              <div key={i} style={{ fontSize: 12, color: C.sec, marginBottom: 7, lineHeight: 1.5, padding: "6px 10px", background: C.raised, borderRadius: 6 }}>{tip}</div>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* ─── EDIT EVENT MODAL ─── */}}
       {showEditEvent && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}>
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 480, animation: "fadeUp .2s ease" }}>
@@ -4086,13 +4127,39 @@ function SettingsView({ supabase, profile, fire }) {
     await supabase.from("profiles").update({ full_name: name }).eq("id", profile.id);
     await supabase.from("companies").update({ 
       name: company, 
-      from_email: fromEmail, 
+      from_email: fromEmail,
+      from_name: fromName,
       brand_color: brandColor 
     }).eq("id", profile.company_id);
     setSaving(false); fire("✅ Settings saved!");
   };
   const [fromEmail, setFromEmail] = useState(profile?.companies?.from_email || "hello@evarahq.com");
+  const [fromName, setFromName] = useState(profile?.companies?.from_name || "");
   const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
+  const [testSending, setTestSending] = useState(false);
+
+  const sendTestEmail = async () => {
+    const to = window.prompt("Send test email to:", profile?.email || "");
+    if (!to?.includes("@")) return;
+    setTestSending(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+        body: JSON.stringify({
+          contacts: [{ email: to, first_name: "Test" }],
+          subject: "✅ evara email delivery test",
+          htmlContent: `<div style="max-width:520px;margin:40px auto;font-family:Arial,sans-serif;background:#0A1628;border-radius:12px;padding:40px;color:#fff;text-align:center"><h2 style="margin:0 0 12px">✅ Delivery confirmed</h2><p style="color:rgba(255,255,255,0.6);margin:0 0 8px">Your evara email setup is working correctly.</p><p style="color:rgba(255,255,255,0.35);font-size:13px">From: ${fromName || "evara"} &lt;${fromEmail || "hello@evarahq.com"}&gt;</p></div>`,
+          fromEmail: fromEmail || "hello@evarahq.com",
+          fromName: fromName || "evara",
+          companyId: profile?.company_id,
+        })
+      }).then(r => r.json());
+      res.sent > 0 ? fire(`✅ Test email sent to ${to}`) : fire(res.error || "Send failed", "err");
+    } catch(e) { fire(e.message, "err"); }
+    setTestSending(false);
+  };
   
   // Brand Voice states
   const [bv, setBv] = useState(null);
@@ -4155,6 +4222,15 @@ function SettingsView({ supabase, profile, fire }) {
         <div style={{ marginBottom: 14 }}>
           <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>From email address <span style={{ color: C.green, fontSize: 10 }}>✓ Verified: hello@evarahq.com</span></label>
           <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
+            style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
+            onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
+        </div>
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>
+            From name <span style={{ fontSize: 10, color: C.muted }}>— shown as sender name in recipients' inboxes</span>
+          </label>
+          <input value={fromName} onChange={e => setFromName(e.target.value)}
+            placeholder="e.g. Orbis Events Team"
             style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
             onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
         </div>
@@ -4285,9 +4361,15 @@ function SettingsView({ supabase, profile, fire }) {
           </button>
         </div>
       </div>
-      <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, transition: "all .15s", cursor: "pointer" }}>
-        {saving ? <><Spin />Saving…</> : "Save changes"}
-      </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+          {saving ? <><Spin />Saving…</> : "Save changes"}
+        </button>
+        <button onClick={sendTestEmail} disabled={testSending}
+          style={{ padding: "11px 20px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>
+          {testSending ? "⏳ Sending…" : "📧 Send test email"}
+        </button>
+      </div>
       <button onClick={async () => {
         const testTo = profile?.email || fromEmail;
         if (!testTo) { fire("No email to send to", "err"); return; }
