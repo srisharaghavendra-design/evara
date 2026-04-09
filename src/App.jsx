@@ -854,7 +854,7 @@ function MainApp({ session }) {
           {view === "schedule" && profile && <ScheduleView key="schedule" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
           {view === "checkin"   && profile && <CheckInView key="checkin"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "social"    && profile && <SocialView key="social"   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} campaigns={campaigns} />}
           {view === "campaign"  && profile && <CampaignView key="campaign"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} campaigns={campaigns} activeEvent={activeEvent} />}
           {view === "qa"        && <QAView      supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -4422,7 +4422,7 @@ Return ONLY valid JSON with this structure:
 }
 
 // ─── ANALYTICS VIEW ───────────────────────────────────────────
-function AnalyticsView({ supabase, profile, activeEvent, fire }) {
+function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
   const [data, setData] = useState(null);
   const [campaigns, setCampaigns] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -4625,6 +4625,25 @@ function AnalyticsView({ supabase, profile, activeEvent, fire }) {
               })}
             </div>
           )}
+        {/* Upcoming scheduled campaigns */}
+        {campaigns && campaigns.filter(c => c.status === "scheduled" && c.scheduled_at && new Date(c.scheduled_at) > new Date()).length > 0 && (
+          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "16px 18px", marginTop: 12 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 12 }}>📅 Upcoming Sends</div>
+            {campaigns.filter(c => c.status === "scheduled" && c.scheduled_at && new Date(c.scheduled_at) > new Date()).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)).slice(0, 5).map(cam => {
+              const d = new Date(cam.scheduled_at);
+              const daysLeft = Math.ceil((d - new Date()) / (1000*60*60*24));
+              return (
+                <div key={cam.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{cam.name?.replace(/ — .*/, "") || cam.email_type}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })} · {d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</div>
+                  </div>
+                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: daysLeft <= 7 ? C.amber + "20" : C.blue + "14", color: daysLeft <= 7 ? C.amber : C.blue, fontWeight: 600 }}>{daysLeft === 0 ? "Today!" : daysLeft === 1 ? "Tomorrow" : `${daysLeft}d`}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         </>
       )}
     </div>
