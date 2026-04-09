@@ -1247,7 +1247,11 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}
-            {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}{activeEvent.rsvp_deadline && new Date(activeEvent.rsvp_deadline) > new Date() ? <> · <span style={{ color: C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span></> : ""}
+            {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}{activeEvent.rsvp_deadline && (() => {
+              const daysLeft = Math.ceil((new Date(activeEvent.rsvp_deadline) - new Date()) / (1000*60*60*24));
+              if (daysLeft < 0) return "";
+              return <> · <span style={{ color: daysLeft <= 3 ? C.red : C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}{daysLeft <= 7 ? ` (${daysLeft}d left)` : ""}</span></>;
+            })()}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
             {(() => {
@@ -5278,7 +5282,33 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
             <div style={{ padding: "13px 16px", borderBottom: `1px solid ${C.border}` }}>
               <span style={{ fontSize: 14, fontWeight: 500, color: C.text }}>Email Campaign Performance</span>
             </div>
-            {campaigns.length === 0 ? (
+              {data && data.total_sent > 0 && (
+        <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "16px 20px", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Conversion Funnel</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 100 }}>
+            {[
+              { label: "Sent", val: data.total_sent||0, color: C.blue },
+              { label: "Opened", val: data.total_opened||0, color: C.teal },
+              { label: "Registered", val: data.ec_total||0, color: C.sec },
+              { label: "Confirmed", val: data.total_confirmed||0, color: C.green },
+              { label: "Attended", val: data.total_attended||0, color: "#4ade80" },
+            ].map((step, i, arr) => {
+              const maxVal = Math.max(...arr.map(s=>s.val), 1);
+              const barH = Math.max(4, Math.round((step.val/maxVal)*80));
+              const pct = i > 0 ? Math.round((step.val/Math.max(arr[0].val,1))*100) : 100;
+              return (
+                <div key={step.label} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", gap:4, height:"100%" }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:step.color }}>{step.val}</div>
+                  <div style={{ width:"100%", background:step.color+"CC", borderRadius:"3px 3px 0 0", height:`${barH}px` }} />
+                  <div style={{ fontSize:9.5, color:C.muted }}>{step.label}</div>
+                  {i > 0 && <div style={{ fontSize:9, color:pct>=50?C.green:pct>=25?C.amber:C.red }}>{pct}%</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+          {campaigns.length === 0 ? (
               <div style={{ padding: 40, textAlign: "center" }}>
                 <div style={{ fontSize: 32, marginBottom: 10 }}>📧</div>
                 <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 6 }}>No email campaigns yet</div>
