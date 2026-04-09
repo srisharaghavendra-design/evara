@@ -2591,6 +2591,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [sendModal, setSendModal] = useState(null);
   const [previewCam, setPreviewCam] = useState(null); // ← NEW: email preview
   const [autoScheduling, setAutoScheduling] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [contactCount, setContactCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
@@ -2793,6 +2794,11 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       </div>
 
       {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px", color: C.muted }}><Spin />Loading campaigns…</div> : (
+        <div style={{ marginBottom: 12 }}>
+          <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Search campaigns by name or subject…"
+            style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "8px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {campaigns.length === 0 && (
             <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "48px", textAlign: "center", color: C.muted }}>
@@ -2816,7 +2822,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               <div style={{ fontSize: 13 }}>Generate emails in eDM Builder, then send or schedule them here</div>
             </div>
           )}
-          {[...campaigns].sort((a, b) => {
+          {[...campaigns].filter(cam => !searchTerm || cam.name?.toLowerCase().includes(searchTerm.toLowerCase()) || cam.subject?.toLowerCase().includes(searchTerm.toLowerCase())).sort((a, b) => {
                 const order = {"save_the_date":0,"invitation":1,"reminder":2,"day_of_details":3,"confirmation":4,"byo":5,"thank_you":6};
                 return (order[a.email_type] ?? 9) - (order[b.email_type] ?? 9);
               }).map(cam => (
