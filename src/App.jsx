@@ -1219,7 +1219,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 600, color: C.blue, textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>Active Event</div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text, margin: 0 }}>{activeEvent.name}</h1>
+            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text, margin: 0 }}>{{"Conference":"🎤 ","Workshop":"🛠 ","Webinar":"🖥 ","Product Launch":"🚀 ","Awards":"🏆 ","Team Event":"🤝 "}[activeEvent.event_type]||""}{activeEvent.name}</h1>
             <span onClick={async () => {
               const statuses = ["draft", "published", "completed"];
               const curr = activeEvent.status || "draft";
@@ -1440,7 +1440,12 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       {/* ─── QUICK ACTIONS ─── */}
       {activeEvent && contacts.length > 0 && campaigns.filter(c => c.status === "draft").length > 0 && (
         <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>⚡ Quick Actions</div>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>⚡ Quick Actions</div>
+            {contacts.filter(c => c.status === "pending").length > 0 && (
+              <span style={{ fontSize: 10, color: C.amber }}>{contacts.filter(c => c.status === "pending").length} pending ↓</span>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button onClick={() => document.querySelector('button[data-view="schedule"]')?.click()}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.green}40`, background: C.green + "10", color: C.green, cursor: "pointer", fontWeight: 500 }}>
@@ -3733,6 +3738,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           { id: "vip", label: `⭐ VIP (${contacts.filter(c => c.tags?.includes("vip")).length})` },
           { id: "unsubscribed", label: `🚫 Unsubscribed (${contacts.filter(c => c.unsubscribed).length})` },
           { id: "active", label: `✓ Active (${contacts.filter(c => !c.unsubscribed).length})` },
+          { id: "active", label: `✓ Active (${contacts.filter(c => !c.unsubscribed).length})` },
           { id: "unsubscribed", label: `🚫 Unsub (${contacts.filter(c => c.unsubscribed).length})` },
         ].map(f => (
           <button key={f.id} onClick={() => setContactFilter(f.id)}
@@ -5221,7 +5227,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                  {["Campaign", "Type", "Status", "Sent", "Opened", "Open Rate"].map(h => (
+                  {["Campaign", "Type", "Status", "Sent", "Opened", "Clicked", "Open Rate"].map(h => (
                     <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase" }}>{h}</th>
                   ))}
                 </tr></thead>
@@ -5250,6 +5256,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
                         </td>
                         <td style={{ padding: "11px 14px", fontSize: 13, color: C.text }}>{cam.total_sent || "—"}</td>
                         <td style={{ padding: "11px 14px", fontSize: 13, color: C.text }}>{cam.total_opened || "—"}</td>
+                        <td style={{ padding: "11px 14px", fontSize: 12, color: cam.total_clicked > 0 ? C.blue : C.muted }}>{cam.total_clicked || "—"}</td>
                         <td style={{ padding: "11px 14px" }}>
                           {cam.total_sent > 0 ? (
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
