@@ -3071,7 +3071,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   const totalSent = sent.reduce((s,c)=>s+(c.total_sent||0),0);
                   const totalOpened = sent.reduce((s,c)=>s+(c.total_opened||0),0);
                   const openRate = totalSent > 0 ? Math.round(totalOpened/totalSent*100) : null;
-                  return openRate !== null ? <span style={{ marginLeft: 8, color: openRate >= 30 ? C.green : openRate >= 20 ? C.amber : C.muted }}>· {openRate}% avg open rate</span> : null;
+                  return openRate !== null ? <span style={{ marginLeft: 8, color: openRate >= 30 ? C.green : openRate >= 20 ? C.amber : C.muted }}>· {openRate}% avg open rate {openRate >= 30 ? "🟢" : openRate >= 20 ? "🟡" : "🔴"}</span> : null;
                 })()}
               </span>
             ) : "Create and send email campaigns for this event."}
@@ -4785,6 +4785,10 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
       const last = contacts.filter(c => c.attended_at).sort((a,b) => new Date(b.attended_at)-new Date(a.attended_at))[0];
       return last?.attended_at ? new Date(last.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—";
     })(), color: C.muted },
+    { label: "Last in", val: (() => {
+      const last = contacts.filter(c => c.attended_at).sort((a,b) => new Date(b.attended_at)-new Date(a.attended_at))[0];
+      return last?.attended_at ? new Date(last.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—";
+    })(), color: C.muted },
   ];
 
   if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event</div>;
@@ -5289,6 +5293,23 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
                       </tr>
                     );
                   })}
+                  {campaigns.length > 1 && (() => {
+                    const totSent = campaigns.reduce((s,c) => s+(c.total_sent||0), 0);
+                    const totOpen = campaigns.reduce((s,c) => s+(c.total_opened||0), 0);
+                    const totClick = campaigns.reduce((s,c) => s+(c.total_clicked||0), 0);
+                    return (
+                      <tr style={{ borderTop: `2px solid ${C.border}`, background: C.raised }}>
+                        <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:C.text }} colSpan={2}>Totals</td>
+                        <td style={{ padding:"10px 14px" }} />
+                        <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:C.text }}>{totSent}</td>
+                        <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:C.text }}>{totOpen}</td>
+                        <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:C.text }}>{totClick||"—"}</td>
+                        <td style={{ padding:"10px 14px", fontSize:12, fontWeight:600, color:totSent>0&&totOpen/totSent>=0.3?C.green:C.text }}>
+                          {totSent > 0 ? Math.round(totOpen/totSent*100)+"%" : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })()}
                 </tbody>
               </table>
             )}
