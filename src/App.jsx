@@ -1829,6 +1829,19 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                   🗑️ Remove from event
                 </button>
               </div>
+              {/* Notes */}
+              <div style={{ padding: "12px 18px", borderTop: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 6 }}>Notes</div>
+                <textarea
+                  placeholder="Private note about this contact..."
+                  defaultValue={selectedContact.notes || ""}
+                  onBlur={async (e) => {
+                    await supabase.from("event_contacts").update({ notes: e.target.value }).eq("id", selectedContact.id);
+                    fire("Note saved");
+                  }}
+                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 9px", fontSize: 12, outline: "none", resize: "vertical", minHeight: 56, fontFamily: "inherit", boxSizing: "border-box" }}
+                />
+              </div>
             </div>
           </div>
         );
@@ -2218,7 +2231,13 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   }}
                   style={{ padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.border}`, marginBottom: 6, cursor: cam.html_content ? "pointer" : "default", transition: "border-color .12s", background: C.bg }}
                   onMouseEnter={e => cam.html_content && (e.currentTarget.style.borderColor = C.blue)} onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
-                  <div style={{ fontSize: 12.5, fontWeight: 500, color: C.text, marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.subject || cam.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                    <span style={{ fontSize: 14, flexShrink: 0 }}>
+                      {cam.email_type === "save_the_date" ? "📅" : cam.email_type === "invitation" ? "✉️" : cam.email_type === "reminder" ? "⏰" : cam.email_type === "day_of_details" ? "📍" : cam.email_type === "thank_you" ? "🙏" : cam.email_type === "confirmation" ? "✅" : "📧"}
+                    </span>
+                    <span style={{ fontSize: 12.5, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{cam.subject || cam.name}</span>
+                    {cam.status === "sent" && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: C.green + "20", color: C.green, flexShrink: 0 }}>Sent</span>}
+                  </div>
                   {cam.subject && cam.name !== cam.subject && <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</div>}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 10.5, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}{cam.total_sent > 0 ? ` · ${cam.total_sent} sent` : ""}</span>
