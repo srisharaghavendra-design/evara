@@ -970,6 +970,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
   const [selectedContact, setSelectedContact] = useState(null);
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [showHelp, setShowHelp] = useState(false);
+  const [scoreFilter, setScoreFilter] = useState(""); // "hot"|"warm"|"cool"|"cold"|""
   const toggleRow = (id) => setSelectedRows(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = (rows) => setSelectedRows(p => p.size === rows.length ? new Set() : new Set(rows.map(r => r.id)));
   const [selectedIds, setSelectedIds] = useState(new Set());
