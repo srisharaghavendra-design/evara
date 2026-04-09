@@ -1120,7 +1120,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
 
   const METRICS = [
     { label: "Emails Sent", val: metrics?.total_sent || 0, sub: campaigns.filter(c=>c.status==="scheduled").length > 0 ? `${campaigns.filter(c=>c.status==="scheduled").length} scheduled` : null, color: C.blue },
-    { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "%" : null },
+    { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "% open rate" : "No sends yet" },
     { label: "Registered", val: metrics?.total_contacts || metrics?.total_invited || 0, color: C.text },
     { label: "Confirmed", val: metrics?.total_confirmed || 0, color: C.green },
     { label: "Declined", val: metrics?.total_declined || 0, color: C.red },
@@ -1655,10 +1655,19 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <button onClick={() => {
             const emails = contacts.filter(c => c.contacts?.email && !c.contacts?.unsubscribed).map(c => c.contacts.email).join(", ");
             navigator.clipboard?.writeText(emails);
-            fire(`✅ ${contacts.length} email${contacts.length !== 1 ? "s" : ""} copied to clipboard`);
+            fire(`✅ ${contacts.length} email${contacts.length !== 1 ? "s" : ""} copied`);
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer" }}>
             📋 Copy Emails
           </button>
+          {contacts.some(c => c.status === "pending") && (
+            <button onClick={() => {
+              const pending = contacts.filter(c => c.status === "pending" && c.contacts?.email && !c.contacts?.unsubscribed).map(c => c.contacts.email);
+              navigator.clipboard?.writeText(pending.join(", "));
+              fire(`✅ ${pending.length} pending email${pending.length !== 1 ? "s" : ""} copied`);
+            }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", background: "transparent", border: `1px solid ${C.amber}40`, borderRadius: 6, color: C.amber, cursor: "pointer" }}>
+              📋 Copy Pending
+            </button>
+          )}
           {contacts.filter(c => c.status === "attended").length > 0 && (
             <button onClick={() => {
               const attended = contacts.filter(c => c.status === "attended");
@@ -3076,6 +3085,16 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               {followUpGenerating ? <><Spin size={11}/>Creating…</> : <>🎉 Post-event Follow-ups</>}
             </button>
           )}
+          <button onClick={async () => {
+            const drafts = campaigns.filter(c => c.status === "draft" && !c.html_content);
+            if (!drafts.length) { fire("No empty drafts to clear"); return; }
+            if (!window.confirm(`Delete ${drafts.length} empty draft${drafts.length > 1 ? "s" : ""}?`)) return;
+            for (const d of drafts) await supabase.from("email_campaigns").delete().eq("id", d.id);
+            setCampaigns(p => p.filter(c => c.status !== "draft" || c.html_content));
+            fire(`✅ ${drafts.length} empty draft${drafts.length > 1 ? "s" : ""} removed`);
+          }} style={{ fontSize: 11, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            🗑 Clear empty drafts
+          </button>
           <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
         </div>
       </div>
@@ -3133,7 +3152,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       </span>
                     );
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
-                  {" · "}Segment: {cam.segment}
+                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{cam.segment === "all" ? "Everyone" : cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1)}</span>
                   {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
                 </div>
                 {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
@@ -3545,6 +3564,24 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <Sparkles size={12}/>AI Sales Brief
           </button>
           <button onClick={importCSV} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>+ Import emails</button>
+          {activeEvent && (
+            <button onClick={async () => {
+              if (!activeEvent || !profile) return;
+              const toAdd = filtered.length > 0 ? filtered : contacts;
+              if (!toAdd.length) { fire("No contacts to add", "err"); return; }
+              let added = 0;
+              for (const c of toAdd) {
+                const { error } = await supabase.from("event_contacts").upsert({
+                  contact_id: c.id, event_id: activeEvent.id,
+                  company_id: profile.company_id, status: "pending",
+                }, { onConflict: "event_id,contact_id", ignoreDuplicates: true });
+                if (!error) added++;
+              }
+              fire(`✅ ${added} contact${added !== 1 ? "s" : ""} added to ${activeEvent.name}`);
+            }} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue+"10", color: C.blue, cursor: "pointer" }}>
+              + Add {filtered.length > 0 && filtered.length < contacts.length ? filtered.length : "all"} to {activeEvent.name.slice(0, 20)}{activeEvent.name.length > 20 ? "…" : ""}
+            </button>
+          )}
           {contacts.filter(c => c.unsubscribed).length > 0 && (
             <span style={{ fontSize: 11, color: C.muted, padding: "4px 10px", background: C.raised, borderRadius: 6, border: `1px solid ${C.border}` }}>
               🚫 {contacts.filter(c => c.unsubscribed).length} unsubscribed — never emailed
@@ -3825,8 +3862,17 @@ function LandingView({ supabase, profile, activeEvent, fire }) {
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: C.green + "10", border: `1px solid ${C.green}25`, borderRadius: 8, marginBottom: 12 }}>
           <div style={{ width: 7, height: 7, borderRadius: "50%", background: C.green, flexShrink: 0 }} />
           <span style={{ fontSize: 11.5, color: C.green, fontWeight: 600 }}>Live:</span>
-          <code style={{ flex: 1, fontSize: 11, color: C.text }}>{window.location.origin}/page/{page.slug}</code>
-          <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/page/${page.slug}`); fire("✅ URL copied!"); }}
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flex: 1 }}>
+            <span style={{ fontSize: 11, color: C.muted }}>{window.location.origin}/page/</span>
+            <input value={info.slug || page.slug} onChange={e => setInfo(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/--+/g, "-") }))}
+              style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "3px 8px", fontSize: 11, outline: "none", fontFamily: "monospace" }}
+              onBlur={async () => {
+                if (!page?.id || !info.slug) return;
+                await supabase.from("landing_pages").update({ slug: info.slug }).eq("id", page.id);
+                fire("✅ URL slug updated");
+              }} />
+          </div>
+          <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/page/${info.slug || page.slug}`); fire("✅ URL copied!"); }}
             style={{ fontSize: 10.5, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", fontWeight: 500 }}>Copy</button>
           <a href={`/page/${page.slug}`} target="_blank" rel="noreferrer"
             style={{ fontSize: 10.5, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, textDecoration: "none" }}>Open ↗</a>
