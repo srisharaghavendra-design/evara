@@ -427,7 +427,6 @@ function AuthScreen() {
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
             <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center" }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
             <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.3px" }}>evara</span>
-          {profile?.companies?.name && <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "1px 6px", borderRadius: 4, marginLeft: 4 }}>{profile.companies.name.slice(0,16)}</span>}
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", marginBottom: 5 }}>{mode === "login" ? "Welcome back" : "Create your account"}</h1>
           <p style={{ fontSize: 13, color: C.muted }}>{mode === "login" ? "Sign in to your workspace" : "Replace Mailchimp + Eventbrite + Typeform in one tool"}</p>
@@ -676,6 +675,7 @@ function MainApp({ session }) {
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
             <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px ${C.blue}20` }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
             <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>evara</span>
+            {profile?.companies?.name && <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "1px 6px", borderRadius: 4 }}>{profile.companies.name.slice(0,14)}</span>}
             <span style={{ fontSize: 9, fontWeight: 600, background: `${C.blue}20`, color: C.blue, padding: "2px 5px", borderRadius: 3, letterSpacing: "0.5px", marginLeft: "auto" }}>BETA</span>
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5, paddingLeft: 2, paddingRight: 2 }}>
