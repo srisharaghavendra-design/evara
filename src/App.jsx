@@ -770,7 +770,7 @@ function MainApp({ session }) {
         </nav>
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
-          <span>⌘N new · ⌘K search · ⌘, settings</span>
+          <span>⌘N new · ⌘K search · ⌘, settings · ESC close</span>
           <span>v1.5</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
@@ -1088,14 +1088,14 @@ function DashView({ supabase, profile, activeEvent, fire }) {
     { id: "contacts", label: "Import contacts", done: contacts.length > 0 || (metrics?.total_contacts || 0) > 0, action: "contacts", icon: "👥" },
     { id: "form", label: "Create registration form", done: !!formShareLink, action: "forms", icon: "📋" },
     { id: "email", label: "Draft invite email", done: campaigns.length > 0 && campaigns.some(c => c.html_content), action: "edm", icon: "✉️" },
-    { id: "sent", label: "Send first email", done: (metrics?.total_sent || 0) > 0 || campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
+    { id: "sent", label: campaigns.filter(c => c.status === "draft").length > 0 ? `Send first email (${campaigns.filter(c => c.status === "draft").length} ready)` : "Send first email", done: (metrics?.total_sent || 0) > 0 || campaigns.some(c => c.status === "sent"), action: "schedule", icon: "🚀" },
   ] : [];
   const goLiveDone = goLiveChecklist.filter(i => i.done).length;
 
   const METRICS = [
     { label: "Emails Sent", val: metrics?.total_sent || 0, color: C.blue },
     { label: "Opened", val: metrics?.total_opened || 0, color: C.teal, sub: metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) + "%" : null },
-    { label: "Registered", val: metrics?.total_invited || 0, color: C.text },
+    { label: "Registered", val: metrics?.total_contacts || metrics?.total_invited || 0, color: C.text },
     { label: "Confirmed", val: metrics?.total_confirmed || 0, color: C.green },
     { label: "Declined", val: metrics?.total_declined || 0, color: C.red },
     { label: "Pending", val: metrics?.total_pending || 0, color: C.amber },
@@ -3735,6 +3735,8 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
   const [mode, setMode] = useState("host"); // "host" | "kiosk"
   const [checkingIn, setCheckingIn] = useState(null);
   const [stats, setStats] = useState({ total: 0, attended: 0, walkin: 0 });
+  const [clock, setClock] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
   const [walkinName, setWalkinName] = useState("");
   const [walkinEmail, setWalkinEmail] = useState("");
   const [walkinCompany, setWalkinCompany] = useState("");
@@ -3823,7 +3825,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Check-in</h1>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — live check-in dashboard</p>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — live check-in dashboard · <span style={{ color: C.text, fontFamily: "monospace" }}>{clock.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span></p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {activeEvent?.id && (
