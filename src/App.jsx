@@ -1213,10 +1213,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           )}
           {metrics && <div style={{ display: "flex", gap: 16 }}>
             {[
-              { l: "Open Rate", v: metrics.total_sent ? `${Math.round((metrics.total_opened / metrics.total_sent) * 100)}%` : "—" },
-              { l: "Show Rate", v: metrics.total_confirmed ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}%` : "—" },
+              { l: "Open Rate", v: metrics.total_sent > 0 ? `${Math.round((metrics.total_opened / metrics.total_sent) * 100)}%` : "0%", good: metrics.total_sent > 0 && (metrics.total_opened / metrics.total_sent) > 0.2 },
+              { l: "Show Rate", v: metrics.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}%` : "0%", good: metrics.total_confirmed > 0 && (metrics.total_attended / metrics.total_confirmed) > 0.7 },
             ].map(s => (<div key={s.l} style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.8px" }}>{s.v}</div>
+              <div style={{ fontSize: 24, fontWeight: 600, color: s.good ? C.green : C.text, letterSpacing: "-0.8px" }}>{s.v}</div>
               <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>{s.l}</div>
             </div>))}
           </div>}
@@ -1546,6 +1546,37 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
             <Download size={11}/>Export CSV
           </button>
+          <div style={{ position: "relative" }}>
+            <button onClick={e => {
+              const menu = e.currentTarget.nextSibling;
+              menu.style.display = menu.style.display === "none" ? "block" : "none";
+            }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer" }}>
+              ↓ SFDC
+            </button>
+            <div style={{ display: "none", position: "absolute", top: "100%", right: 0, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, padding: 6, zIndex: 50, width: 160, marginTop: 4 }}>
+              {[
+                { label: "Salesforce CSV", fields: ["FirstName","LastName","Email","Phone","Company","Title","LeadStatus"] },
+                { label: "Standard CSV", fields: ["first_name","last_name","email","phone","company","job_title","status"] },
+              ].map(fmt => (
+                <button key={fmt.label} onClick={() => {
+                  const rows = [fmt.fields.join(",")];
+                  contacts.forEach(ec => {
+                    const c = ec.contacts || {};
+                    const vals = [c.first_name||"",c.last_name||"",c.email||"",c.phone||"",c.company_name||"",c.job_title||"",ec.status||""];
+                    rows.push(vals.map(v => `"${String(v).replace(/"/g,'""')}"`).join(","));
+                  });
+                  const blob = new Blob([rows.join("\n")], {type:"text/csv"});
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `${activeEvent.name.replace(/\s+/g,"_")}_${fmt.label.replace(/\s+/g,"_")}.csv`;
+                  a.click();
+                  fire(`✅ ${fmt.label} downloaded (${contacts.length} contacts)`);
+                }} style={{ display: "block", width: "100%", textAlign: "left", padding: "6px 10px", fontSize: 11.5, color: C.text, background: "transparent", border: "none", cursor: "pointer", borderRadius: 5 }}>
+                  {fmt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* ✨ Natural Language Filter Bar */}
