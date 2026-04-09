@@ -2640,6 +2640,23 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             📅 Auto-Schedule
           </button>
           <button onClick={async () => {
+            const types = {};
+            const toDelete = [];
+            campaigns.forEach(c => {
+              if (!types[c.email_type]) { types[c.email_type] = c.id; }
+              else { toDelete.push(c.id); }
+            });
+            if (!toDelete.length) { fire("No duplicates found ✅"); return; }
+            if (!window.confirm(`Delete ${toDelete.length} duplicate campaign(s)?`)) return;
+            for (const id of toDelete) {
+              await supabase.from("email_campaigns").delete().eq("id", id);
+            }
+            setCampaigns(p => p.filter(c => !toDelete.includes(c.id)));
+            fire(`✅ Removed ${toDelete.length} duplicate(s)`);
+          }} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            🧹 Remove duplicates
+          </button>
+          <button onClick={async () => {
             fire("⚡ Running scheduler…");
             const { data: { session } } = await supabase.auth.getSession();
             const res = await fetch(`${SUPABASE_URL}/functions/v1/send-scheduled`, {
@@ -2756,6 +2773,15 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 )}
                 {cam.status === "draft" && !cam.html_content && (
                   <span style={{ fontSize: 11, color: C.muted, fontStyle: "italic" }}>Generate email first in eDM Builder</span>
+                )}
+                {cam.status === "scheduled" && (
+                  <button onClick={async () => {
+                    await supabase.from("email_campaigns").update({ status: "draft", scheduled_at: null }).eq("id", cam.id);
+                    setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "draft", scheduled_at: null } : c));
+                    fire("Campaign unscheduled — moved back to draft");
+                  }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.amber}40`, background: "transparent", color: C.amber, cursor: "pointer" }}>
+                    ✕ Unschedule
+                  </button>
                 )}
                 {cam.status === "sent" && cam.total_sent > 0 && cam.html_content && (
                   <button onClick={async () => {
