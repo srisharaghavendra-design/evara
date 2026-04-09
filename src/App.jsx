@@ -1336,6 +1336,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           {metrics && <div style={{ display: "flex", gap: 16 }}>
             {[
               { l: "Open Rate", v: metrics.total_sent > 0 ? `${Math.round((metrics.total_opened / metrics.total_sent) * 100)}%` : "0%", good: metrics.total_sent > 0 && (metrics.total_opened / metrics.total_sent) > 0.2 },
+              { l: "Click Rate", v: metrics.total_sent > 0 && metrics.total_clicked > 0 ? `${Math.round((metrics.total_clicked / metrics.total_sent) * 100)}%` : "—", good: metrics.total_sent > 0 && (metrics.total_clicked / metrics.total_sent) > 0.05 },
               { l: "Show Rate", v: metrics.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}%` : "0%", good: metrics.total_confirmed > 0 && (metrics.total_attended / metrics.total_confirmed) > 0.7 },
             ].map(s => (<div key={s.l} style={{ textAlign: "right" }}>
               <div style={{ fontSize: 24, fontWeight: 600, color: s.good ? C.green : C.text, letterSpacing: "-0.8px" }}>{s.v}</div>
@@ -3093,6 +3094,12 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 {campaigns.filter(c=>c.status==="sent").length} sent ·{" "}
                 <span style={{ color: C.blue }}>{campaigns.filter(c=>c.status==="scheduled").length} scheduled</span> ·{" "}
                 {campaigns.filter(c=>c.status==="draft").length} drafts
+                {(() => {
+                  const next = campaigns.filter(c=>c.status==="scheduled"&&c.scheduled_at&&new Date(c.scheduled_at)>new Date()).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))[0];
+                  if (!next) return null;
+                  const h = Math.round((new Date(next.scheduled_at)-new Date())/(1000*60*60));
+                  return <span style={{ marginLeft:8, color:h<24?C.amber:C.muted }}>· next in {h<24?`${h}h`:`${Math.round(h/24)}d`}</span>;
+                })()}
                 {(() => {
                   const sent = campaigns.filter(c=>c.status==="sent");
                   const totalSent = sent.reduce((s,c)=>s+(c.total_sent||0),0);
@@ -4897,7 +4904,10 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
       <div style={{ background: C.card, borderRadius: 10, padding: "14px 16px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 8, fontSize: 12, color: C.muted }}>
           <span>Check-in progress</span>
-          <span style={{ color: C.green }}>{stats.attended}/{stats.total} checked in</span>
+          <span style={{ color: C.green }}>
+            {stats.attended}/{stats.total} checked in
+            {stats.total > 0 ? ` · ${Math.round(stats.attended/stats.total*100)}%` : ""}
+          </span>
         </div>
         <div style={{ height: 8, background: C.raised, borderRadius: 4, overflow: "hidden" }}>
           <div style={{ height: "100%", background: `linear-gradient(90deg, ${C.green}, ${C.teal})`, width: `${stats.total ? (stats.attended / stats.total) * 100 : 0}%`, borderRadius: 4, transition: "width .5s ease" }} />
