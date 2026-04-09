@@ -2794,7 +2794,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       </div>
 
       {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px", color: C.muted }}><Spin />Loading campaigns…</div> : (
-        <>
+        <div>
         <div style={{ marginBottom: 12 }}>
           <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search campaigns by name or subject…"
@@ -3071,7 +3071,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             </div>
           </div>
         </div>
-        </>
+        </div>
       )}
     </div>
   );
