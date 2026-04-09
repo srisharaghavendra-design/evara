@@ -1412,6 +1412,21 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           <button onClick={() => setLiveMode(false)} style={{ marginLeft: "auto", fontSize: 11, color: C.muted, background: "transparent", border: "none", cursor: "pointer" }}>✕ Stop</button>
         </div>
       )}
+      {/* RSVP deadline urgency banner */}
+      {activeEvent?.rsvp_deadline && (() => {
+        const daysToRsvp = Math.ceil((new Date(activeEvent.rsvp_deadline) - new Date()) / (1000*60*60*24));
+        if (daysToRsvp > 3 || daysToRsvp < 0) return null;
+        return (
+          <div style={{ background: daysToRsvp <= 1 ? C.red+"15" : C.amber+"15", border: `1px solid ${daysToRsvp <= 1 ? C.red : C.amber}30`, borderRadius: 10, padding: "10px 16px", marginBottom: 12, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <span style={{ fontSize:13, color: daysToRsvp <= 1 ? C.red : C.amber }}>
+              {daysToRsvp === 0 ? "🚨 RSVP deadline is TODAY" : `⚠️ RSVP deadline in ${daysToRsvp} day${daysToRsvp>1?"s":""}`} — {contacts.filter(c=>c.status==="pending").length} pending responses
+            </span>
+            <button onClick={() => setView("schedule")} style={{ fontSize:12, padding:"4px 12px", borderRadius:6, background:"transparent", border:`1px solid ${daysToRsvp<=1?C.red:C.amber}40`, color: daysToRsvp<=1?C.red:C.amber, cursor:"pointer" }}>
+              Send reminder →
+            </button>
+          </div>
+        );
+      })()}
       {/* ─── POST-EVENT NUDGE ─── */}
       {activeEvent?.event_date && Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24)) < 0 && contacts.filter(c => c.status === "confirmed").length > 0 && (
         <div style={{ background: C.blue+"10", border: `1px solid ${C.blue}25`, borderRadius: 10, padding: "12px 16px", marginBottom: 12, display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
