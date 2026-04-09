@@ -5727,6 +5727,12 @@ function PublicLandingPage({ slug }) {
       </div>
 
       <div style={{ borderTop: `1px solid ${page.template === "minimal" ? "#eee" : "rgba(255,255,255,0.1)"}`, padding: "20px 24px", textAlign: "center" }}>
+        <div style={{ display: "flex", gap: 10, justifyContent: "center", marginBottom: 12, flexWrap: "wrap" }}>
+          <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener"
+            style={{ fontSize: 12, padding: "6px 14px", background: "rgba(255,255,255,0.15)", color: page.template === "minimal" ? "#555" : "#fff", borderRadius: 20, textDecoration: "none", border: "1px solid rgba(255,255,255,0.2)" }}>
+            📤 Share on LinkedIn
+          </a>
+        </div>
         <span style={{ fontSize: 11, color: page.template === "minimal" ? "#bbb" : "rgba(255,255,255,0.3)" }}>Powered by evara · evarahq.com</span>
       </div>
     </div>
