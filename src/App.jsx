@@ -903,6 +903,7 @@ function MainApp({ session }) {
               <button onClick={createEvent} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Sparkles size={13} />Create + Auto-Draft →</button>
             </div>
           </div>
+        </div>
       )}
 
       {toast && (
@@ -3062,7 +3063,6 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               <button onClick={schedule} style={{ flex: 1, padding: "10px", background: C.blue, border: "none", borderRadius: 7, color: "#fff", fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Schedule →</button>
             </div>
           </div>
-        </div>
         </div>
       )}
     </div>
