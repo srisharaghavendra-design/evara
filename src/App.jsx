@@ -1497,6 +1497,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             <button onClick={() => document.querySelector('button[data-view="schedule"]')?.click()}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.green}40`, background: C.green + "10", color: C.green, cursor: "pointer", fontWeight: 500 }}>
               📨 Send next email ({campaigns.filter(c => c.status === "draft").length} ready)
+              {(() => { const d=new Date().getDay(); const h=new Date().getHours(); return (d>=2&&d<=4&&h>=9&&h<=11) ? <span style={{fontSize:9,marginLeft:6,color:C.green}}>✓ Great time</span> : <span style={{fontSize:9,marginLeft:6,color:C.muted}}>💡 Tue–Thu 9–11am</span>; })()}
             </button>
             <button onClick={() => {
               document.querySelector('button[data-view="edm"]')?.click();
@@ -3335,7 +3336,23 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     );
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
                   {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{ {"all":`Everyone (${contactCount})`,"confirmed":"✅ Confirmed","pending":"⏳ Pending","attended":"📍 Attended","declined":"❌ Declined","vip":"⭐ VIP"}[cam.segment] || cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1) }</span>
-                  {cam.status === "sent" && ` · ✅ ${cam.total_sent || 0} sent${cam.total_sent > 0 ? ` · ${Math.round(((cam.total_opened || 0) / cam.total_sent) * 100)}% opened` : ""}${cam.total_clicked > 0 ? ` · ${cam.total_clicked} clicks` : ""}`}
+                  {cam.status === "sent" && (
+                    <span>
+                      {` · ✅ ${cam.total_sent || 0} sent`}
+                      {cam.total_sent > 0 && ` · ${Math.round(((cam.total_opened||0)/cam.total_sent)*100)}% opened`}
+                      {cam.total_clicked > 0 && ` · ${cam.total_clicked} clicks`}
+                      {cam.sent_at && (() => {
+                        const d = new Date(cam.sent_at);
+                        const day = d.getDay(); const h = d.getHours();
+                        const optimal = day>=2 && day<=4 && h>=9 && h<=11;
+                        const daysAgo = Math.round((new Date()-d)/(1000*60*60*24));
+                        return <span style={{ marginLeft:4, color:C.muted }}>
+                          · {daysAgo===0?"today":`${daysAgo}d ago`}
+                          {optimal && <span style={{ marginLeft:4, color:C.green }}>✓ optimal</span>}
+                        </span>;
+                      })()}
+                    </span>
+                  )}
                 </div>
                 {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
                 {cam.html_content && (() => {
@@ -5641,6 +5658,15 @@ function EngagementBreakdown({ supabase, activeEvent, campaigns }) {
             </select>
             <button onClick={load} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>↻ Refresh</button>
             {sends.length > 0 && <button onClick={doExport} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.green}40`, background: "transparent", color: C.green, cursor: "pointer" }}>⬇ Export CSV</button>}
+          <button onClick={async () => {
+            const token = activeEvent.share_token || Math.random().toString(36).slice(2);
+            if (!activeEvent.share_token) {
+              await supabase.from("events").update({ share_token: token }).eq("id", activeEvent.id);
+              setActiveEvent(p => ({ ...p, share_token: token }));
+            }
+            navigator.clipboard?.writeText(`${window.location.origin}/share/${token}`);
+            fire("📊 Analytics link copied!");
+          }} style={{ fontSize:12, padding:"5px 12px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>📊 Share</button>
           </div>
           {loading ? (
             <div style={{ padding: 24, textAlign: "center", color: C.muted, display: "flex", gap: 8, alignItems: "center", justifyContent: "center" }}><Spin />Loading…</div>
