@@ -1153,7 +1153,10 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
               fire(`Event status → ${next}`);
             }} style={{ fontSize: 11, fontWeight: 600, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "15", padding: "2px 8px", borderRadius: 4, textTransform: "capitalize", flexShrink: 0, cursor: "pointer" }} title="Click to change status">
-              {activeEvent.status || "draft"}
+              <span style={{ fontSize: 9.5, marginRight: 2 }}>
+                {activeEvent.status === "published" ? "🟢" : activeEvent.status === "completed" ? "✅" : "⚪"}
+              </span>
+              {(activeEvent.status || "draft").charAt(0).toUpperCase() + (activeEvent.status || "draft").slice(1)}
             </span>
             <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
               Edit
@@ -1349,7 +1352,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               🌐 Edit landing page
             </button>
-            <button onClick={() => document.querySelector('button[data-view="contacts"]')?.click()}
+            <button onClick={() => document.querySelector('button[data-view="contacts"]'setShowAddContact(true)}
               style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               👥 Add contacts ({contacts.length} total)
             </button>
