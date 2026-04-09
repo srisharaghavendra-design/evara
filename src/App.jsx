@@ -1559,6 +1559,13 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, padding: "5px 11px", color: C.muted, cursor: "pointer" }}>
             <Download size={11}/>Export CSV
           </button>
+          <button onClick={() => {
+            const emails = contacts.filter(c => c.contacts?.email && !c.contacts?.unsubscribed).map(c => c.contacts.email).join(", ");
+            navigator.clipboard?.writeText(emails);
+            fire(`✅ ${contacts.length} email${contacts.length !== 1 ? "s" : ""} copied to clipboard`);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer" }}>
+            📋 Copy Emails
+          </button>
           <div style={{ position: "relative" }}>
             <button onClick={e => {
               const menu = e.currentTarget.nextSibling;
