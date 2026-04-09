@@ -3785,7 +3785,17 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Check-in</h1>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — live check-in dashboard</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {activeEvent?.id && (
+            <div style={{ textAlign: "center" }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&bgcolor=1C1C1E&color=FFFFFF&data=${encodeURIComponent(window.location.origin + "/checkin/" + activeEvent.id)}`}
+                alt="Check-in QR"
+                style={{ width: 48, height: 48, borderRadius: 6, border: `1px solid ${C.border}` }}
+              />
+              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>Scan to check in</div>
+            </div>
+          )}
           {["host", "kiosk"].map(m => (
             <button key={m} onClick={() => setMode(m)}
               style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${mode === m ? C.blue + "80" : C.border}`, background: mode === m ? C.blue + "14" : "transparent", color: mode === m ? C.blue : C.muted, cursor: "pointer", textTransform: "capitalize" }}>
@@ -3798,6 +3808,13 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
             fire("Check-in kiosk URL copied! Open on a tablet at the door.");
           }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             📋 Copy Kiosk URL
+          </button>
+          <button onClick={() => {
+            const url = `${window.location.origin}/checkin/${activeEvent?.id}`;
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
+            window.open(qrUrl, "_blank");
+          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+            📱 QR Code
           </button>
           <button onClick={() => {
             const attended = contacts.filter(c => c.status === "attended");
