@@ -636,6 +636,7 @@ function MainApp({ session }) {
       event_time: newEventExtra?.event_time || null,
       location: newEventExtra?.location || null,
       description: newEventExtra?.description || null,
+      event_type: newEventExtra?.event_type || null,
       capacity: newEventExtra?.capacity ? parseInt(newEventExtra.capacity) : null,
       company_id: profile.company_id, status: "draft", created_by: profile.id,
       share_token: shareToken,
@@ -874,6 +875,7 @@ function MainApp({ session }) {
             <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>New event</h2>
             {[
               { key: "name",        label: "Event name *",    ph: "e.g. Tech Summit 2026",              type: "text" },
+              { key: "event_type",  label: "Event type",      ph: "",                                    type: "select", options: ["Conference","Workshop","Dinner / Gala","Webinar","Product Launch","Awards","Team Event","Other"] },
               { key: "event_date",  label: "Date",            ph: "",                                    type: "date" },
               { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
               { key: "location",    label: "Venue / Location", ph: "e.g. The Ritz-Carlton, Bangalore", type: "text" },
@@ -882,14 +884,22 @@ function MainApp({ session }) {
             ].map(f => (
               <div key={f.key} style={{ marginBottom: 12 }}>
                 <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
-                <input type={f.type}
-                  value={f.key === "name" ? newEventName : (newEventExtra?.[f.key] || "")}
-                  onChange={e => f.key === "name" ? setNewEventName(e.target.value) : setNewEventExtra(p => ({ ...p, [f.key]: e.target.value }))}
-                  onKeyDown={e => e.key === "Enter" && createEvent()}
-                  placeholder={f.ph} autoFocus={f.key === "name"}
-                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
-                  onFocus={e => e.target.style.borderColor = C.blue}
-                  onBlur={e => e.target.style.borderColor = C.border} />
+                {f.type === "select" ? (
+                  <select value={newEventExtra?.[f.key] || ""} onChange={e => setNewEventExtra(p => ({ ...p, [f.key]: e.target.value }))}
+                    style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
+                    <option value="">Select type…</option>
+                    {(f.options || []).map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                ) : (
+                  <input type={f.type}
+                    value={f.key === "name" ? newEventName : (newEventExtra?.[f.key] || "")}
+                    onChange={e => f.key === "name" ? setNewEventName(e.target.value) : setNewEventExtra(p => ({ ...p, [f.key]: e.target.value }))}
+                    onKeyDown={e => e.key === "Enter" && createEvent()}
+                    placeholder={f.ph} autoFocus={f.key === "name"}
+                    style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
+                    onFocus={e => e.target.style.borderColor = C.blue}
+                    onBlur={e => e.target.style.borderColor = C.border} />
+                )}
               </div>
             ))}
             <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}25`, borderRadius: 8, padding: "10px 12px", marginTop: 4, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
@@ -1177,7 +1187,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
             </button>
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
-            {activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
+            {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
             {activeEvent.expected_attendees ? ` · 👥 ${activeEvent.expected_attendees} expected` : ""}
@@ -1621,6 +1631,49 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer" }}>
             📋 Copy Emails
           </button>
+          {contacts.filter(c => c.status === "attended").length > 0 && (
+            <button onClick={() => {
+              const attended = contacts.filter(c => c.status === "attended");
+              const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { weekday:"long", day:"numeric", month:"long", year:"numeric" }) : "";
+              const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Certificates — ${activeEvent?.name}</title>
+              <style>
+                @page { size: A4 landscape; margin: 0; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                body { font-family: Georgia, serif; background: #fff; }
+                .cert { width: 297mm; height: 210mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: linear-gradient(135deg,#0A1628 0%,#1a2a4a 100%); color: #fff; page-break-after: always; position: relative; padding: 50px; }
+                .cert:last-child { page-break-after: auto; }
+                .border { position: absolute; inset: 24px; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 6px; pointer-events: none; }
+                .logo { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-bottom: 36px; font-family: Arial, sans-serif; }
+                .cert-title { font-size: 13px; letter-spacing: 5px; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 20px; font-family: Arial, sans-serif; }
+                .name { font-size: 52px; font-weight: 400; color: #fff; letter-spacing: -1px; margin-bottom: 20px; }
+                .body-text { font-size: 16px; color: rgba(255,255,255,0.6); line-height: 1.6; max-width: 520px; margin-bottom: 32px; font-family: Arial, sans-serif; }
+                .event-name { font-size: 22px; color: #fff; font-weight: 700; margin-bottom: 6px; font-family: Arial, sans-serif; }
+                .event-meta { font-size: 13px; color: rgba(255,255,255,0.35); margin-bottom: 48px; font-family: Arial, sans-serif; letter-spacing: 1px; }
+                .sig-line { width: 180px; border-top: 1px solid rgba(255,255,255,0.25); padding-top: 8px; font-size: 11px; color: rgba(255,255,255,0.3); font-family: Arial, sans-serif; letter-spacing: 1px; }
+              </style></head><body>
+              ${attended.map(ec => {
+                const c = ec.contacts || {};
+                const name = (c.first_name + " " + (c.last_name || "")).trim() || c.email || "Guest";
+                return '<div class="cert"><div class="border"></div>'
+                  + '<div class="logo">evara</div>'
+                  + '<div class="cert-title">Certificate of Attendance</div>'
+                  + '<div class="name">' + name + '</div>'
+                  + '<div class="body-text">This certifies that the above named individual attended</div>'
+                  + '<div class="event-name">' + (activeEvent?.name || "Event") + '</div>'
+                  + '<div class="event-meta">' + eventDate + (activeEvent?.location ? " &nbsp;·&nbsp; " + activeEvent.location : "") + '</div>'
+                  + '<div class="sig-line">AUTHORISED SIGNATURE</div>'
+                  + '</div>';
+              }).join("")}
+              </body></html>`;
+              const win = window.open("", "_blank");
+              win.document.write(html);
+              win.document.close();
+              setTimeout(() => win.print(), 600);
+              fire(`🎓 ${attended.length} certificate${attended.length !== 1 ? "s" : ""} generated — print or save as PDF`);
+            }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, padding: "5px 11px", background: "transparent", border: `1px solid ${C.green}40`, borderRadius: 6, color: C.green, cursor: "pointer" }}>
+              🎓 Certificates ({contacts.filter(c => c.status === "attended").length})
+            </button>
+          )}
           <div style={{ position: "relative" }}>
             <button onClick={e => {
               const menu = e.currentTarget.nextSibling;
@@ -1898,6 +1951,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
                 {[
                   { label: "Email", val: c.email }, { label: "Phone", val: c.phone },
                   { label: "Company", val: c.company_name }, { label: "Title", val: c.job_title },
+                  { label: "LinkedIn", val: c.linkedin_url },
                   { label: "Registered", val: selectedContact.created_at ? new Date(selectedContact.created_at).toLocaleDateString("en-AU") : null },
                   { label: "Confirmed", val: selectedContact.confirmed_at ? new Date(selectedContact.confirmed_at).toLocaleDateString("en-AU") : null },
                 ].filter(f => f.val).map(f => (
