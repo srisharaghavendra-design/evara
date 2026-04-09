@@ -2449,12 +2449,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        if (preview?.html && !saving) saveDraft();
+        if (preview?.html) saveDraft();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [preview?.html, saving]);
+  }, [preview?.html]);
   const [subjectAlts, setSubjectAlts] = useState([]);
   const [loadingAlts, setLoadingAlts] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
