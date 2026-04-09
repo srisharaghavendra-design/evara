@@ -3745,6 +3745,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   }, [profile]);
   const [contactFilter, setContactFilter] = useState("all"); // all | vip | unsubscribed | active
   const [contactSort, setContactSort] = useState("newest"); // newest | name | company
+  const [tagFilter, setTagFilter] = useState(""); // filter by specific tag
   const [selContacts, setSelContacts] = useState(new Set());
   const toggleSel = (id) => setSelContacts(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const filtered = contacts.filter(c => {
@@ -3752,6 +3753,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
     if (contactFilter === "vip" && !c.tags?.includes("vip")) return false;
     if (contactFilter === "unsubscribed" && !c.unsubscribed) return false;
     if (contactFilter === "active" && c.unsubscribed) return false;
+    if (tagFilter && !(c.tags||[]).includes(tagFilter)) return false;
     return true;
   }).sort((a, b) => {
     if (contactSort === "name") return (`${a.first_name||""} ${a.last_name||""}`).localeCompare(`${b.first_name||""} ${b.last_name||""}`);
@@ -3885,6 +3887,12 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               fire(`✅ ${added} contact${added !== 1 ? "s" : ""} added to ${activeEvent.name}`);
             }} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue+"10", color: C.blue, cursor: "pointer" }}>
               + Add {filtered.length > 0 && filtered.length < contacts.length ? filtered.length : "all"} to {activeEvent.name.slice(0, 20)}{activeEvent.name.length > 20 ? "…" : ""}
+            </button>
+          )}
+          {tagFilter && (
+            <button onClick={() => setTagFilter("")}
+              style={{ fontSize:11, padding:"3px 8px", borderRadius:5, background:C.blue+"10", border:`1px solid ${C.blue}30`, color:C.blue, cursor:"pointer" }}>
+              🏷 #{tagFilter} ✕
             </button>
           )}
           {contacts.filter(c => c.unsubscribed).length > 0 && (
@@ -4050,7 +4058,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                           style={{ accentColor: C.blue, cursor:"pointer", flexShrink:0 }} />
                         <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: C.blue, flexShrink: 0 }}>{ini(`${c.first_name || ""} ${c.last_name || ""}`)}</div>
                         <span style={{ fontSize: 13, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</span>
-                        {c.tags?.includes("vip") && <span style={{ fontSize: 10, color: "#FFB800", marginLeft: 4 }}>⭐ VIP</span>}
+                        {c.tags?.includes("vip") && <span onClick={e=>{e.stopPropagation();setTagFilter(f=>f==="vip"?"":"vip");}} style={{ fontSize:10, color:"#FFB800", marginLeft:4, cursor:"pointer" }} title="Filter by VIP">⭐ VIP</span>}
                         {c.unsubscribed && <span style={{ fontSize: 9, padding:"1px 5px", borderRadius:3, background:C.red+"15", color:C.red }}>unsub</span>}
                       </div>
                     </td>
