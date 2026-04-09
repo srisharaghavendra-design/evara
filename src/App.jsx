@@ -638,6 +638,7 @@ function MainApp({ session }) {
       description: newEventExtra?.description || null,
       event_type: newEventExtra?.event_type || null,
       event_format: newEventExtra?.event_format || null,
+      rsvp_deadline: newEventExtra?.rsvp_deadline || null,
       capacity: newEventExtra?.capacity ? parseInt(newEventExtra.capacity) : null,
       company_id: profile.company_id, status: "draft", created_by: profile.id,
       share_token: shareToken,
@@ -881,7 +882,8 @@ function MainApp({ session }) {
             {[
               { key: "name",        label: "Event name *",    ph: "e.g. Tech Summit 2026",              type: "text" },
               { key: "event_type",   label: "Event type",      ph: "",                                    type: "select", options: ["Conference","Workshop","Dinner / Gala","Webinar","Product Launch","Awards","Team Event","Other"] },
-              { key: "event_format", label: "Format",          ph: "",                                    type: "select", options: ["In-person","Online / Webinar","Hybrid"] },
+              { key: "event_format",   label: "Format",            ph: "",                                    type: "select", options: ["In-person","Online / Webinar","Hybrid"] },
+              { key: "rsvp_deadline",  label: "RSVP deadline",      ph: "",                                    type: "date" },
               { key: "event_date",  label: "Date",            ph: "",                                    type: "date" },
               { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
               { key: "location",    label: "Venue / Location", ph: "e.g. The Ritz-Carlton, Bangalore", type: "text" },
@@ -1198,7 +1200,7 @@ function DashView({ supabase, profile, activeEvent, fire }) {
           </div>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
             {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}
-            {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}
+            {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}{activeEvent.rsvp_deadline && new Date(activeEvent.rsvp_deadline) > new Date() ? <> · <span style={{ color: C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</span></> : ""}
             {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
             {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
             {activeEvent.expected_attendees ? ` · 👥 ${activeEvent.expected_attendees} expected` : ""}
@@ -4461,6 +4463,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
   const [mode, setMode] = useState("host"); // "host" | "kiosk"
   const [checkingIn, setCheckingIn] = useState(null);
   const [stats, setStats] = useState({ total: 0, attended: 0, walkin: 0 });
+  const [hourlyData, setHourlyData] = useState([]);
   const [clock, setClock] = useState(new Date());
   useEffect(() => { const t = setInterval(() => setClock(new Date()), 1000); return () => clearInterval(t); }, []);
   const [walkinName, setWalkinName] = useState("");
@@ -4487,6 +4490,14 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
       attended: rows.filter(r => r.status === "attended").length,
       walkin: rows.filter(r => r.contacts?.source === "walkin").length,
     });
+    // Hourly breakdown
+    const hourMap = {};
+    rows.filter(r => r.attended_at).forEach(r => {
+      const h = new Date(r.attended_at).getHours();
+      hourMap[h] = (hourMap[h] || 0) + 1;
+    });
+    const hrs = Object.keys(hourMap).map(Number).sort((a,b)=>a-b);
+    setHourlyData(hrs.map(h => ({ hour: h, count: hourMap[h] })));
     setLoading(false);
   };
 
@@ -4630,6 +4641,25 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
         </div>
       </div>
 
+      {/* Hourly check-in chart */}
+      {hourlyData.length > 1 && (
+        <div style={{ background: C.card, borderRadius: 10, padding: "14px 16px", border: `1px solid ${C.border}`, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>Check-in by hour</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 60 }}>
+            {hourlyData.map(({ hour, count }) => {
+              const maxCount = Math.max(...hourlyData.map(d => d.count));
+              const pct = maxCount > 0 ? (count / maxCount) * 100 : 0;
+              return (
+                <div key={hour} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                  <div style={{ fontSize: 9, color: C.muted }}>{count}</div>
+                  <div style={{ width: "100%", background: C.green, borderRadius: "2px 2px 0 0", height: `${Math.max(4, pct * 0.44)}px`, opacity: 0.8 }} />
+                  <div style={{ fontSize: 9, color: C.muted, whiteSpace: "nowrap" }}>{hour}:00</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
       {/* Search + list */}
       <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", gap: 10 }}>
