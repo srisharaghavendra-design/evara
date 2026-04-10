@@ -4143,6 +4143,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
   const [followUpGenerating, setFollowUpGenerating] = useState(false);
+  const [schedPickerCam, setSchedPickerCam] = useState(null); // cam being scheduled via picker
+  const [schedPickerVal, setSchedPickerVal] = useState("");
 
   const generateFollowUpSequence = async () => {
     if (!activeEvent || !profile) return;
@@ -4677,17 +4679,30 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       <Send size={11} />Send Now
                     </button>
                     {cam.status !== "scheduled" && (
-                      <button onClick={async () => {
-                        const dateStr = window.prompt("Schedule email — enter date & time (YYYY-MM-DD HH:MM):", new Date(Date.now() + 86400000).toISOString().slice(0, 16).replace("T", " "));
-                        if (!dateStr) return;
-                        const schedDate = new Date(dateStr);
-                        if (isNaN(schedDate)) { fire("Invalid date format", "err"); return; }
-                        await supabase.from("email_campaigns").update({ status: "scheduled", scheduled_at: schedDate.toISOString() }).eq("id", cam.id);
-                        setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "scheduled", scheduled_at: schedDate.toISOString() } : c));
-                        fire(`✅ Scheduled for ${schedDate.toLocaleDateString("en-AU", { day: "numeric", month: "short" })} at ${schedDate.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}`);
-                      }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-                        ⏰ Schedule
-                      </button>
+                      schedPickerCam?.id === cam.id ? (
+                        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                          <input type="datetime-local" value={schedPickerVal}
+                            onChange={e => setSchedPickerVal(e.target.value)}
+                            min={new Date().toISOString().slice(0,16)}
+                            style={{ fontSize:11, padding:"4px 7px", borderRadius:5, border:`1px solid ${C.blue}60`, background:C.bg, color:C.text, outline:"none" }} />
+                          <button onClick={async () => {
+                            if (!schedPickerVal) return;
+                            const schedDate = new Date(schedPickerVal);
+                            await supabase.from("email_campaigns").update({ status:"scheduled", scheduled_at:schedDate.toISOString() }).eq("id", cam.id);
+                            setCampaigns(p => p.map(c => c.id===cam.id ? {...c, status:"scheduled", scheduled_at:schedDate.toISOString()} : c));
+                            setSchedPickerCam(null); setSchedPickerVal("");
+                            fire(`✅ Scheduled for ${schedDate.toLocaleDateString("en-AU",{day:"numeric",month:"short"})} at ${schedDate.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}`);
+                          }} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:"none", background:C.blue, color:"#fff", cursor:"pointer", fontWeight:600 }}>Set</button>
+                          <button onClick={() => { setSchedPickerCam(null); setSchedPickerVal(""); }} style={{ fontSize:11, padding:"4px 7px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>✕</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => {
+                          const defaultVal = new Date(Date.now() + 86400000).toISOString().slice(0,16);
+                          setSchedPickerCam(cam); setSchedPickerVal(defaultVal);
+                        }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 12px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                          ⏰ Schedule
+                        </button>
+                      )
                     )}
                   </>
                 )}
