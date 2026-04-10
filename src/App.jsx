@@ -7723,6 +7723,80 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
           </button>
         </div>
       </div>
+
+      {/* ── Visual cost breakdown + evara savings ── */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginTop:14 }}>
+
+        {/* Cost breakdown bar chart */}
+        <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:18 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:14 }}>Cost Breakdown</div>
+          {(() => {
+            const items = [
+              { label:"Venue", val:parseFloat(costs.venue)||0, color:"#FF453A" },
+              { label:"Catering", val:parseFloat(costs.catering)||0, color:"#FF9F0A" },
+              { label:"AV & Production", val:parseFloat(costs.av)||0, color:"#BF5AF2" },
+              { label:"Marketing", val:parseFloat(costs.marketing)||0, color:"#0A84FF" },
+              { label:"Staff", val:parseFloat(costs.staff)||0, color:"#5AC8FA" },
+              { label:"Other", val:parseFloat(costs.other)||0, color:"#636366" },
+            ].filter(i => i.val > 0);
+            const max = Math.max(...items.map(i=>i.val), 1);
+            if (!items.length) return <div style={{ fontSize:13, color:C.muted, textAlign:"center", padding:20 }}>Enter costs to see breakdown</div>;
+            return (
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {items.map(item => (
+                  <div key={item.label}>
+                    <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:12 }}>
+                      <span style={{ color:C.sec }}>{item.label}</span>
+                      <span style={{ color:item.color, fontWeight:600 }}>${item.val.toLocaleString()} <span style={{ color:C.muted, fontWeight:400 }}>({Math.round(item.val/totalCost*100)}%)</span></span>
+                    </div>
+                    <div style={{ height:6, background:C.raised, borderRadius:3 }}>
+                      <div style={{ height:"100%", width:`${(item.val/max)*100}%`, background:item.color, borderRadius:3, transition:"width .5s ease" }} />
+                    </div>
+                  </div>
+                ))}
+                {/* Stacked total visual */}
+                <div style={{ marginTop:8, height:24, borderRadius:6, overflow:"hidden", display:"flex" }}>
+                  {items.map(item => (
+                    <div key={item.label} style={{ height:"100%", width:`${(item.val/totalCost)*100}%`, background:item.color }} title={`${item.label}: $${item.val.toLocaleString()}`} />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* evara vs old stack savings */}
+        <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:18 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:4 }}>evara Tool Savings</div>
+          <div style={{ fontSize:11, color:C.muted, marginBottom:14 }}>What you save vs running a fragmented stack</div>
+          {[
+            { tool:"Mailchimp", cost:350, replaced:"Email marketing" },
+            { tool:"Eventbrite", cost:299, replaced:"Event registration" },
+            { tool:"Typeform", cost:99, replaced:"Forms & surveys" },
+            { tool:"Unbounce", cost:200, replaced:"Landing pages" },
+            { tool:"Zapier", cost:200, replaced:"Automation" },
+          ].map(t => (
+            <div key={t.tool} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"6px 0", borderBottom:`1px solid ${C.border}` }}>
+              <div>
+                <span style={{ fontSize:12.5, color:C.sec, textDecoration:"line-through" }}>{t.tool}</span>
+                <span style={{ fontSize:10, color:C.muted, marginLeft:6 }}>{t.replaced}</span>
+              </div>
+              <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>-${t.cost}/mo</span>
+            </div>
+          ))}
+          <div style={{ paddingTop:10, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div>
+              <div style={{ fontSize:11, color:C.muted }}>Old stack total</div>
+              <div style={{ fontSize:13, color:C.muted, textDecoration:"line-through" }}>$1,148/mo</div>
+            </div>
+            <div style={{ textAlign:"right" }}>
+              <div style={{ fontSize:11, color:C.green }}>evara Growth plan</div>
+              <div style={{ fontSize:22, fontWeight:800, color:C.green, letterSpacing:"-0.5px" }}>$949 saved</div>
+              <div style={{ fontSize:10, color:C.muted }}>per month</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
