@@ -4020,6 +4020,23 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               {sendingTest ? "Sending…" : "📤 Send test"}
             </button>
+            {profile?.email && (
+              <button onClick={async () => {
+                const { data: { session } } = await supabase.auth.getSession();
+                setSendingTest(true);
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                  body: JSON.stringify({ to: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), companyId: profile?.company_id }),
+                });
+                setSendingTest(false);
+                const d = await res.json();
+                fire(d.sent > 0 ? `✅ Preview sent to ${profile.email}` : "Send failed", d.sent > 0 ? "ok" : "err");
+              }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, cursor: "pointer" }}
+                title={`Send preview to ${profile.email}`}>
+                ⚡ Send to me
+              </button>
+            )}
 
             <button onClick={saveAsTemplate} disabled={!preview?.html || savingTemplate}
               style={{ padding:"9px 14px", background:"transparent", color:C.green, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:12, cursor:"pointer" }}>
