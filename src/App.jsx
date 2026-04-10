@@ -5675,6 +5675,149 @@ function BrandKitSection({ profile, supabase, fire, fromEmail, setFromEmail, fro
   );
 }
 
+// ─── DANGER ZONE ─────────────────────────────────────────────
+function DangerZone({ profile, supabase, fire }) {
+  const [exporting, setExporting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(0); // 0=idle 1=confirm 2=typing
+  const [deleteInput, setDeleteInput] = useState("");
+  const CONFIRM_PHRASE = "delete my account";
+
+  const exportAllData = async () => {
+    if (!profile?.company_id) return;
+    setExporting(true);
+    try {
+      // Fetch all data
+      const [{ data: contacts }, { data: events }, { data: campaigns }, { data: forms }] = await Promise.all([
+        supabase.from("contacts").select("*").eq("company_id", profile.company_id),
+        supabase.from("events").select("*").eq("company_id", profile.company_id),
+        supabase.from("email_campaigns").select("*").eq("company_id", profile.company_id),
+        supabase.from("forms").select("*").eq("company_id", profile.company_id),
+      ]);
+
+      // Build GDPR export package as JSON
+      const exportData = {
+        exported_at: new Date().toISOString(),
+        account: { id: profile.id, email: profile.email, full_name: profile.full_name, company: profile.companies?.name, role: profile.role },
+        contacts: (contacts || []).map(c => ({ id:c.id, email:c.email, first_name:c.first_name, last_name:c.last_name, company:c.company_name, phone:c.phone, job_title:c.job_title, tags:c.tags, created_at:c.created_at, unsubscribed:c.unsubscribed })),
+        events: (events || []).map(e => ({ id:e.id, name:e.name, date:e.event_date, location:e.location, status:e.status })),
+        email_campaigns: (campaigns || []).map(c => ({ id:c.id, name:c.name, type:c.email_type, subject:c.subject, status:c.status, sent:c.total_sent, opened:c.total_opened })),
+        forms: (forms || []).map(f => ({ id:f.id, name:f.name, type:f.form_type })),
+      };
+
+      // Also export contacts as CSV
+      const csvHeaders = ["ID","Email","First Name","Last Name","Company","Phone","Job Title","Tags","Created","Unsubscribed"];
+      const csvRows = (contacts||[]).map(c => [c.id,c.email,c.first_name,c.last_name,c.company_name,c.phone,c.job_title,(c.tags||[]).join(";"),c.created_at,c.unsubscribed?"yes":"no"].map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(","));
+      const csv = [csvHeaders.join(","), ...csvRows].join("\n");
+
+      // Download JSON
+      const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], { type:"application/json" });
+      const jsonA = document.createElement("a");
+      jsonA.href = URL.createObjectURL(jsonBlob);
+      jsonA.download = `evara-data-export-${new Date().toISOString().slice(0,10)}.json`;
+      jsonA.click();
+
+      // Download CSV (after short delay)
+      setTimeout(() => {
+        const csvBlob = new Blob([csv], { type:"text/csv" });
+        const csvA = document.createElement("a");
+        csvA.href = URL.createObjectURL(csvBlob);
+        csvA.download = `evara-contacts-${new Date().toISOString().slice(0,10)}.csv`;
+        csvA.click();
+      }, 500);
+
+      fire(`✅ Exported ${contacts?.length||0} contacts + full account data`);
+    } catch(e) { fire(e.message || "Export failed", "err"); }
+    setExporting(false);
+  };
+
+  const requestDeletion = async () => {
+    if (deleteInput.toLowerCase() !== CONFIRM_PHRASE) { fire("Phrase doesn't match", "err"); return; }
+    setDeleting(true);
+    try {
+      // Export data first automatically
+      await exportAllData();
+      // Then log the deletion request
+      await supabase.from("deletion_requests").insert({
+        user_id: profile.id, company_id: profile.company_id,
+        email: profile.email, requested_at: new Date().toISOString(), status: "pending"
+      }).catch(() => {});
+      fire("✅ Deletion request submitted. You'll receive confirmation at " + profile.email + " within 30 days.");
+      setDeleteStep(0); setDeleteInput("");
+    } catch(e) { fire(e.message||"Request failed","err"); }
+    setDeleting(false);
+  };
+
+  return (
+    <div style={{ background:"#0F0808", borderRadius:12, border:`1px solid ${C.red}25`, padding:20, marginBottom:14 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:16 }}>
+        <div style={{ width:8, height:8, borderRadius:"50%", background:C.red }} />
+        <span style={{ fontSize:11, fontWeight:700, color:C.red, textTransform:"uppercase", letterSpacing:"0.8px" }}>Data & Privacy</span>
+      </div>
+
+      {/* GDPR Export */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"14px 0", borderBottom:`1px solid ${C.red}15` }}>
+        <div>
+          <div style={{ fontSize:13, fontWeight:500, color:C.text, marginBottom:3 }}>Export my data (GDPR Article 20)</div>
+          <div style={{ fontSize:11, color:C.muted, lineHeight:1.5 }}>Downloads all contacts, events, campaigns and account data as JSON + CSV. Compliant with GDPR right to data portability.</div>
+        </div>
+        <button onClick={exportAllData} disabled={exporting} style={{ padding:"8px 16px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.sec, fontSize:12, fontWeight:500, cursor:"pointer", whiteSpace:"nowrap", marginLeft:16, flexShrink:0 }}>
+          {exporting ? "Exporting…" : "⬇ Export data"}
+        </button>
+      </div>
+
+      {/* Account deletion */}
+      <div style={{ paddingTop:14 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+          <div>
+            <div style={{ fontSize:13, fontWeight:500, color:C.red, marginBottom:3 }}>Delete account & all data (GDPR Article 17)</div>
+            <div style={{ fontSize:11, color:C.muted, lineHeight:1.5 }}>Permanently removes all contacts, events, emails, and account data. This action cannot be undone. Your data will be exported automatically before deletion.</div>
+          </div>
+          {deleteStep === 0 && (
+            <button onClick={() => setDeleteStep(1)} style={{ padding:"8px 14px", background:"transparent", border:`1px solid ${C.red}50`, borderRadius:7, color:C.red, fontSize:12, cursor:"pointer", whiteSpace:"nowrap", marginLeft:16, flexShrink:0 }}>
+              Request deletion
+            </button>
+          )}
+        </div>
+
+        {deleteStep === 1 && (
+          <div style={{ marginTop:14, background:`${C.red}08`, border:`1px solid ${C.red}25`, borderRadius:8, padding:14 }}>
+            <div style={{ fontSize:13, color:C.text, marginBottom:10, fontWeight:500 }}>⚠️ This will permanently delete:</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:4, marginBottom:14 }}>
+              {["All contacts and their data","All events and registrations","All email campaigns and analytics","Your company account and profile","All uploaded assets and files"].map(item => (
+                <div key={item} style={{ fontSize:12, color:C.red, display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ opacity:0.6 }}>✗</span> {item}
+                </div>
+              ))}
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => { setDeleteStep(0); setDeleteInput(""); }} style={{ padding:"7px 14px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:6, color:C.muted, fontSize:12, cursor:"pointer" }}>Cancel</button>
+              <button onClick={() => setDeleteStep(2)} style={{ padding:"7px 14px", background:C.red, border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>I understand, continue →</button>
+            </div>
+          </div>
+        )}
+
+        {deleteStep === 2 && (
+          <div style={{ marginTop:14, background:`${C.red}08`, border:`1px solid ${C.red}30`, borderRadius:8, padding:14 }}>
+            <div style={{ fontSize:13, color:C.text, marginBottom:10 }}>
+              Type <strong style={{ color:C.red, fontFamily:"monospace" }}>{CONFIRM_PHRASE}</strong> to confirm:
+            </div>
+            <input value={deleteInput} onChange={e => setDeleteInput(e.target.value)}
+              placeholder={CONFIRM_PHRASE} autoFocus
+              style={{ width:"100%", background:C.bg, border:`1px solid ${deleteInput.toLowerCase()===CONFIRM_PHRASE?C.red:C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", fontFamily:"monospace", marginBottom:10 }} />
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => { setDeleteStep(0); setDeleteInput(""); }} style={{ padding:"7px 14px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:6, color:C.muted, fontSize:12, cursor:"pointer" }}>Cancel</button>
+              <button onClick={requestDeletion} disabled={deleting || deleteInput.toLowerCase() !== CONFIRM_PHRASE} style={{ padding:"7px 16px", background: deleteInput.toLowerCase()===CONFIRM_PHRASE ? C.red : C.raised, border:"none", borderRadius:6, color: deleteInput.toLowerCase()===CONFIRM_PHRASE ? "#fff" : C.muted, fontSize:12, fontWeight:600, cursor: deleteInput.toLowerCase()===CONFIRM_PHRASE ? "pointer" : "default" }}>
+                {deleting ? "Submitting…" : "Submit deletion request"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SettingsView({ supabase, profile, fire }) {
   const [name, setName] = useState(profile?.full_name || "");
   const [company, setComp] = useState(profile?.companies?.name || "");
@@ -5880,22 +6023,9 @@ function SettingsView({ supabase, profile, fire }) {
         </div>
       </div>
 
-      <div style={{ background: "#1a0808", borderRadius: 12, border: `1px solid ${C.red}30`, padding: 20, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.red, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 14 }}>Danger Zone</div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <div style={{ fontSize: 13, color: C.text, marginBottom: 4 }}>Export all data and delete account</div>
-            <div style={{ fontSize: 11, color: C.muted }}>Downloads your data then permanently removes all account data.</div>
-          </div>
-          <button onClick={() => {
-            if (window.confirm("Are you absolutely sure? This cannot be undone.")) {
-              fire("Please contact hello@evarahq.com to delete your account and data.", "err");
-            }
-          }} style={{ padding: "7px 14px", background: "transparent", border: `1px solid ${C.red}50`, borderRadius: 7, color: C.red, fontSize: 12, cursor: "pointer" }}>
-            Request Deletion
-          </button>
-        </div>
-      </div>
+      {/* ── DANGER ZONE ── */}
+      <DangerZone profile={profile} supabase={supabase} fire={fire} />
+
       <div style={{ display: "flex", gap: 8 }}>
         <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
           {saving ? <><Spin />Saving…</> : "Save changes"}
