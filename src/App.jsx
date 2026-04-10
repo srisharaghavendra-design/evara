@@ -3710,6 +3710,78 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
       {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px", color: C.muted }}><Spin />Loading campaigns…</div> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {/* ── VISUAL DRIP SEQUENCE TIMELINE ── */}
+          {campaigns.length > 0 && (() => {
+            const ORDER = ["save_the_date","invitation","reminder","byo","day_of_details","confirmation","thank_you"];
+            const sorted = ORDER.map(type => campaigns.find(c => c.email_type === type)).filter(Boolean);
+            const extra = campaigns.filter(c => !ORDER.includes(c.email_type));
+            const all = [...sorted, ...extra];
+            const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date) : null;
+            return (
+              <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 20px", marginBottom:4, overflowX:"auto" }}>
+                <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:14 }}>Email Sequence — {all.length} email{all.length!==1?"s":""}</div>
+                <div style={{ display:"flex", alignItems:"flex-start", gap:0, minWidth: all.length * 110 }}>
+                  {all.map((cam, i) => {
+                    const isLast = i === all.length - 1;
+                    const statusColor = cam.status==="sent" ? C.green : cam.status==="scheduled" ? C.blue : C.muted;
+                    const statusBg = cam.status==="sent" ? C.green+"20" : cam.status==="scheduled" ? C.blue+"20" : C.raised;
+                    const icon = {save_the_date:"📅",invitation:"✉️",reminder:"⏰",day_of_details:"📍",thank_you:"🙏",confirmation:"✅",byo:"🎒"}[cam.email_type] || "📧";
+                    const sendDate = cam.scheduled_at || cam.send_at || cam.sent_at;
+                    const daysFromEvent = sendDate && eventDate ? Math.round((new Date(sendDate) - eventDate)/(1000*60*60*24)) : null;
+                    return (
+                      <div key={cam.id} style={{ display:"flex", alignItems:"flex-start", flex:1 }}>
+                        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:6 }}>
+                          {/* Node */}
+                          <div style={{ width:40, height:40, borderRadius:"50%", background:statusBg, border:`2px solid ${statusColor}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, cursor:cam.html_content?"pointer":"default", transition:"transform .15s" }}
+                            onClick={() => cam.html_content && setPreviewCam(cam)}
+                            title={cam.name}
+                            onMouseEnter={e=>cam.html_content&&(e.currentTarget.style.transform="scale(1.1)")}
+                            onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}>
+                            {cam.status==="sent" ? "✓" : icon}
+                          </div>
+                          {/* Label */}
+                          <div style={{ textAlign:"center", width:"100%" }}>
+                            <div style={{ fontSize:10.5, fontWeight:600, color:cam.status==="sent"?C.green:cam.status==="scheduled"?C.blue:C.sec, lineHeight:1.2 }}>
+                              {cam.email_type?.replace(/_/g," ").replace("save the date","STD").replace("day of details","Day-of").replace("thank you","TY").replace("confirmation","Confirm").replace("invitation","Invite") || cam.name?.split("—")[0]?.trim()?.slice(0,10)}
+                            </div>
+                            {sendDate && (
+                              <div style={{ fontSize:9.5, color:C.muted, marginTop:2 }}>
+                                {new Date(sendDate).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}
+                                {daysFromEvent !== null && <span style={{ color:daysFromEvent<0?C.amber:daysFromEvent===0?"#FF9F0A":C.teal }}> ({daysFromEvent===0?"event day":daysFromEvent>0?`+${daysFromEvent}d`:`${daysFromEvent}d`})</span>}
+                              </div>
+                            )}
+                            <div style={{ fontSize:9, color:statusColor, marginTop:1, fontWeight:600, textTransform:"uppercase" }}>{cam.status}</div>
+                          </div>
+                        </div>
+                        {/* Connector line */}
+                        {!isLast && (
+                          <div style={{ display:"flex", alignItems:"center", paddingTop:18, flexShrink:0 }}>
+                            <div style={{ width:20, height:2, background: cam.status==="sent"?C.green+"60":C.border, borderRadius:1 }} />
+                            <div style={{ fontSize:9, color:C.border }}>›</div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {/* Summary row */}
+                <div style={{ display:"flex", gap:16, marginTop:14, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
+                  {[
+                    { label:"Sent", val:campaigns.filter(c=>c.status==="sent").length, color:C.green },
+                    { label:"Scheduled", val:campaigns.filter(c=>c.status==="scheduled").length, color:C.blue },
+                    { label:"Draft", val:campaigns.filter(c=>c.status==="draft").length, color:C.muted },
+                    { label:"Total contacts", val:contactCount, color:C.text },
+                  ].map(m => (
+                    <div key={m.label} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11 }}>
+                      <span style={{ fontWeight:700, color:m.color }}>{m.val}</span>
+                      <span style={{ color:C.muted }}>{m.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+
           {campaigns.length > 0 && (() => {
             const types = new Set(campaigns.map(c => c.email_type));
             const missing = ["save_the_date","invitation","reminder","confirmation","thank_you","byo"].filter(t => !types.has(t));
