@@ -1846,6 +1846,12 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               })()}
             </p>
           )}
+          {activeEvent.internal_notes && (
+            <div style={{ marginTop:6, padding:"7px 10px", background:`${C.amber}08`, border:`1px solid ${C.amber}20`, borderRadius:6, display:"flex", alignItems:"flex-start", gap:7 }}>
+              <span style={{ fontSize:12, flexShrink:0 }}>📌</span>
+              <span style={{ fontSize:11.5, color:C.amber, lineHeight:1.5 }}>{activeEvent.internal_notes}</span>
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
           {formShareLink && (
