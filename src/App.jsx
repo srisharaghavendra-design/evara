@@ -2732,7 +2732,21 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                           {ini(`${c.first_name || ""} ${c.last_name || ""}`.trim() || c.email || "?")}
                         </div>
                         <div>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</div>
+                          <div style={{ display:"flex", alignItems:"center", gap:5 }}>
+                            <span style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</span>
+                            <button onClick={async (e) => {
+                              e.stopPropagation();
+                              const tags = c.tags || [];
+                              const isVip = tags.includes("vip");
+                              const newTags = isVip ? tags.filter(t=>t!=="vip") : [...tags,"vip"];
+                              await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
+                              setContacts(p => p.map(ec2 => ec2.contacts?.id===c.id ? {...ec2, contacts:{...ec2.contacts,tags:newTags}} : ec2));
+                              fire(isVip ? "⭐ VIP removed" : "⭐ Marked VIP");
+                            }} title={c.tags?.includes("vip")?"Remove VIP":"Mark as VIP"}
+                              style={{ background:"transparent", border:"none", cursor:"pointer", padding:"1px 3px", fontSize:13, opacity:c.tags?.includes("vip")?1:0.25, color:C.amber, lineHeight:1 }}>
+                              ★
+                            </button>
+                          </div>
                           <div style={{ fontSize: 11, color: C.muted }}>{c.email}</div>
                         </div>
                       </div>
