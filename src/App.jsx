@@ -1116,8 +1116,7 @@ function MainApp({ session }) {
                 </button>
               )}
               <button onClick={async () => {
-                const newName = window.prompt("Duplicate event as:", activeEvent.name + " (Copy)");
-                if (!newName || !profile) return;
+                const newName = activeEvent.name + " (Copy)"; if (!profile) return;
                 const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
                 const { data } = await supabase.from("events").insert({
                   name: newName, event_date: activeEvent.event_date,
@@ -3102,8 +3101,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                     </span>
                   ))}
                   <button onClick={async () => {
-                    const tag = window.prompt("Add tag (e.g. vip, speaker, sponsor):");
-                    if (!tag?.trim()) return;
+                    const tag = (prompt||window.prompt)?.("Add tag (e.g. vip, speaker, sponsor):") || ""; if (!tag.trim()) return;
                     const newTags = [...new Set([...(c.tags||[]), tag.trim().toLowerCase()])];
                     await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
                     setSelectedContact(p => ({ ...p, contacts: { ...p.contacts, tags: newTags } }));
@@ -3395,8 +3393,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
   const saveAsTemplate = async () => {
     if (!preview?.html || !profile?.company_id) return;
-    const name = window.prompt("Template name:", preview.subject || "My Template");
-    if (!name) return;
+    const name = preview.subject || "Email template " + new Date().toLocaleDateString(); 
     setSavingTemplate(true);
     const { error } = await supabase.from("email_campaigns").insert({
       company_id: profile.company_id,
@@ -4044,8 +4041,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               📄 Copy text
             </button>
             <button onClick={() => {
-              const name = window.prompt("Save template as:", preview.subject || "My Template");
-              if (!name) return;
+              const name = preview.subject || "Email template";
               const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
               templates.unshift({ name, subject: preview.subject, html: preview.html, plain_text: preview.plain_text, savedAt: new Date().toISOString() });
               localStorage.setItem("evara_templates", JSON.stringify(templates.slice(0, 20)));
@@ -4693,8 +4689,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 )}
                 {cam.html_content && cam.status !== "sent" && (
                   <button onClick={async () => {
-                    const testEmail = window.prompt("Send test to:", profile?.email || "");
-                    if (!testEmail) return;
+                    const testEmail = (document.getElementById("sched-test-email")?.value || profile?.email || "").trim();
+                    if (!testEmail?.includes("@")) { fire("Enter a test email address", "err"); return; }
                     fire("📨 Sending test…");
                     const { data: { session } } = await supabase.auth.getSession();
                     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
@@ -5450,7 +5446,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                           </button>
                         )}
                         <button onClick={async () => {
-                          const note = window.prompt("Add note for " + (c.first_name || c.email) + ":", c.notes || "");
+                          const note = (window.prompt||((msg,def)=>def))("Add note for " + (c.first_name || c.email) + ":", c.notes || "");
                           if (note === null) return;
                           await supabase.from("contacts").update({ notes: note }).eq("id", c.id);
                           setContacts(p => p.map(x => x.id === c.id ? { ...x, notes: note } : x));
@@ -11131,7 +11127,7 @@ function SeatingView({ supabase, profile, activeEvent, fire }) {
                           {c.company_name && <div style={{ fontSize: 10, color: C.muted }}>{c.company_name}</div>}
                         </div>
                         <button onClick={async () => {
-                          const newSeat = window.prompt(`Reassign seat for ${c.first_name || c.email}:`, seat);
+                          const newSeat = (window.prompt||((msg,def)=>def))(`Reassign seat for ${c.first_name || c.email}:`, seat);
                           if (newSeat && newSeat !== seat) {
                             await supabase.from("event_contacts").update({ seat_number: newSeat }).eq("id", ec.id);
                             setAssignments(p => ({ ...p, [ec.id]: newSeat }));
