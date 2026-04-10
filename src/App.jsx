@@ -6183,6 +6183,14 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
           }} style={{ fontSize: 11, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", whiteSpace: "nowrap", fontWeight: 500 }}>
             Copy Link
           </button>
+          <button onClick={() => {
+            const url = `${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/form/${activeForm.share_token}`;
+            const embed = `<iframe src="${url}" width="100%" height="600" frameborder="0" style="border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.08)"></iframe>`;
+            navigator.clipboard.writeText(embed);
+            fire("✅ Embed code copied — paste into your website!");
+          }} style={{ fontSize: 11, padding: "3px 10px", background: C.blue+"15", border: `1px solid ${C.blue}40`, borderRadius: 5, color: C.blue, cursor: "pointer", whiteSpace: "nowrap", fontWeight: 500 }}>
+            {"</> Embed"}
+          </button>
           <a href={`${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/form/${activeForm.share_token}`} target="_blank" rel="noreferrer"
             style={{ fontSize: 11, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, cursor: "pointer", whiteSpace: "nowrap", textDecoration: "none" }}>
             Open ↗
