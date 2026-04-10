@@ -2085,9 +2085,9 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
                     </div>
                     {ins.action && ins.action_target !== "null" && ins.action_target && (
                       <button onClick={() => {
-                        const targets = { edm: "edm", schedule: "schedule", contacts: "contacts", forms: "forms", campaigns: "campaign" };
+                        const targets = { edm:"edm", schedule:"schedule", contacts:"contacts", forms:"forms", campaigns:"campaign", analytics:"analytics", checkin:"checkin" };
                         const t = targets[ins.action_target];
-                        if (t) document.querySelector(`button[data-view="${t}"]`)?.click();
+                        if (t) setView(t);
                       }} style={{ fontSize: 10.5, padding: "4px 10px", background: tc.dot + "20", border: `1px solid ${tc.dot}40`, borderRadius: 5, color: tc.dot, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, fontWeight: 500 }}>
                         {ins.action} →
                       </button>
