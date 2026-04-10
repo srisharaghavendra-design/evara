@@ -3817,17 +3817,6 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
             {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
             {gen && (() => {
-              const steps = ["Reading your event brief…","Crafting the subject line…","Writing the body copy…","Adding personalisation tokens…","Polishing the HTML…"];
-              const [step, setStep] = useState(0);
-              useEffect(() => {
-                if (!gen) return;
-                setStep(0);
-                const t1 = setTimeout(() => setStep(1), 2000);
-                const t2 = setTimeout(() => setStep(2), 5000);
-                const t3 = setTimeout(() => setStep(3), 9000);
-                const t4 = setTimeout(() => setStep(4), 12000);
-                return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
-              }, [gen]);
               return (
                 <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, minHeight:300, padding:32 }}>
                   <div style={{ position:"relative", width:56, height:56 }}>
@@ -3839,10 +3828,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   </div>
                   <div style={{ textAlign:"center" }}>
                     <div style={{ fontSize:14, fontWeight:600, color:"#1C1C1E", marginBottom:6 }}>Claude is writing your email…</div>
-                    <div style={{ fontSize:12, color:"#AEAEB2", transition:"all .4s" }}>{steps[step]}</div>
-                  </div>
-                  <div style={{ display:"flex", gap:5 }}>
-                    {steps.map((_,i) => <div key={i} style={{ width:6, height:6, borderRadius:"50%", background:i<=step?"#0A84FF":"#E5E5EA", transition:"background .3s" }} />)}
+                    <div style={{ fontSize:12, color:"#AEAEB2" }}>This usually takes 10–20 seconds</div>
                   </div>
                 </div>
               );
