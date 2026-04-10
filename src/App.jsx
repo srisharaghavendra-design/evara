@@ -4349,6 +4349,16 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             const all = [...sorted, ...extra];
             const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date) : null;
             return (
+              <>
+              {/* Best send time tip */}
+              <div style={{ background:C.raised, borderRadius:9, border:`1px solid ${C.border}`, padding:"10px 14px", marginBottom:10, display:"flex", alignItems:"center", gap:10 }}>
+                <span style={{ fontSize:16 }}>⏰</span>
+                <div style={{ flex:1 }}>
+                  <span style={{ fontSize:12, fontWeight:600, color:C.text }}>Best send times for B2B events: </span>
+                  <span style={{ fontSize:12, color:C.sec }}>Tuesday–Thursday · 9–10am or 2–3pm recipient time. Avoid Mondays, Fridays, and public holidays.</span>
+                </div>
+                <span style={{ fontSize:10, padding:"2px 7px", background:`${C.green}15`, color:C.green, borderRadius:3, fontWeight:600, flexShrink:0 }}>Auto-applied</span>
+              </div>
               <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 20px", marginBottom:4, overflowX:"auto" }}>
                 <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:14 }}>Email Sequence — {all.length} email{all.length!==1?"s":""}</div>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:0, minWidth: all.length * 110 }}>
@@ -4411,6 +4421,9 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 </div>
               </div>
             );
+          })()}
+          </>
+          );
           })()}
 
           {campaigns.length > 0 && (() => {
