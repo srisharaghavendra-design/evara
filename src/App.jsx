@@ -7884,38 +7884,38 @@ function LifecycleView({ supabase, profile, activeEvent, fire }) {
 
             {/* Activity timeline */}
             <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 16 }}>Activity Timeline</div>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Journey Timeline</div>
+                <span style={{ fontSize:11, color:C.muted }}>{activity.length} touchpoint{activity.length!==1?"s":""}</span>
+              </div>
               {activity.length === 0 ? (
                 <div style={{ textAlign: "center", color: C.muted, padding: 24 }}>No activity recorded yet</div>
-              ) : activity.map((a, i) => (
-                <div key={a.id} style={{ display: "flex", gap: 12, marginBottom: 16, paddingBottom: 16, borderBottom: i < activity.length - 1 ? `1px solid ${C.border}` : undefined }}>
-                  <div style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, marginTop: 4,
-                    background: a.activity_type === "checked_in" ? C.green
-                      : a.activity_type === "status_changed" ? C.amber
-                      : a.activity_type === "email_opened" ? C.teal
-                      : a.activity_type === "email_clicked" ? C.blue
-                      : a.activity_type === "email_sent" ? C.muted
-                      : C.blue }} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                      <div style={{ fontSize: 13, color: C.text }}>
-                        {a.activity_type === "email_opened" ? "👁 Opened: " : a.activity_type === "email_clicked" ? "🖱 Clicked: " : a.activity_type === "email_sent" ? "📧 Sent: " : ""}{a.description}
+              ) : (
+                <div style={{ position:"relative" }}>
+                  {/* Vertical connector line */}
+                  <div style={{ position:"absolute", left:15, top:8, bottom:8, width:2, background:`linear-gradient(to bottom, ${C.blue}40, ${C.green}40)`, borderRadius:2 }} />
+                  {activity.map((a, i) => {
+                    const typeColor = a.activity_type==="checked_in"?C.green:a.activity_type==="status_changed"?C.amber:a.activity_type==="email_opened"?C.teal:a.activity_type==="email_clicked"?C.blue:C.muted;
+                    const typeIcon = a.activity_type==="checked_in"?"✓":a.activity_type==="email_opened"?"👁":a.activity_type==="email_clicked"?"🖱":a.activity_type==="email_sent"?"📧":a.activity_type==="status_changed"?"↔":"•";
+                    return (
+                      <div key={a.id} style={{ display:"flex", gap:14, marginBottom:14, paddingBottom: i<activity.length-1?14:0, borderBottom: i<activity.length-1?`1px solid ${C.border}00`:undefined }}>
+                        {/* Timeline dot */}
+                        <div style={{ width:30, height:30, borderRadius:"50%", background:`${typeColor}20`, border:`2px solid ${typeColor}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, flexShrink:0, zIndex:1, position:"relative" }}>
+                          {typeIcon}
+                        </div>
+                        <div style={{ flex:1, paddingTop:4 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap", marginBottom:2 }}>
+                            <span style={{ fontSize:13, color:C.text, fontWeight:500 }}>{a.description}</span>
+                            <span style={{ fontSize:10, padding:"1px 6px", borderRadius:3, background:`${typeColor}18`, color:typeColor, fontWeight:600, textTransform:"capitalize" }}>{a.activity_type?.replace(/_/g," ")}</span>
+                          </div>
+                          {a.events?.name && <div style={{ fontSize:11, color:C.blue, marginBottom:2 }}>📅 {a.events.name}</div>}
+                          <div style={{ fontSize:10.5, color:C.muted }}>{new Date(a.created_at).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+                        </div>
                       </div>
-                      {a._status && <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 3,
-                        background: a._status === "clicked" ? C.blue+"20" : a._status === "opened" ? C.teal+"20" : C.raised,
-                        color: a._status === "clicked" ? C.blue : a._status === "opened" ? C.teal : C.muted }}>
-                        {a._status}
-                      </span>}
-                    </div>
-                    {a.events?.name && <div style={{ fontSize: 11, color: C.blue, marginTop: 2 }}>📅 {a.events.name}</div>}
-                    {a.metadata?.campaign && !a.events?.name && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>Campaign: {a.metadata.campaign}</div>}
-                    <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{new Date(a.created_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</div>
-                  </div>
-                  <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "2px 7px", borderRadius: 3, height: "fit-content", textTransform: "capitalize" }}>
-                    {a.activity_type?.replace(/_/g, " ")}
-                  </span>
+                    );
+                  })}
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
