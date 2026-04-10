@@ -1121,6 +1121,21 @@ function MainApp({ session }) {
               onKeyDown={e => { if (e.key === "Escape") { setGlobalSearch(""); e.target.blur(); } }}
               style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
           </div>
+          {/* Quick event stats */}
+          {activeEvent && metrics && (
+            <div style={{ display:"flex", gap:1, background:C.raised, borderRadius:7, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0 }}>
+              {[
+                { label:"Sent", val:metrics?.total_sent||0, color:C.blue },
+                { label:"Opened", val:metrics?.total_opened||0, color:C.teal },
+                { label:"Confirmed", val:metrics?.total_confirmed||0, color:C.green },
+              ].map((s,i) => (
+                <div key={s.label} style={{ padding:"4px 10px", borderRight: i<2?`1px solid ${C.border}`:"none", textAlign:"center" }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
+                  <div style={{ fontSize:9, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
             <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
               <Plus size={12} />New Event
