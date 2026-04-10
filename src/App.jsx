@@ -7516,12 +7516,25 @@ function CampaignView({ supabase, profile, activeEvent, fire, setView }) {
             </div>
           )}
           {generating && (
-            <div style={{ minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10 }}>
-              <Spin size={32} />
-              <div style={{ fontSize: 15, color: C.text }}>Claude is writing 7 emails…</div>
-              <div style={{ fontSize: 12, color: C.muted }}>This takes about 30 seconds</div>
+            <div style={{ minHeight: 400, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, color: C.muted, border: `1px dashed ${C.border}`, borderRadius: 10, padding: 40 }}>
+              <Spin size={28} />
+              <div style={{ fontSize: 15, fontWeight: 500, color: C.text }}>Claude is writing your campaign…</div>
+              <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Generating all 7 emails simultaneously</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, width: "100%", maxWidth: 360 }}>
+                {EMAIL_SEQUENCE.map((e, i) => (
+                  <div key={e.type} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px", background: C.card, borderRadius: 8, border: `1px solid ${C.border}`, animation: `fadeUp .3s ease ${i * 0.12}s both` }}>
+                    <span style={{ fontSize: 16 }}>{e.emoji}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{e.label}</div>
+                      <div style={{ fontSize: 10, color: C.muted }}>{e.timing}</div>
+                    </div>
+                    <div style={{ width: 16, height: 16, borderRadius: "50%", border: `2px solid ${C.blue}30`, borderTop: `2px solid ${C.blue}`, animation: "spin .8s linear infinite", animationDelay: `${i * 0.15}s` }} />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
+
           {campaigns.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>{campaigns.length} campaigns saved — click any to preview</div>
