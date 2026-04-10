@@ -1333,7 +1333,7 @@ function MainApp({ session }) {
         </header>
 
         <main style={{ flex: 1, overflow: "auto", padding: "26px" }}>
-          {view === "dashboard" && <DashView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "dashboard" && <DashView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
           {view === "edm" && profile && <EdmView key="edm" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
@@ -1471,7 +1471,7 @@ function MainApp({ session }) {
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────
-function DashView({ supabase, profile, activeEvent, fire, setView }) {
+function DashView({ supabase, profile, activeEvent, fire, setView, events = [], setActiveEvent }) {
   const [contacts, setContacts] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
