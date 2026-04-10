@@ -5239,6 +5239,23 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           </button>
         ))}
       </div>
+      {/* Tag filter chips */}
+      {(() => {
+        const allTags = [...new Set(contacts.flatMap(c => c.tags||[]))].filter(t => t !== "vip").sort();
+        if (!allTags.length) return null;
+        return (
+          <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:10 }}>
+            <span style={{ fontSize:11, color:C.muted, alignSelf:"center" }}>Tags:</span>
+            {allTags.map(tag => (
+              <button key={tag} onClick={() => setTagFilter(t => t===tag?"":tag)}
+                style={{ fontSize:11, padding:"2px 9px", borderRadius:4, border:`1px solid ${tagFilter===tag?C.blue:C.border}`, background:tagFilter===tag?`${C.blue}15`:"transparent", color:tagFilter===tag?C.blue:C.muted, cursor:"pointer" }}>
+                #{tag}
+              </button>
+            ))}
+            {tagFilter && <button onClick={() => setTagFilter("")} style={{ fontSize:11, padding:"2px 7px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>✕ clear</button>}
+          </div>
+        );
+      })()}
       <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, overflow:"hidden" }}>
         {/* Stats bar */}
         {contacts.length > 0 && (
