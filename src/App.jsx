@@ -1182,49 +1182,96 @@ function MainApp({ session }) {
 
       {/* NEW EVENT MODAL */}
       {showNewEvent && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 460, animation: "fadeUp .2s ease" }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>New event</h2>
-            {[
-              { key: "name",        label: "Event name *",    ph: "e.g. Tech Summit 2026",              type: "text" },
-              { key: "event_type",   label: "Event type",      ph: "",                                    type: "select", options: ["Conference","Workshop","Dinner / Gala","Webinar","Product Launch","Awards","Team Event","Other"] },
-              { key: "event_format",   label: "Format",            ph: "",                                    type: "select", options: ["In-person","Online / Webinar","Hybrid"] },
-              { key: "rsvp_deadline",  label: "RSVP deadline",      ph: "",                                    type: "date" },
-              { key: "event_date",  label: "Date",            ph: "",                                    type: "date" },
-              { key: "event_time",  label: "Time",            ph: "e.g. 6:30 PM",                       type: "text" },
-              { key: "location",    label: "Venue / Location", ph: "e.g. The Ritz-Carlton, Bangalore", type: "text" },
-              { key: "expected_attendees", label: "Expected attendees", ph: "e.g. 150",                type: "text" },
-              { key: "description", label: "Description (helps AI write better emails)", ph: "e.g. Annual leadership forum for senior managers. Smart casual attire. Drinks and canapés.", type: "text" },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
-                {f.type === "select" ? (
-                  <select value={newEventExtra?.[f.key] || ""} onChange={e => setNewEventExtra(p => ({ ...p, [f.key]: e.target.value }))}
-                    style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}>
-                    <option value="">Select type…</option>
-                    {(f.options || []).map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                ) : (
-                  <input type={f.type}
-                    value={f.key === "name" ? newEventName : (newEventExtra?.[f.key] || "")}
-                    onChange={e => f.key === "name" ? setNewEventName(e.target.value) : setNewEventExtra(p => ({ ...p, [f.key]: e.target.value }))}
-                    onKeyDown={e => e.key === "Enter" && createEvent()}
-                    placeholder={f.ph} autoFocus={f.key === "name"}
-                    style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
-                    onFocus={e => e.target.style.borderColor = C.blue}
-                    onBlur={e => e.target.style.borderColor = C.border} />
-                )}
-              </div>
-            ))}
-            <div style={{ background: C.blue + "10", border: `1px solid ${C.blue}25`, borderRadius: 8, padding: "10px 12px", marginTop: 4, marginBottom: 8, display: "flex", alignItems: "center", gap: 8 }}>
-              <Sparkles size={13} color={C.blue} strokeWidth={1.5} />
-              <span style={{ fontSize: 11.5, color: C.blue, lineHeight: 1.4 }}>
-                <strong>AI will auto-draft</strong> your Save the Date, Invitation, Reminder, Day-of and Thank You emails the moment you create this event.
-              </span>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99 }}>
+          <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, width:520, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp .2s ease" }}>
+            <div style={{ padding:"22px 26px 18px", borderBottom:`1px solid ${C.border}` }}>
+              <h2 style={{ fontSize:18, fontWeight:700, color:C.text, margin:0 }}>Create new event</h2>
+              <p style={{ fontSize:12, color:C.muted, marginTop:3 }}>AI auto-drafts your full email sequence in the background</p>
             </div>
-            <div style={{ display: "flex", gap: 9, marginTop: 8 }}>
-              <button onClick={() => setShowNewEvent(false)} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-              <button onClick={createEvent} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}><Sparkles size={13} />Create + Auto-Draft →</button>
+            <div style={{ padding:"20px 26px" }}>
+              {/* Event name */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Event name *</label>
+                <input value={newEventName} onChange={e => setNewEventName(e.target.value)} onKeyDown={e => e.key==="Enter" && createEvent()} placeholder="e.g. Annual Client Summit 2026" autoFocus
+                  style={{ width:"100%", background:C.bg, border:`1.5px solid ${newEventName?C.blue:C.border}`, borderRadius:9, color:C.text, padding:"11px 14px", fontSize:14, outline:"none", boxSizing:"border-box" }} />
+              </div>
+
+              {/* Event type tiles */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:8, textTransform:"uppercase", letterSpacing:"0.5px" }}>Event type</label>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:6 }}>
+                  {[["conference","🎤","Conference"],["gala","🥂","Gala"],["workshop","🛠","Workshop"],["webinar","🖥","Webinar"],["awards","🏆","Awards"],["networking","🤝","Networking"],["launch","🚀","Launch"],["training","📋","Training"],["dinner","🍽","Dinner"],["other","📅","Other"]].map(([type,icon,label]) => {
+                    const sel = (newEventExtra?.event_type||"") === type;
+                    return (
+                      <button key={type} onClick={() => setNewEventExtra(p=>({...p,event_type:type}))}
+                        style={{ padding:"8px 4px", borderRadius:8, border:`1.5px solid ${sel?C.blue:C.border}`, background:sel?`${C.blue}15`:"transparent", cursor:"pointer", textAlign:"center", transition:"all .1s" }}>
+                        <div style={{ fontSize:18 }}>{icon}</div>
+                        <div style={{ fontSize:10, color:sel?C.blue:C.muted, marginTop:3, fontWeight:sel?600:400 }}>{label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Date + Time */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Date</label>
+                  <input type="date" value={newEventExtra?.event_date||""} onChange={e=>setNewEventExtra(p=>({...p,event_date:e.target.value}))}
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Time</label>
+                  <input value={newEventExtra?.event_time||""} onChange={e=>setNewEventExtra(p=>({...p,event_time:e.target.value}))} placeholder="6:30 PM"
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+              </div>
+
+              {/* Location + Format */}
+              <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12, marginBottom:14 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Venue / Location</label>
+                  <input value={newEventExtra?.location||""} onChange={e=>setNewEventExtra(p=>({...p,location:e.target.value}))} placeholder="The Ritz-Carlton, Sydney"
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Format</label>
+                  <select value={newEventExtra?.event_format||""} onChange={e=>setNewEventExtra(p=>({...p,event_format:e.target.value}))}
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}>
+                    <option value="">Select…</option>
+                    <option value="In-person">📍 In-person</option>
+                    <option value="Online">💻 Online</option>
+                    <option value="Hybrid">🌐 Hybrid</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Description <span style={{ color:C.muted, fontWeight:400, textTransform:"none" }}>(helps AI write better emails)</span></label>
+                <textarea value={newEventExtra?.description||""} onChange={e=>setNewEventExtra(p=>({...p,description:e.target.value}))} rows={2}
+                  placeholder="e.g. Annual leadership forum for senior executives. Smart casual. Drinks and canapés included."
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", resize:"none", lineHeight:1.5, boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+              </div>
+
+              {/* AI banner */}
+              <div style={{ background:`${C.blue}10`, border:`1px solid ${C.blue}25`, borderRadius:9, padding:"10px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
+                <Sparkles size={14} color={C.blue} strokeWidth={1.5} />
+                <span style={{ fontSize:12, color:C.blue, lineHeight:1.5 }}>
+                  <strong>AI auto-drafts</strong> your Save the Date, Invitation, Reminder, Day-of & Thank You emails in the background — ready in Scheduling when you create this event.
+                </span>
+              </div>
+
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={() => { setShowNewEvent(false); setNewEventName(""); setNewEventExtra({event_date:"",event_time:"",location:""}); }} style={{ flex:1, padding:12, background:"transparent", border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+                <button onClick={createEvent} disabled={!newEventName.trim()} style={{ flex:2, padding:12, background:newEventName.trim()?C.blue:C.border, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:600, cursor:newEventName.trim()?"pointer":"default", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow:newEventName.trim()?`0 4px 16px ${C.blue}40`:"none" }}>
+                  <Sparkles size={14} />Create + Auto-Draft →
+                </button>
+              </div>
             </div>
           </div>
         </div>
