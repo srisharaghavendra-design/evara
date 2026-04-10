@@ -2710,6 +2710,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [preview, setPreview] = useState(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [previewWidth, setPreviewWidth] = useState("100%");
+  const [previewTab, setPreviewTab] = useState("html"); // html | text
 
   // Cmd+S shortcut saves draft
   useEffect(() => {
@@ -3143,37 +3144,107 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   )}
                 </div>
                 <div style={{ background: "#f2f2f2", borderRadius: 8, overflow: "hidden" }}>
-                  {/* Inbox header mock */}
-                  <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "8px 14px", display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#1a73e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, color: "#fff", fontWeight: 600 }}>O</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, color: "#222" }}>{preview.subject}</div>
-                      <div style={{ fontSize: 10.5, color: "#888" }}>hello@evarahq.com · to me</div>
+                  {/* Gmail-style inbox chrome */}
+                  <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "10px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: profile?.companies?.brand_color || "#1a73e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0 }}>
+                        {(profile?.companies?.from_name || profile?.companies?.name || "E").charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{profile?.companies?.from_name || profile?.companies?.name || "Events Team"}</span>
+                          <span style={{ fontSize: 10.5, color: "#aaa" }}>{new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>to: Guest &lt;guest@example.com&gt; · via hello@evarahq.com</div>
+                        {/* Subject line - editable */}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8f8f8", borderRadius: 6, padding: "6px 10px", border: "1px solid #E5E5E7" }}>
+                          <span style={{ fontSize: 10, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", flexShrink: 0 }}>Subject</span>
+                          <input
+                            value={preview.subject || ""}
+                            onChange={e => setPreview(p => ({ ...p, subject: e.target.value }))}
+                            style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#111", border: "none", outline: "none", background: "transparent", fontFamily: "Arial,sans-serif" }}
+                          />
+                          <span style={{ fontSize: 10, color: preview.subject?.length > 60 ? "#FF453A" : preview.subject?.length > 40 ? "#FF9F0A" : "#30D158", flexShrink: 0, fontWeight: 600 }}>
+                            {preview.subject?.length || 0}/60
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div style={{ fontSize: 10, color: "#aaa" }}>{new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</div>
                   </div>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    {[{ label: "💻 Desktop", w: "100%" }, { label: "📱 Mobile", w: "375px" }].map(v => (
-                      <button key={v.label} onClick={() => setPreviewWidth(v.w)}
-                        style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: `1px solid ${previewWidth === v.w || (!previewWidth && v.w === "100%") ? C.blue : C.border}`, background: previewWidth === v.w || (!previewWidth && v.w === "100%") ? C.blue+"15" : "transparent", color: previewWidth === v.w || (!previewWidth && v.w === "100%") ? C.blue : C.muted, cursor: "pointer" }}>
-                        {v.label}
-                      </button>
-                    ))}
+
+                  {/* Toolbar: preview mode + spam score + plain text */}
+                  <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {/* View toggle */}
+                    <div style={{ display: "flex", gap: 3, background: "#f5f5f5", borderRadius: 6, padding: 2 }}>
+                      {[{id:"html",label:"📧 HTML"},{id:"text",label:"📄 Plain text"}].map(t => (
+                        <button key={t.id} onClick={() => setPreviewTab(t.id)}
+                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: "none", background: (previewTab||"html")===t.id ? "#fff" : "transparent", color: (previewTab||"html")===t.id ? "#111" : "#888", cursor: "pointer", fontWeight: (previewTab||"html")===t.id ? 600 : 400, boxShadow: (previewTab||"html")===t.id ? "0 1px 3px rgba(0,0,0,.1)" : "none", transition: "all .12s" }}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Device toggle */}
+                    <div style={{ display: "flex", gap: 3 }}>
+                      {[{label:"🖥",w:"100%"},{label:"📱",w:"375px"}].map(v => (
+                        <button key={v.w} onClick={() => setPreviewWidth(v.w)}
+                          style={{ fontSize: 13, padding: "3px 8px", borderRadius: 5, border: `1px solid ${previewWidth===v.w||(!previewWidth&&v.w==="100%") ? C.blue : C.border}`, background: previewWidth===v.w||(!previewWidth&&v.w==="100%") ? C.blue+"15" : "transparent", cursor: "pointer" }}>
+                          {v.label}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Spam score */}
+                    {(() => {
+                      const html = preview.html || "";
+                      const subj = preview.subject || "";
+                      let score = 0;
+                      const flags = [];
+                      if (/FREE|URGENT|ACT NOW|CLICK HERE|GUARANTEED|WINNER/i.test(subj)) { score += 25; flags.push("Spammy subject words"); }
+                      if (subj.includes("!!!") || subj.split("!").length > 3) { score += 15; flags.push("Too many exclamation marks"); }
+                      if ((subj.match(/[A-Z]/g)||[]).length > subj.length * 0.5 && subj.length > 5) { score += 20; flags.push("ALL CAPS in subject"); }
+                      if (!html.includes("unsubscribe") && !html.includes("Unsubscribe")) { score += 20; flags.push("No unsubscribe link"); }
+                      if ((html.match(/<img/gi)||[]).length > 8) { score += 10; flags.push("Too many images"); }
+                      const color = score === 0 ? "#30D158" : score < 30 ? "#FF9F0A" : "#FF453A";
+                      const label = score === 0 ? "✓ Clean" : score < 30 ? "⚠ Caution" : "✗ High risk";
+                      return (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }} title={flags.length ? flags.join(" · ") : "No spam signals detected"}>
+                          <span style={{ fontSize: 10, color: "#888" }}>Spam score</span>
+                          <div style={{ width: 60, height: 5, background: "#E5E5E7", borderRadius: 3, overflow: "hidden" }}>
+                            <div style={{ width: `${Math.min(score, 100)}%`, height: "100%", background: color, borderRadius: 3, transition: "width .3s" }} />
+                          </div>
+                          <span style={{ fontSize: 10, fontWeight: 600, color }}>{label}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
-                  {preview?.subject && (
-                    <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:"9px 14px", display:"flex", gap:8, alignItems:"center" }}>
-                      <span style={{ fontSize:10, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.6px" }}>Subject</span>
-                      <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{preview.subject}</span>
+
+                  {/* Alt subjects */}
+                  {subjectAlts.length > 0 && (
+                    <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "8px 14px" }}>
+                      <div style={{ fontSize: 10, color: "#999", marginBottom: 5 }}>✨ Alternative subject lines — click to use:</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                        {subjectAlts.map((s, i) => (
+                          <div key={i} onClick={() => { setPreview(p => ({ ...p, subject: s })); setSubjectAlts([]); }}
+                            style={{ fontSize: 12, padding: "5px 8px", background: "#f5f5f5", borderRadius: 4, cursor: "pointer", color: "#333", border: "1px solid #eee" }}
+                            onMouseEnter={e => e.currentTarget.style.background = "#e8f0fe"}
+                            onMouseLeave={e => e.currentTarget.style.background = "#f5f5f5"}>
+                            {s}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
-                  {preview?.subject && (
-                    <div style={{ background:C.card, borderBottom:`1px solid ${C.border}`, padding:"9px 14px", display:"flex", gap:8, alignItems:"center" }}>
-                      <span style={{ fontSize:10, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.6px" }}>Subject</span>
-                      <span style={{ fontSize:12.5, color:C.text, fontWeight:500 }}>{preview.subject}</span>
-                    </div>
-                  )}
-                  <div style={{ overflowX: "auto" }}>
-                    <iframe srcDoc={preview.html} style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 560, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 12 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }} title="Email Preview" sandbox="allow-same-origin" />
+
+                  {/* Email body */}
+                  <div style={{ overflowX: "auto", background: "#f0f0f0", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "20px" : "0" }}>
+                    {(previewTab || "html") === "html" ? (
+                      <iframe srcDoc={preview.html}
+                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 520, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                        title="Email Preview" sandbox="allow-same-origin" />
+                    ) : (
+                      <div style={{ width: "100%", background: "#fff", padding: "24px", fontFamily: "monospace", fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap", minHeight: 400 }}>
+                        {preview.plain_text || preview.html?.replace(/<[^>]+>/g, "").replace(/\s{2,}/g, "\n").trim() || "No plain text available."}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
