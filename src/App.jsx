@@ -5940,6 +5940,39 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>About section</div>
                     <textarea value={info.about_text||""} onChange={e => setInfo(p=>({...p, about_text:e.target.value}))} rows={4} placeholder="What attendees will experience..." style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5 }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                   </div>
+
+                  {/* SEO + Social Meta */}
+                  <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:12, marginTop:4 }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>SEO & Social Preview</div>
+                    <div style={{ marginBottom:8 }}>
+                      <div style={{ fontSize:10.5, color:C.muted, marginBottom:4 }}>Meta title <span style={{ color:C.muted, fontSize:9 }}>(55–60 chars ideal)</span></div>
+                      <input value={info.meta_title||""} onChange={e=>setInfo(p=>({...p,meta_title:e.target.value}))} placeholder={`${activeEvent?.name || "Event"} — Register Now`}
+                        style={{ width:"100%", background:C.bg, border:`1px solid ${(info.meta_title||"").length>60?C.red:(info.meta_title||"").length>45?C.green:C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }}
+                        onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                      <div style={{ fontSize:10, color:(info.meta_title||"").length>60?C.red:C.muted, marginTop:2 }}>{(info.meta_title||"").length}/60</div>
+                    </div>
+                    <div style={{ marginBottom:8 }}>
+                      <div style={{ fontSize:10.5, color:C.muted, marginBottom:4 }}>Meta description <span style={{ color:C.muted, fontSize:9 }}>(150–160 chars)</span></div>
+                      <textarea value={info.meta_description||""} onChange={e=>setInfo(p=>({...p,meta_description:e.target.value}))} rows={2}
+                        placeholder="Join us for..."
+                        style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12, outline:"none", resize:"none" }}
+                        onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                      <div style={{ fontSize:10, color:(info.meta_description||"").length>160?C.red:C.muted, marginTop:2 }}>{(info.meta_description||"").length}/160</div>
+                    </div>
+                    {/* Social preview card */}
+                    {(info.meta_title||info.title) && (
+                      <div style={{ border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden" }}>
+                        <div style={{ height:48, background:`linear-gradient(135deg,${info.brand_color||C.blue}40,${info.brand_color||C.blue}20)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          {logoUrl ? <img src={logoUrl} style={{ height:28, objectFit:"contain" }} alt="logo" /> : <span style={{ fontSize:11, color:C.muted }}>No image</span>}
+                        </div>
+                        <div style={{ padding:"8px 10px", background:C.raised }}>
+                          <div style={{ fontSize:11, fontWeight:600, color:C.text, marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{info.meta_title||info.title}</div>
+                          <div style={{ fontSize:10, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{info.meta_description||info.description}</div>
+                          <div style={{ fontSize:9, color:C.muted, marginTop:3 }}>evarahq.com/page/{info.slug}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
