@@ -61,6 +61,16 @@ serve(async (req) => {
       if (res.ok || res.status === 202) {
         sent++;
         console.log(`✅ Sent to ${contact.email}`);
+        // Record the send so the webhook can match opens/clicks by campaign_id + email
+        if (campaignId) {
+          await supabase.from("email_sends").upsert({
+            campaign_id: campaignId,
+            contact_id: contact.id || null,
+            email: contact.email,
+            status: "sent",
+            sent_at: new Date().toISOString(),
+          }, { onConflict: "campaign_id,email", ignoreDuplicates: false });
+        }
       } else {
         failed++;
         const errText = await res.text();

@@ -954,6 +954,10 @@ function MainApp({ session }) {
   const [showArchived, setShowArchived] = useState(false);
   const [newEventName, setNewEventName] = useState("");
   const [newEventDate, setNewEventDate] = useState("");
+  const [showDupModal, setShowDupModal] = useState(false);
+  const [dupName, setDupName] = useState("");
+  const [dupDate, setDupDate] = useState("");
+  const [duping, setDuping] = useState(false);
 
   // Load metrics for header strip whenever active event changes
   useEffect(() => {
@@ -1115,35 +1119,7 @@ function MainApp({ session }) {
                   {showArchived ? "↑ Hide archived" : `+ ${events.filter(e=>e.status==="archived").length} archived event${events.filter(e=>e.status==="archived").length>1?"s":""}`}
                 </button>
               )}
-              <button onClick={async () => {
-                const newName = activeEvent.name + " (Copy)"; if (!profile) return;
-                const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
-                const { data } = await supabase.from("events").insert({
-                  name: newName, event_date: activeEvent.event_date,
-                  event_time: activeEvent.event_time, location: activeEvent.location,
-                  description: activeEvent.description, event_type: activeEvent.event_type,
-                  event_format: activeEvent.event_format, capacity: activeEvent.capacity,
-                  company_id: profile.company_id, status: "draft",
-                  created_by: profile.id, share_token: shareToken,
-                }).select().single();
-                if (data) {
-                  setEvents(p => [...p, data]);
-                  setActiveEvent(data);
-                  fire("✅ Event duplicated! Copying email drafts…");
-                  const { data: existingCams } = await supabase.from("email_campaigns")
-                    .select("*").eq("event_id", activeEvent.id).limit(20);
-                  if (existingCams?.length) {
-                    const dupCams = existingCams.map(c => ({
-                      event_id: data.id, company_id: profile.company_id,
-                      name: c.name, email_type: c.email_type,
-                      subject: c.subject, html_content: c.html_content,
-                      plain_text: c.plain_text, status: "draft", segment: c.segment || "all",
-                    }));
-                    await supabase.from("email_campaigns").insert(dupCams);
-                    fire(`✅ Duplicated with ${existingCams.length} email drafts!`);
-                  }
-                }
-              }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
+              <button onClick={() => { setDupName(activeEvent.name + " (Copy)"); setDupDate(activeEvent.event_date || ""); setShowDupModal(true); }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
                 ⧉ Duplicate event
               </button>
               {activeEvent.status !== "archived" ? (
@@ -1459,6 +1435,84 @@ function MainApp({ session }) {
                   <Sparkles size={14} />Create + Auto-Draft →
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDupModal && activeEvent && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}
+          onClick={() => setShowDupModal(false)}>
+          <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:28, width:440, animation:"fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:4 }}>Duplicate Event</h2>
+            <p style={{ fontSize:12, color:C.muted, marginBottom:20 }}>Creates a new draft with all email templates copied. Contacts are not duplicated.</p>
+            <div style={{ marginBottom:14 }}>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>New event name *</label>
+              <input value={dupName} onChange={e => setDupName(e.target.value)} autoFocus
+                style={{ width:"100%", background:C.bg, border:`1.5px solid ${dupName?C.blue:C.border}`, borderRadius:8, color:C.text, padding:"10px 13px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=dupName?C.blue:C.border} />
+            </div>
+            <div style={{ marginBottom:20 }}>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>New event date <span style={{ opacity:.6 }}>(optional)</span></label>
+              <input type="date" value={dupDate} onChange={e => setDupDate(e.target.value)}
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 13px", fontSize:13, outline:"none", boxSizing:"border-box" }} />
+            </div>
+            <div style={{ background:C.raised, borderRadius:8, padding:"10px 14px", marginBottom:20, fontSize:12, color:C.muted }}>
+              <div style={{ fontWeight:600, color:C.text, marginBottom:4 }}>What gets copied</div>
+              {[`${campaigns.filter(c=>c.html_content).length} email templates → reset to draft`, "Event details (type, format, location, capacity)", "Landing page content"].map(t => (
+                <div key={t} style={{ display:"flex", gap:6, marginBottom:2 }}>
+                  <span style={{ color:C.green }}>✓</span><span>{t}</span>
+                </div>
+              ))}
+              <div style={{ display:"flex", gap:6, marginTop:4, opacity:.5 }}>
+                <span>✗</span><span>Contacts / RSVPs (not copied)</span>
+              </div>
+            </div>
+            <div style={{ display:"flex", gap:9 }}>
+              <button onClick={() => setShowDupModal(false)} style={{ flex:1, padding:"10px 0", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+              <button disabled={!dupName.trim() || duping} onClick={async () => {
+                if (!dupName.trim() || !profile) return;
+                setDuping(true);
+                const shareToken = Math.random().toString(36).substring(2,14) + Date.now().toString(36);
+                const { data: newEv } = await supabase.from("events").insert({
+                  name: dupName.trim(), event_date: dupDate || null,
+                  event_time: activeEvent.event_time, location: activeEvent.location,
+                  description: activeEvent.description, event_type: activeEvent.event_type,
+                  event_format: activeEvent.event_format, capacity: activeEvent.capacity,
+                  expected_attendees: activeEvent.expected_attendees,
+                  company_id: profile.company_id, status:"draft",
+                  created_by: profile.id, share_token: shareToken,
+                }).select().single();
+                if (!newEv) { fire("Failed to duplicate event","err"); setDuping(false); return; }
+                setEvents(p => [...p, newEv]);
+                setActiveEvent(newEv);
+                setShowDupModal(false);
+                // Copy campaigns
+                const { data: existingCams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).limit(20);
+                let camCount = 0;
+                if (existingCams?.length) {
+                  const dupCams = existingCams.filter(c => c.html_content).map(c => ({
+                    event_id: newEv.id, company_id: profile.company_id,
+                    name: c.name, email_type: c.email_type, subject: c.subject,
+                    html_content: c.html_content, plain_text: c.plain_text,
+                    template_style: c.template_style, status:"draft", segment: c.segment || "all",
+                  }));
+                  if (dupCams.length) { await supabase.from("email_campaigns").insert(dupCams); camCount = dupCams.length; }
+                }
+                // Copy landing page
+                const { data: lp } = await supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).maybeSingle();
+                if (lp) {
+                  const newSlug = dupName.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") + "-" + Date.now().toString(36);
+                  await supabase.from("landing_pages").insert({ ...lp, id: undefined, event_id: newEv.id, slug: newSlug, created_at: undefined, updated_at: undefined });
+                }
+                fire(`✅ "${dupName.trim()}" created with ${camCount} email drafts!`);
+                setDuping(false);
+                setDupName(""); setDupDate("");
+                setView("dashboard");
+              }} style={{ flex:2, padding:"10px 0", background:dupName.trim()?C.blue:C.border, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:dupName.trim()?"pointer":"default" }}>
+                {duping ? "Duplicating…" : "⧉ Duplicate Event →"}
+              </button>
             </div>
           </div>
         </div>
@@ -2057,6 +2111,156 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               {m.sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>{m.sub}</div>}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* ─── GUEST LIST WITH BULK ACTIONS ─── */}
+      {activeEvent && contacts.length > 0 && (
+        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:11, overflow:"hidden", marginBottom:16 }}>
+          {/* Header + filter tabs */}
+          <div style={{ padding:"11px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <span style={{ fontSize:13, fontWeight:600, color:C.text, marginRight:4 }}>Guest List</span>
+            {["all","pending","confirmed","attended","declined"].map(f => {
+              const count = f === "all" ? contacts.length : contacts.filter(c => c.status === f).length;
+              return (
+                <button key={f} onClick={() => setFilt(f)}
+                  style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${filt===f?(f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue):C.border}`, background:filt===f?`${f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue}15`:"transparent", color:filt===f?(f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue):C.muted, cursor:"pointer", fontWeight:filt===f?600:400 }}>
+                  {f === "all" ? "All" : f.charAt(0).toUpperCase()+f.slice(1)} ({count})
+                </button>
+              );
+            })}
+            <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
+              <button onClick={() => setView("contacts")} style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                Manage all →
+              </button>
+            </div>
+          </div>
+
+          {/* Bulk action bar — shown when rows selected */}
+          {selectedRows.size > 0 && (
+            <div style={{ padding:"8px 14px", background:`${C.blue}10`, borderBottom:`1px solid ${C.blue}25`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+              <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>{selectedRows.size} selected</span>
+              <button onClick={async () => {
+                const ids = [...selectedRows];
+                await supabase.from("event_contacts").update({ status:"confirmed", confirmed_at:new Date().toISOString() }).in("id", ids);
+                setContacts(p => p.map(ec => ids.includes(ec.id) ? { ...ec, status:"confirmed", confirmed_at:new Date().toISOString() } : ec));
+                setSelectedRows(new Set());
+                fire(`✅ ${ids.length} marked confirmed`);
+              }} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.green}40`, background:`${C.green}12`, color:C.green, cursor:"pointer", fontWeight:500 }}>
+                ✅ Mark Confirmed
+              </button>
+              <button onClick={async () => {
+                const ids = [...selectedRows];
+                await supabase.from("event_contacts").update({ status:"attended", attended_at:new Date().toISOString() }).in("id", ids);
+                setContacts(p => p.map(ec => ids.includes(ec.id) ? { ...ec, status:"attended", attended_at:new Date().toISOString() } : ec));
+                setSelectedRows(new Set());
+                fire(`✅ ${ids.length} marked attended`);
+              }} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.teal}40`, background:`${C.teal}12`, color:C.teal, cursor:"pointer", fontWeight:500 }}>
+                🎟 Mark Attended
+              </button>
+              <button onClick={async () => {
+                const ids = [...selectedRows];
+                const targets = contacts.filter(ec => ids.includes(ec.id) && ec.contacts?.email);
+                if (!targets.length) { fire("No valid emails in selection","err"); return; }
+                fire(`📧 Sending reminder to ${targets.length} contacts…`);
+                const { data:{ session } } = await supabase.auth.getSession();
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
+                  method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                  body: JSON.stringify({ contacts: targets.map(ec => ec.contacts), triggerType:"reminder", eventName:activeEvent.name, eventDate:activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}) : "", location:activeEvent.location||"", orgName:profile?.companies?.name||"evara" })
+                });
+                const d = await res.json();
+                setSelectedRows(new Set());
+                fire(d.sent > 0 ? `✅ Reminder sent to ${d.sent} contacts` : "Send failed", d.sent > 0 ? "ok" : "err");
+              }} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.amber}40`, background:`${C.amber}12`, color:C.amber, cursor:"pointer", fontWeight:500 }}>
+                ⏰ Send Reminder
+              </button>
+              <button onClick={async () => {
+                const ids = [...selectedRows];
+                await supabase.from("event_contacts").update({ status:"declined" }).in("id", ids);
+                setContacts(p => p.map(ec => ids.includes(ec.id) ? { ...ec, status:"declined" } : ec));
+                setSelectedRows(new Set());
+                fire(`${ids.length} marked declined`);
+              }} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.red}30`, background:"transparent", color:C.red, cursor:"pointer" }}>
+                ✗ Mark Declined
+              </button>
+              <button onClick={() => setSelectedRows(new Set())} style={{ fontSize:11, padding:"4px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft:"auto" }}>
+                Clear
+              </button>
+            </div>
+          )}
+
+          {/* Table */}
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+              <thead>
+                <tr style={{ background:C.raised, borderBottom:`1px solid ${C.border}` }}>
+                  <th style={{ padding:"7px 12px", width:32 }}>
+                    <input type="checkbox"
+                      checked={rows.length > 0 && selectedRows.size === rows.length}
+                      onChange={() => toggleAll(rows)}
+                      style={{ cursor:"pointer", accentColor:C.blue }} />
+                  </th>
+                  {["Name","Company","Status","Score",""].map(h => (
+                    <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:C.muted, fontWeight:600, fontSize:10, textTransform:"uppercase", letterSpacing:"0.5px", whiteSpace:"nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.slice(0, 50).map(ec => {
+                  const c = ec.contacts || {};
+                  const scoreData = scores[c.id] || {};
+                  const statusColor = ec.status==="confirmed"?C.green:ec.status==="attended"?C.teal:ec.status==="declined"?C.red:C.amber;
+                  const isSelected = selectedRows.has(ec.id);
+                  return (
+                    <tr key={ec.id} style={{ borderBottom:`1px solid ${C.border}`, background:isSelected?`${C.blue}06`:"transparent", transition:"background .1s" }}
+                      onMouseEnter={e=>{ if(!isSelected) e.currentTarget.style.background=C.raised; }}
+                      onMouseLeave={e=>{ e.currentTarget.style.background=isSelected?`${C.blue}06`:"transparent"; }}>
+                      <td style={{ padding:"7px 12px" }} onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" checked={isSelected} onChange={() => toggleRow(ec.id)}
+                          style={{ cursor:"pointer", accentColor:C.blue }} />
+                      </td>
+                      <td style={{ padding:"7px 10px", cursor:"pointer" }} onClick={() => setSelectedContact(ec)}>
+                        <div style={{ fontWeight:500, color:C.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:160 }}>
+                          {[c.first_name, c.last_name].filter(Boolean).join(" ") || c.email || "Unknown"}
+                        </div>
+                        <div style={{ fontSize:10.5, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", maxWidth:160 }}>{c.email}</div>
+                      </td>
+                      <td style={{ padding:"7px 10px", color:C.muted, fontSize:11, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:120 }}>
+                        {c.company_name || "—"}
+                      </td>
+                      <td style={{ padding:"7px 10px" }}>
+                        <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:999, fontWeight:600, textTransform:"capitalize", background:statusColor+"18", color:statusColor }}>
+                          {ec.status || "pending"}
+                        </span>
+                      </td>
+                      <td style={{ padding:"7px 10px" }}>
+                        {scoreData.score > 0 && (
+                          <span style={{ fontSize:10, padding:"1px 6px", borderRadius:3, background:scoreData.temp==="hot"?`${C.red}15`:scoreData.temp==="warm"?`${C.amber}15`:`${C.blue}10`, color:scoreData.temp==="hot"?C.red:scoreData.temp==="warm"?C.amber:C.muted, fontWeight:600 }}>
+                            {scoreData.temp} {scoreData.score}
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ padding:"7px 10px" }}>
+                        <button onClick={() => setSelectedContact(ec)} style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                          View →
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {rows.length > 50 && (
+              <div style={{ padding:"10px 14px", textAlign:"center", fontSize:12, color:C.muted, borderTop:`1px solid ${C.border}` }}>
+                Showing 50 of {rows.length} — <span onClick={() => setView("contacts")} style={{ color:C.blue, cursor:"pointer" }}>View all in Contacts →</span>
+              </div>
+            )}
+            {rows.length === 0 && (
+              <div style={{ padding:"24px", textAlign:"center", color:C.muted, fontSize:13 }}>
+                No contacts match this filter
+              </div>
+            )}
+          </div>
         </div>
       )}
 
