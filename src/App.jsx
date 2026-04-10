@@ -9720,21 +9720,48 @@ function SeatingView({ supabase, profile, activeEvent, fire }) {
           {Array.from({ length: totalTables }, (_, ti) => {
             const tableNum = ti + 1;
             const tableGuests = contacts.filter(ec => assignments[ec.id]?.startsWith(`T${tableNum}-`));
+            const pct = Math.round(tableGuests.length / layout.seatsPerTable * 100);
             return (
               <div key={tableNum} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
                 <div style={{ padding: "10px 14px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", background: C.raised }}>
                   <span style={{ fontSize: 13, fontWeight: 600, color: C.text }}>Table {tableNum}</span>
-                  <span style={{ fontSize: 11, color: C.muted }}>{tableGuests.length}/{layout.seatsPerTable} seats</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 50, height: 4, background: C.border, borderRadius: 2, overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: pct >= 80 ? C.green : pct >= 50 ? C.blue : C.amber, borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontSize: 11, color: C.muted }}>{tableGuests.length}/{layout.seatsPerTable}</span>
+                  </div>
                 </div>
-                <div style={{ padding: "8px 0" }}>
+                {/* Round table visual */}
+                {tableGuests.length > 0 && (
+                  <div style={{ padding: "8px 14px 0", display: "flex", justifyContent: "center" }}>
+                    <svg width="120" height="70" viewBox="0 0 120 70">
+                      <ellipse cx="60" cy="35" rx="35" ry="22" fill={`${C.blue}15`} stroke={C.border} strokeWidth="1.5" />
+                      {Array.from({ length: Math.min(tableGuests.length, 10) }, (_, i) => {
+                        const angle = (i / Math.max(layout.seatsPerTable, 1)) * 2 * Math.PI - Math.PI / 2;
+                        const x = 60 + 48 * Math.cos(angle);
+                        const y = 35 + 28 * Math.sin(angle);
+                        const ec = tableGuests[i];
+                        const initials = ec?.contacts ? ((ec.contacts.first_name?.[0]||"") + (ec.contacts.last_name?.[0]||"")).toUpperCase() : "?";
+                        return (
+                          <g key={i}>
+                            <circle cx={x} cy={y} r="8" fill={C.blue} opacity="0.8" />
+                            <text x={x} y={y+3} textAnchor="middle" fontSize="6" fill="#fff" fontWeight="700">{initials||"?"}</text>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                )}
+                <div style={{ padding: "6px 0" }}>
                   {tableGuests.length === 0 ? (
                     <div style={{ padding: "12px 14px", fontSize: 12, color: C.muted, fontStyle: "italic", textAlign: "center" }}>Empty</div>
                   ) : tableGuests.map(ec => {
                     const c = ec.contacts || {};
                     const seat = assignments[ec.id];
                     return (
-                      <div key={ec.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "7px 14px", borderBottom: `1px solid ${C.border}` }}>
-                        <div style={{ width: 24, height: 24, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: C.blue, flexShrink: 0 }}>
+                      <div key={ec.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 14px", borderBottom: `1px solid ${C.border}` }}>
+                        <div style={{ width: 22, height: 22, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, fontWeight: 700, color: C.blue, flexShrink: 0 }}>
                           {seat?.split("-")[1] || "?"}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
