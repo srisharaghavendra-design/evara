@@ -914,6 +914,11 @@ function MainApp({ session }) {
         e.preventDefault();
         document.querySelector("input[placeholder*='Search']")?.focus();
       }
+      // N = new event (when not typing in an input)
+      if (e.key === "n" && !e.metaKey && !e.ctrlKey && !["INPUT","TEXTAREA","SELECT"].includes(e.target?.tagName)) {
+        e.preventDefault();
+        setShowNewEvent(true);
+      }
       // Escape = close modals
       if (e.key === "Escape") {
         setShowNewEvent(false);
