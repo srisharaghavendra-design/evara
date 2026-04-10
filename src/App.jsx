@@ -1136,12 +1136,67 @@ function MainApp({ session }) {
             })()}
           </div>
           <div style={{ width: 1, height: 18, background: C.border }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, padding: "6px 11px", flex: 1, maxWidth: 260 }}>
-            <Search size={12} color={C.muted} strokeWidth={1.5} />
-            <input placeholder="Search… (⌘K)" value={globalSearch} 
-              onChange={e => { setGlobalSearch(e.target.value); if (e.target.value.length > 1) setView("contacts"); }}
-              onKeyDown={e => { if (e.key === "Escape") { setGlobalSearch(""); e.target.blur(); } }}
-              style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
+          <div style={{ position:"relative", flex:1, maxWidth:280 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${globalSearch?C.blue:C.border}`, borderRadius: 7, padding: "6px 11px" }}>
+              <Search size={12} color={C.muted} strokeWidth={1.5} />
+              <input placeholder="Search events, contacts… (⌘K)" value={globalSearch}
+                onChange={e => setGlobalSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Escape") { setGlobalSearch(""); e.target.blur(); }
+                  if (e.key === "Enter" && globalSearch.length > 1) { setView("contacts"); }
+                }}
+                style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
+              {globalSearch && <button onClick={() => setGlobalSearch("")} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:14, lineHeight:1, padding:0 }}>×</button>}
+            </div>
+            {/* Command palette dropdown */}
+            {globalSearch.length > 0 && (() => {
+              const q = globalSearch.toLowerCase();
+              const matchedEvents = events.filter(e => e.name?.toLowerCase().includes(q) || e.location?.toLowerCase().includes(q)).slice(0,4);
+              const modules = [
+                {id:"dashboard",label:"Dashboard",icon:"📊"},{id:"edm",label:"eDM Builder",icon:"✉️"},
+                {id:"schedule",label:"Scheduling",icon:"📅"},{id:"contacts",label:"Contacts",icon:"👥"},
+                {id:"analytics",label:"Analytics",icon:"📈"},{id:"campaign",label:"Campaign Builder",icon:"⚡"},
+                {id:"calendar",label:"Calendar",icon:"🗓"},{id:"checkin",label:"Check-in",icon:"✓"},
+                {id:"overview",label:"All Events",icon:"🗂"},{id:"settings",label:"Settings",icon:"⚙️"},
+              ].filter(m => m.label.toLowerCase().includes(q)).slice(0,4);
+              if (!matchedEvents.length && !modules.length) return null;
+              return (
+                <div style={{ position:"absolute", top:"100%", left:0, right:0, marginTop:4, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, boxShadow:"0 8px 32px rgba(0,0,0,.5)", zIndex:300, overflow:"hidden" }}>
+                  {matchedEvents.length > 0 && <>
+                    <div style={{ padding:"6px 12px 3px", fontSize:9.5, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px" }}>Events</div>
+                    {matchedEvents.map(ev => (
+                      <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); setGlobalSearch(""); fire(`Switched to ${ev.name}`); }}
+                        style={{ padding:"8px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:9, fontSize:13 }}
+                        onMouseEnter={e=>e.currentTarget.style.background=C.raised}
+                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <span style={{ fontSize:15 }}>🎪</span>
+                        <div>
+                          <div style={{ color:C.text, fontWeight:500 }}>{ev.name}</div>
+                          {ev.event_date && <div style={{ fontSize:11, color:C.muted }}>{new Date(ev.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </>}
+                  {modules.length > 0 && <>
+                    <div style={{ padding:"6px 12px 3px", fontSize:9.5, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", borderTop:matchedEvents.length?`1px solid ${C.border}`:undefined }}>Go to</div>
+                    {modules.map(m => (
+                      <div key={m.id} onClick={() => { setView(m.id); setGlobalSearch(""); }}
+                        style={{ padding:"8px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:9, fontSize:13 }}
+                        onMouseEnter={e=>e.currentTarget.style.background=C.raised}
+                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                        <span style={{ fontSize:15 }}>{m.icon}</span>
+                        <span style={{ color:C.text }}>{m.label}</span>
+                      </div>
+                    ))}
+                  </>}
+                  <div style={{ padding:"6px 12px", borderTop:`1px solid ${C.border}` }}>
+                    <div onClick={() => { setView("contacts"); }} style={{ fontSize:11, color:C.muted, cursor:"pointer" }}>
+                      Press Enter to search all contacts for "{globalSearch}"
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
           {/* Quick event stats */}
           {activeEvent && metrics && (
