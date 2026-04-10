@@ -4752,6 +4752,18 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     ✕ Unschedule
                   </button>
                 )}
+                {(cam.status === "draft" || cam.status === "scheduled") && (
+                  <button onClick={async () => {
+                    if (!window.confirm(`Mark "${cam.name || cam.email_type}" as sent manually? This records it as sent without sending through evara.`)) return;
+                    const now = new Date().toISOString();
+                    await supabase.from("email_campaigns").update({ status: "sent", sent_at: now, total_sent: contactCount || 1 }).eq("id", cam.id);
+                    setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "sent", sent_at: now, total_sent: contactCount || 1 } : c));
+                    fire("✅ Marked as sent manually");
+                  }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}
+                    title="Mark as sent if you sent this email through another tool">
+                    ✓ Mark sent
+                  </button>
+                )}
                 {cam.status === "sent" && cam.total_sent > 0 && cam.html_content && (
                   <button onClick={async () => {
                     if (!window.confirm(`Resend to contacts who haven't opened "${cam.subject}"?`)) return;
