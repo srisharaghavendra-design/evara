@@ -6843,6 +6843,21 @@ Return ONLY valid JSON with this structure:
 function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [drillCam, setDrillCam] = useState(null); // campaign being drilled into
+  const [drillData, setDrillData] = useState([]);
+  const [drillLoading, setDrillLoading] = useState(false);
+
+  const openDrill = async (cam) => {
+    if (drillCam?.id === cam.id) { setDrillCam(null); setDrillData([]); return; }
+    setDrillCam(cam); setDrillLoading(true);
+    const { data } = await supabase.from("email_sends")
+      .select("*,contacts(first_name,last_name,email,company_name)")
+      .eq("campaign_id", cam.id)
+      .order("sent_at", { ascending: false })
+      .limit(50);
+    setDrillData(data || []);
+    setDrillLoading(false);
+  };
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
@@ -6963,23 +6978,22 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
                 <tbody>
                   {campaigns.map((cam, i) => {
                     const openRate = cam.total_sent ? Math.round((cam.total_opened / cam.total_sent) * 100) : 0;
+                    const isDrilled = drillCam?.id === cam.id;
                     return (
-                      <tr key={cam.id} className="rh" style={{ borderBottom: i < campaigns.length - 1 ? `1px solid ${C.border}` : undefined }}>
+                      <>
+                      <tr key={cam.id} className="rh" onClick={() => cam.status==="sent" && openDrill(cam)}
+                        style={{ borderBottom: !isDrilled && i < campaigns.length - 1 ? `1px solid ${C.border}` : undefined, cursor: cam.status==="sent"?"pointer":"default", background: isDrilled?`${C.blue}06`:"transparent" }}>
                         <td style={{ padding: "11px 14px", fontSize: 13, color: C.text, maxWidth: 200 }}>
                           <div style={{ display:"flex", alignItems:"center", gap:4, overflow: "hidden" }}>
                             <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex:1 }}>{cam.name}</span>
                             {cam.total_sent > 0 && Math.round((cam.total_opened||0)/cam.total_sent*100) >= 40 && <span title="Top performer">⭐</span>}
+                            {cam.status==="sent" && <span style={{ fontSize:10, color:isDrilled?C.blue:C.muted }}>▾</span>}
                           </div>
                           {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, fontStyle: "italic" }}>"{cam.subject}"</div>}
                         </td>
                         <td style={{ padding: "11px 14px", fontSize: 12, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}</td>
                         <td style={{ padding: "11px 14px" }}>
                           <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, background: cam.status === "sent" ? C.green + "15" : C.blue + "15", color: cam.status === "sent" ? C.green : C.blue }}>{cam.status}</span>
-                          {cam.send_at && cam.status !== "sent" && (
-                            <div style={{ fontSize: 10, color: C.amber, marginTop: 3 }}>
-                              📅 {new Date(cam.send_at).toLocaleDateString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
-                            </div>
-                          )}
                           {cam.sent_at && (
                             <div style={{ fontSize: 10, color: C.muted, marginTop: 3 }}>
                               Sent {new Date(cam.sent_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
@@ -7000,6 +7014,34 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
                           ) : <span style={{ fontSize: 12, color: C.muted }}>—</span>}
                         </td>
                       </tr>
+                      {isDrilled && (
+                        <tr key={`drill-${cam.id}`}>
+                          <td colSpan={7} style={{ padding:0, background:`${C.blue}05`, borderBottom:`1px solid ${C.border}` }}>
+                            <div style={{ padding:"12px 16px" }}>
+                              <div style={{ fontSize:11, fontWeight:600, color:C.blue, marginBottom:10, textTransform:"uppercase", letterSpacing:"0.6px" }}>
+                                Per-contact breakdown — {cam.name} {drillLoading && <span style={{ color:C.muted, fontWeight:400 }}>Loading…</span>}
+                              </div>
+                              {!drillLoading && drillData.length === 0 && <div style={{ fontSize:12, color:C.muted }}>No per-contact tracking data yet — appears after emails are sent via evara.</div>}
+                              {!drillLoading && drillData.length > 0 && (
+                                <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:6, maxHeight:200, overflowY:"auto" }}>
+                                  {drillData.map(s => (
+                                    <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"6px 8px", background:s.clicked_at?`${C.blue}10`:s.opened_at?`${C.green}08`:C.card, borderRadius:6, border:`1px solid ${s.clicked_at?C.blue:s.opened_at?C.green:C.border}25` }}>
+                                      <div style={{ width:22, height:22, borderRadius:"50%", background:s.clicked_at?C.blue:s.opened_at?C.green:C.raised, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#fff", flexShrink:0, fontWeight:700 }}>
+                                        {s.clicked_at?"🖱":s.opened_at?"👁":"✉"}
+                                      </div>
+                                      <div style={{ minWidth:0 }}>
+                                        <div style={{ fontSize:11.5, fontWeight:500, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{s.contacts?.first_name} {s.contacts?.last_name||s.contacts?.email}</div>
+                                        <div style={{ fontSize:10, color:s.clicked_at?C.blue:s.opened_at?C.green:C.muted }}>{s.clicked_at?"Clicked":s.opened_at?"Opened":"Sent"}</div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </>
                     );
                   })}
                   {campaigns.length > 1 && (() => {
