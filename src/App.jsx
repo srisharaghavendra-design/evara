@@ -3640,17 +3640,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               {sendingTest ? "Sending…" : "📤 Send test"}
             </button>
-            <button onClick={() => {\n              const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
-              if (!templates.length) { fire("No saved templates yet — generate an email and save it first"); return; }
-              const choice = window.prompt(templates.map((t, i) => `${i+1}. ${t.name}`).join("\n") + "\n\nEnter number:", "1");
-              const idx = parseInt(choice) - 1;
-              if (isNaN(idx) || idx < 0 || idx >= templates.length) return;
-              const t = templates[idx];
-              setPreview(p => ({ ...p, subject: t.subject || p.subject, html: t.html, plain_text: t.plain_text }));
-              fire(`✅ Template "${t.name}" loaded`);
-            }} style={{ padding: "9px 14px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
-              📂 Load template
-            </button>
+
             <button onClick={saveAsTemplate} disabled={!preview?.html || savingTemplate}
               style={{ padding:"9px 14px", background:"transparent", color:C.green, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:12, cursor:"pointer" }}>
               {savingTemplate ? "Saving…" : "💾 Save as template"}
