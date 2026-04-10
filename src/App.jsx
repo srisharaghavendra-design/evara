@@ -6365,108 +6365,135 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
             )}
           </div>
 
-          {/* Event lifecycle funnel */}
-          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 16 }}>Event Lifecycle Funnel</div>
-            {[
-              { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue },
-              { label: "Opened", val: data?.total_opened || 0, color: C.teal },
-              { label: "Registered", val: data?.ec_total || 0, color: C.text },
-              { label: "Confirmed", val: data?.confirmed || 0, color: C.amber },
-              { label: "Attended", val: data?.attended || 0, color: C.green },
-            ].map((s, i, arr) => {
-              const max = arr[0].val || 1;
-              const pct = Math.round((s.val / max) * 100);
-              return (
-                <div key={s.label} style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
-                    <span style={{ color: C.sec }}>{s.label}</span>
-                    <span style={{ color: s.color, fontWeight: 600 }}>{s.val.toLocaleString()} {max > 0 && i > 0 ? `(${pct}%)` : ""}</span>
-                  </div>
-                  <div style={{ height: 6, background: C.raised, borderRadius: 3 }}>
-                    <div style={{ height: "100%", background: s.color, width: `${pct}%`, borderRadius: 3, transition: "width .5s ease" }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-          {/* ── Visual email timeline chart ── */}
-          {campaigns.filter(c => c.status === "sent" && c.total_sent > 0).length > 0 && (
-            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "16px 18px", marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 14 }}>Send Volume by Campaign</div>
-              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 80 }}>
-                {campaigns.filter(c => c.status === "sent").map((cam, i) => {
-                  const maxSent = Math.max(...campaigns.filter(c => c.status === "sent").map(c => c.total_sent || 0), 1);
-                  const h = Math.max(6, Math.round(((cam.total_sent || 0) / maxSent) * 72));
-                  const openH = Math.max(0, Math.round(((cam.total_opened || 0) / maxSent) * 72));
+          {/* ── UNIFIED FUNNEL + TREND ── */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:12, marginTop:12 }}>
+            {/* Funnel */}
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"16px 18px" }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:14 }}>Event Funnel</div>
+              {(() => {
+                const steps = [
+                  { label:"Sent", val:data?.total_sent||0, color:C.blue },
+                  { label:"Opened", val:data?.total_opened||0, color:C.teal },
+                  { label:"Registered", val:data?.ec_total||0, color:"#BF5AF2" },
+                  { label:"Confirmed", val:data?.confirmed||0, color:C.amber },
+                  { label:"Attended", val:data?.attended||0, color:C.green },
+                ];
+                const top = steps[0].val || 1;
+                return steps.map((s, i) => {
+                  const pct = Math.round((s.val/top)*100);
+                  const conv = i > 0 && steps[i-1].val > 0 ? Math.round((s.val/steps[i-1].val)*100) : null;
                   return (
-                    <div key={cam.id} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "default" }} title={`${cam.name}: ${cam.total_sent} sent, ${cam.total_opened || 0} opened`}>
-                      <div style={{ width: "100%", display: "flex", flexDirection: "column", justifyContent: "flex-end", height: 72, gap: 2 }}>
-                        <div style={{ width: "100%", height: openH, background: C.teal + "80", borderRadius: "3px 3px 0 0", minHeight: openH > 0 ? 3 : 0 }} />
-                        <div style={{ width: "100%", height: h - openH, background: C.blue + "60", borderRadius: openH > 0 ? 0 : "3px 3px 0 0", minHeight: 3 }} />
+                    <div key={s.label} style={{ marginBottom:10 }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4, fontSize:12 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <div style={{ width:8, height:8, borderRadius:"50%", background:s.color, flexShrink:0 }} />
+                          <span style={{ color:C.sec }}>{s.label}</span>
+                          {conv !== null && <span style={{ fontSize:10, color:conv>=50?C.green:conv>=25?C.amber:C.red, background:(conv>=50?C.green:conv>=25?C.amber:C.red)+"18", padding:"1px 5px", borderRadius:3 }}>↳{conv}%</span>}
+                        </div>
+                        <span style={{ color:s.color, fontWeight:700 }}>{s.val.toLocaleString()}</span>
                       </div>
-                      <div style={{ fontSize: 9, color: C.muted, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", width: "100%", maxWidth: 60 }}>
-                        {cam.email_type?.replace(/_/g, " ") || cam.name?.slice(0, 8)}
+                      <div style={{ height:7, background:C.raised, borderRadius:4, overflow:"hidden" }}>
+                        <div style={{ height:"100%", width:`${pct}%`, background:s.color, borderRadius:4, transition:"width .5s ease", opacity:0.85 }} />
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            {/* Open rate trend */}
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"16px 18px" }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:2 }}>Open Rate Trend</div>
+              <div style={{ fontSize:11, color:C.muted, marginBottom:10 }}>Across sent campaigns — 25% goal line</div>
+              {(() => {
+                const sent = campaigns.filter(c => c.status==="sent" && c.total_sent > 0).sort((a,b) => new Date(a.sent_at||a.created_at) - new Date(b.sent_at||b.created_at)).slice(-8);
+                if (!sent.length) return <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:100, color:C.muted, fontSize:12 }}>No sent campaigns yet</div>;
+                const rates = sent.map(c => Math.round(((c.total_opened||0)/c.total_sent)*100));
+                const maxR = Math.max(...rates, 40);
+                const W = 280, H = 90, PAD = 10;
+                const pts = rates.map((r, i) => [PAD + (i/Math.max(rates.length-1,1))*(W-PAD*2), H - PAD - (r/maxR)*(H-PAD*2)]);
+                const pathD = pts.map((p,i) => (i===0?"M":"L")+p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ");
+                const areaD = `${pathD} L${pts[pts.length-1][0].toFixed(1)},${H-PAD} L${pts[0][0].toFixed(1)},${H-PAD} Z`;
+                const goalY = H - PAD - (25/maxR)*(H-PAD*2);
+                return (
+                  <div>
+                    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} style={{ overflow:"visible" }}>
+                      <line x1={PAD} y1={goalY} x2={W-PAD} y2={goalY} stroke={C.amber} strokeWidth="1" strokeDasharray="4 3" opacity="0.7" />
+                      <text x={W-PAD+3} y={goalY+3} fontSize="8" fill={C.amber}>25%</text>
+                      <path d={areaD} fill={C.teal} opacity="0.1" />
+                      <path d={pathD} fill="none" stroke={C.teal} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                      {pts.map(([x,y], i) => (
+                        <g key={i}>
+                          <circle cx={x} cy={y} r="4" fill={rates[i]>=25?C.green:C.amber} stroke={C.card} strokeWidth="2" />
+                          <text x={x} y={y-8} fontSize="9" fill={rates[i]>=25?C.green:C.amber} textAnchor="middle" fontWeight="700">{rates[i]}%</text>
+                        </g>
+                      ))}
+                    </svg>
+                    <div style={{ display:"flex", marginTop:2 }}>
+                      {sent.map((c,i) => (
+                        <div key={c.id} style={{ flex:"1", fontSize:9, color:C.muted, textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                          {(c.email_type||"").replace(/_/g," ").replace("save the date","STD").replace("invitation","Inv").replace("reminder","Rem").replace("thank you","TY")||`#${i+1}`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+
+          {/* Send Volume chart */}
+          {campaigns.filter(c => c.status==="sent" && c.total_sent>0).length > 0 && (
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"16px 18px", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.text }}>Send Volume</div>
+                <div style={{ display:"flex", gap:12 }}>
+                  {[{col:C.blue+"50",lbl:"Sent"},{col:C.teal+"90",lbl:"Opened"},{col:C.blue,lbl:"Clicked"}].map(({col,lbl})=>(
+                    <div key={lbl} style={{ display:"flex", alignItems:"center", gap:4, fontSize:10, color:C.muted }}><div style={{ width:10, height:10, background:col, borderRadius:2 }} />{lbl}</div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display:"flex", alignItems:"flex-end", gap:8, height:90 }}>
+                {campaigns.filter(c=>c.status==="sent").map((cam) => {
+                  const maxSent = Math.max(...campaigns.filter(c=>c.status==="sent").map(c=>c.total_sent||0),1);
+                  const h = Math.max(6, Math.round(((cam.total_sent||0)/maxSent)*80));
+                  const openH = Math.round(((cam.total_opened||0)/maxSent)*80);
+                  const clickH = Math.round(((cam.total_clicked||0)/maxSent)*80);
+                  return (
+                    <div key={cam.id} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }} title={`${cam.name}: ${cam.total_sent} sent · ${cam.total_opened||0} opened`}>
+                      <div style={{ width:"100%", height:80, position:"relative", display:"flex", alignItems:"flex-end" }}>
+                        <div style={{ position:"absolute", bottom:0, left:0, right:0, height:h, background:C.blue+"40", borderRadius:"3px 3px 0 0" }} />
+                        {openH>0 && <div style={{ position:"absolute", bottom:0, left:"20%", right:"20%", height:openH, background:C.teal+"90", borderRadius:"3px 3px 0 0" }} />}
+                        {clickH>0 && <div style={{ position:"absolute", bottom:0, left:"35%", right:"35%", height:clickH, background:C.blue, borderRadius:"3px 3px 0 0" }} />}
+                      </div>
+                      <div style={{ fontSize:9, color:C.muted, textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", width:"100%" }}>
+                        {(cam.email_type||"").replace(/_/g," ")||cam.name?.slice(0,8)}
                       </div>
                     </div>
                   );
                 })}
               </div>
-              <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.muted }}>
-                  <div style={{ width: 10, height: 10, background: C.blue + "60", borderRadius: 2 }} />Sent
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: C.muted }}>
-                  <div style={{ width: 10, height: 10, background: C.teal + "80", borderRadius: 2 }} />Opened
-                </div>
-              </div>
             </div>
           )}
-            {/* ── Engagement funnel ── */}
-          {data && (
-            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "16px 18px", marginTop: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 14 }}>Engagement Funnel</div>
-              {[
-                { label: "Invited", val: data.total_contacts || 0, color: C.blue },
-                { label: "Opened Email", val: data.total_opened || 0, color: C.teal },
-                { label: "Registered", val: data.total_invited || 0, color: "#AF52DE" },
-                { label: "Confirmed", val: data.total_confirmed || 0, color: C.green },
-                { label: "Attended", val: data.total_attended || 0, color: "#FF9F0A" },
-              ].map((step, i, arr) => {
-                const pct = i === 0 ? 100 : arr[0].val > 0 ? Math.round((step.val / arr[0].val) * 100) : 0;
+
+          {/* Upcoming scheduled */}
+          {campaigns && campaigns.filter(c => c.status==="scheduled" && c.scheduled_at && new Date(c.scheduled_at) > new Date()).length > 0 && (
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"16px 18px", marginBottom:12 }}>
+              <div style={{ fontSize:13, fontWeight:500, color:C.text, marginBottom:12 }}>📅 Upcoming Sends</div>
+              {campaigns.filter(c=>c.status==="scheduled" && c.scheduled_at && new Date(c.scheduled_at)>new Date()).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at)).slice(0,5).map(cam => {
+                const d = new Date(cam.scheduled_at);
+                const daysLeft = Math.ceil((d - new Date())/(1000*60*60*24));
                 return (
-                  <div key={step.label} style={{ marginBottom: 10 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, color: C.muted }}>{step.label}</span>
-                      <span style={{ fontSize: 12, fontWeight: 600, color: step.color }}>{step.val} <span style={{ color: C.muted, fontWeight: 400 }}>({pct}%)</span></span>
+                  <div key={cam.id} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+                    <div>
+                      <div style={{ fontSize:12, fontWeight:500, color:C.text }}>{cam.name?.replace(/ — .*/,"") || cam.email_type}</div>
+                      <div style={{ fontSize:11, color:C.muted }}>{d.toLocaleDateString("en-AU",{weekday:"short",day:"numeric",month:"short"})} · {d.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}</div>
                     </div>
-                    <div style={{ height: 6, background: C.raised, borderRadius: 999 }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: step.color, borderRadius: 999, transition: "width .5s ease", opacity: 0.8 }} />
-                    </div>
+                    <span style={{ fontSize:10, padding:"2px 8px", borderRadius:4, background:daysLeft<=7?C.amber+"20":C.blue+"14", color:daysLeft<=7?C.amber:C.blue, fontWeight:600 }}>{daysLeft===0?"Today!":daysLeft===1?"Tomorrow":`${daysLeft}d`}</span>
                   </div>
                 );
               })}
             </div>
           )}
-        {/* Upcoming scheduled campaigns */}
-        {campaigns && campaigns.filter(c => c.status === "scheduled" && c.scheduled_at && new Date(c.scheduled_at) > new Date()).length > 0 && (
-          <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "16px 18px", marginTop: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 12 }}>📅 Upcoming Sends</div>
-            {campaigns.filter(c => c.status === "scheduled" && c.scheduled_at && new Date(c.scheduled_at) > new Date()).sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)).slice(0, 5).map(cam => {
-              const d = new Date(cam.scheduled_at);
-              const daysLeft = Math.ceil((d - new Date()) / (1000*60*60*24));
-              return (
-                <div key={cam.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{cam.name?.replace(/ — .*/, "") || cam.email_type}</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" })} · {d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</div>
-                  </div>
-                  <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, background: daysLeft <= 7 ? C.amber + "20" : C.blue + "14", color: daysLeft <= 7 ? C.amber : C.blue, fontWeight: 600 }}>{daysLeft === 0 ? "Today!" : daysLeft === 1 ? "Tomorrow" : `${daysLeft}d`}</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
         </>
       )}
     </div>
