@@ -3789,16 +3789,19 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   onChange={e => setPreview(p => ({ ...p, subject: e.target.value }))}
                   style={{ fontSize: 14, fontWeight: 600, color: "#111", border: "none", outline: "none", background: "transparent", width: "100%", fontFamily: "inherit" }} />
                   {subjectAlts.length > 0 && (
-                    <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                      <div style={{ fontSize: 10, color: "#999", marginBottom: 2 }}>Alternative subject lines — click to use:</div>
-                      {subjectAlts.map((s, i) => (
-                        <div key={i} onClick={() => { setPreview(p => ({ ...p, subject: s })); setSubjectAlts([]); }}
-                          style={{ fontSize: 12, padding: "5px 8px", background: "#f5f5f5", borderRadius: 4, cursor: "pointer", color: "#333", border: "1px solid #eee" }}
-                          onMouseEnter={e => e.currentTarget.style.background = "#e8f0fe"}
-                          onMouseLeave={e => e.currentTarget.style.background = "#f5f5f5"}>
-                          {s}
-                        </div>
-                      ))}
+                    <div style={{ marginTop: 8 }}>
+                      <div style={{ fontSize: 10, color: "#888", marginBottom: 5, textTransform:"uppercase", letterSpacing:"0.5px" }}>✨ Click to use alternative subject:</div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                        {subjectAlts.map((s, i) => (
+                          <button key={i} onClick={() => { setPreview(p => ({ ...p, subject: s })); setSubjectAlts([]); }}
+                            style={{ fontSize: 11.5, padding: "4px 10px", background: "#EEF3FF", borderRadius: 20, cursor: "pointer", color: "#0A84FF", border: "1px solid #C7D9FF", fontFamily:"inherit", transition:"all .1s" }}
+                            onMouseEnter={e => { e.currentTarget.style.background="#0A84FF"; e.currentTarget.style.color="#fff"; }}
+                            onMouseLeave={e => { e.currentTarget.style.background="#EEF3FF"; e.currentTarget.style.color="#0A84FF"; }}>
+                            {s}
+                          </button>
+                        ))}
+                        <button onClick={() => setSubjectAlts([])} style={{ fontSize:11, padding:"4px 8px", background:"transparent", border:"1px solid #ddd", borderRadius:20, color:"#999", cursor:"pointer", fontFamily:"inherit" }}>✕</button>
+                      </div>
                     </div>
                   )}
                 </div>
