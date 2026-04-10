@@ -1714,35 +1714,33 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
       </div>
 
-      {/* Go Live progress bar */}
+      {/* Go Live checklist */}
       {goLiveChecklist.length > 0 && goLiveDone < goLiveChecklist.length && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "12px 16px", marginBottom: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>🚀 Go Live Checklist</span>
-            <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, marginLeft: 6 }}>
-              {goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " · ✅ Ready!" : ""}
-            </span>
-            <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, marginLeft: 6 }}>
-              {goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " · ✅ Ready!" : ""}
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 70, height: 4, background: C.raised, borderRadius: 2 }}>
-                <div style={{ width: `${Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%`, height: "100%", background: goLiveDone === goLiveChecklist.length ? C.green : C.blue, borderRadius: 2, transition: "width .4s" }} />
+        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"14px 16px", marginBottom:12 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:13, fontWeight:600, color:C.text }}>🚀 Go Live Checklist</span>
+              <span style={{ fontSize:11, color:C.muted }}>{goLiveDone}/{goLiveChecklist.length} complete</span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <div style={{ width:80, height:5, background:C.raised, borderRadius:3, overflow:"hidden" }}>
+                <div style={{ width:`${Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%`, height:"100%", background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:3, transition:"width .4s" }} />
               </div>
-              <span style={{ fontSize: 11, color: goLiveDone === goLiveChecklist.length ? C.green : C.muted, fontWeight: goLiveDone === goLiveChecklist.length ? 600 : 400 }}>{goLiveDone}/{goLiveChecklist.length}{goLiveDone === goLiveChecklist.length ? " ✓" : ""}</span>
+              <span style={{ fontSize:11, fontWeight:600, color:goLiveDone===goLiveChecklist.length?C.green:C.blue }}>{Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%</span>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
             {goLiveChecklist.map(item => (
               <button key={item.id}
-                onClick={() => !item.done && document.querySelector(`button[data-view="${item.action}"]`)?.click()}
-                style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, border: `1px solid ${item.done ? C.green + "40" : C.border}`, background: item.done ? C.green + "10" : C.raised, cursor: item.done ? "default" : "pointer", fontSize: 11, color: item.done ? C.green : C.text }}>
-                {item.done ? "✓" : item.icon} <span style={{ textDecoration: item.done ? "line-through" : "none", opacity: item.done ? 0.6 : 1 }}>{item.label}</span>
+                onClick={() => !item.done && setView(item.action)}
+                style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, border:`1px solid ${item.done?C.green+"40":C.border}`, background:item.done?C.green+"0a":C.raised, cursor:item.done?"default":"pointer", textAlign:"left" }}>
+                <div style={{ width:20, height:20, borderRadius:"50%", background:item.done?C.green:"transparent", border:`2px solid ${item.done?C.green:C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:10, color:"#fff" }}>
+                  {item.done?"✓":item.icon}
+                </div>
+                <span style={{ fontSize:12, color:item.done?C.green:C.text, fontWeight:item.done?400:500, textDecoration:item.done?"line-through":"none", opacity:item.done?0.6:1, lineHeight:1.3 }}>{item.label}</span>
+                {!item.done && <span style={{ marginLeft:"auto", fontSize:10, color:C.blue, flexShrink:0 }}>→</span>}
               </button>
             ))}
-          </div>
-          <div style={{ marginTop: 10, height: 3, background: C.raised, borderRadius: 999 }}>
-            <div style={{ width: `${(goLiveDone / goLiveChecklist.length) * 100}%`, height: "100%", background: `linear-gradient(90deg, ${C.blue}, ${C.teal})`, borderRadius: 999, transition: "width .5s" }} />
           </div>
         </div>
       )}
@@ -3255,10 +3253,21 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>
           <Sec label="Template style">
             <div style={{ display: "flex", gap: 6 }}>
-              {["minimal", "branded", "vibrant"].map(t => (
-                <button key={t} onClick={() => { setTmpl(t); setPreview(null); }} style={{ flex: 1, padding: "9px 6px", borderRadius: 6, border: `1px solid ${tmpl === t ? C.blue + "80" : C.border}`, background: tmpl === t ? C.blue + "10" : "transparent", cursor: "pointer", textAlign: "center", transition: "all .12s" }}>
-                  <div style={{ width: "100%", height: 24, borderRadius: 3, marginBottom: 5, background: t === "minimal" ? "#F8F8F6" : t === "branded" ? "#1E3A5F" : "#FF5C35" }} />
-                  <div style={{ fontSize: 11.5, fontWeight: 500, color: tmpl === t ? C.blue : C.text, textTransform: "capitalize" }}>{t}</div>
+              {[
+                { id:"minimal", label:"Minimal", desc:"Clean white", bg:"#F8F8F6", accent:"#111", textBg:"#E8E8E6" },
+                { id:"branded", label:"Branded", desc:"Dark pro", bg:"#0A1628", accent:"#0A84FF", textBg:"rgba(255,255,255,0.15)" },
+                { id:"vibrant", label:"Vibrant", desc:"Bold colour", bg:"#FF5C35", accent:"#fff", textBg:"rgba(255,255,255,0.3)" },
+              ].map(t => (
+                <button key={t.id} onClick={() => { setTmpl(t.id); setPreview(null); }} style={{ flex:1, padding:"8px 6px", borderRadius:7, border:`1.5px solid ${tmpl===t.id?C.blue+"80":C.border}`, background:tmpl===t.id?C.blue+"10":"transparent", cursor:"pointer", textAlign:"center", transition:"all .12s" }}>
+                  {/* Mini email preview */}
+                  <div style={{ width:"100%", height:40, borderRadius:4, marginBottom:5, background:t.bg, padding:"4px 5px", overflow:"hidden" }}>
+                    <div style={{ height:5, borderRadius:2, background:t.accent, opacity:0.9, marginBottom:3 }} />
+                    <div style={{ height:3, borderRadius:1, background:t.textBg, width:"70%", marginBottom:2 }} />
+                    <div style={{ height:3, borderRadius:1, background:t.textBg, width:"50%", marginBottom:3 }} />
+                    <div style={{ height:8, width:32, borderRadius:2, background:t.accent, opacity:0.8 }} />
+                  </div>
+                  <div style={{ fontSize:11.5, fontWeight:600, color:tmpl===t.id?C.blue:C.text }}>{t.label}</div>
+                  <div style={{ fontSize:10, color:C.muted }}>{t.desc}</div>
                 </button>
               ))}
             </div>
@@ -6261,8 +6270,8 @@ function SettingsView({ supabase, profile, fire }) {
       {/* ── DANGER ZONE ── */}
       <DangerZone profile={profile} supabase={supabase} fire={fire} />
 
-      <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
           {saving ? <><Spin />Saving…</> : "Save changes"}
         </button>
         <button onClick={sendTestEmail} disabled={testSending}
@@ -6270,21 +6279,6 @@ function SettingsView({ supabase, profile, fire }) {
           {testSending ? "⏳ Sending…" : "📧 Send test email"}
         </button>
       </div>
-      <button onClick={async () => {
-        const testTo = profile?.email || fromEmail;
-        if (!testTo) { fire("No email to send to", "err"); return; }
-        fire("📤 Sending test email…");
-        const { data: { session } } = await supabase.auth.getSession();
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ to: [{ email: testTo, first_name: "Test" }], subject: "✅ evara email test", htmlContent: `<h2>Your evara email is working!</h2><p>Sent from hello@evarahq.com via SendGrid.</p><p style="color:#888;font-size:12px">This is a test message.</p>`, companyId: profile?.company_id }),
-        });
-        const d = await res.json();
-        fire(d.sent > 0 ? `✅ Test email sent to ${testTo}` : `Failed: ${d.error || "check SendGrid"}`, d.sent > 0 ? "ok" : "err");
-      }} style={{ marginTop: 10, width: "100%", padding: "10px 0", borderRadius: 8, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
-        📤 Send test email
-      </button>
     </div>
   );
 }
