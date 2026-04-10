@@ -1173,7 +1173,7 @@ function MainApp({ session }) {
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
           <span>⌘N new · ⌘K search · ⌘, settings · ESC close</span>
-          <span>v2.1</span>
+          <span>v2.2</span>
         </div>
         <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
@@ -6683,7 +6683,7 @@ function SettingsView({ supabase, profile, fire }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Profile</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, color: C.muted }}>evara v2.1 · Build 2026-04-10</span>
+          <span style={{ fontSize: 10, color: C.muted }}>evara v2.2 · Build 2026-04-11</span>
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { label: "Supabase", ok: true },
