@@ -3432,8 +3432,6 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     if (!activeEvent || !profile) return;
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
       .then(({ data: d }) => setCampaigns(d || []));
-    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
-      .then(({ data: d }) => setData(d));
   }, [activeEvent, profile]);
 
   // Upload image to Supabase Storage
