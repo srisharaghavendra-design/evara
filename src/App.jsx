@@ -294,26 +294,28 @@ function buildEmailHtml({
 // ─── IMAGE UPLOAD ZONE ───────────────────────────────────────
 function ImageUploadZone({ label, sublabel, url, onUpload, onClear, uploading }) {
   const ref = useRef();
+  const [dragging, setDragging] = React.useState(false);
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 5, fontWeight: 500 }}>{label}</div>
       {url ? (
-        <div style={{ position: "relative", borderRadius: 6, overflow: "hidden", border: `1px solid ${C.borderHi}` }}>
+        <div style={{ position: "relative", borderRadius: 8, overflow: "hidden", border: `1px solid ${C.green}40` }}>
           <img src={url} alt={label} style={{ display: "block", width: "100%", maxHeight: 80, objectFit: "cover" }} />
           <button onClick={onClear}
-            style={{ position: "absolute", top: 5, right: 5, background: "rgba(0,0,0,.7)", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}>
+            style={{ position: "absolute", top: 5, right: 5, background: "rgba(0,0,0,.75)", border: "none", borderRadius: "50%", width: 22, height: 22, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#fff" }}>
             <X size={11} />
           </button>
-          <div style={{ position: "absolute", bottom: 5, left: 8, fontSize: 10, color: "rgba(255,255,255,.8)", background: "rgba(0,0,0,.5)", padding: "2px 6px", borderRadius: 3 }}>
-            ✓ Uploaded
-          </div>
+          <div style={{ position: "absolute", bottom: 5, left: 8, fontSize: 10, color: "rgba(255,255,255,.9)", background: "rgba(0,0,0,.5)", padding: "2px 6px", borderRadius: 3 }}>✓ Uploaded</div>
         </div>
       ) : (
         <div
           onClick={() => !uploading && ref.current?.click()}
-          style={{ border: `1.5px dashed ${C.borderHi}`, borderRadius: 6, padding: "12px 10px", textAlign: "center", cursor: uploading ? "default" : "pointer", background: C.bg, transition: "border-color .15s" }}
-          onMouseEnter={e => !uploading && (e.currentTarget.style.borderColor = C.blue)}
-          onMouseLeave={e => (e.currentTarget.style.borderColor = C.borderHi)}
+          onDragOver={e => { e.preventDefault(); setDragging(true); }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={e => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files?.[0]; if (f && f.type.startsWith("image/")) onUpload(f); }}
+          style={{ border: `1.5px dashed ${dragging?C.blue:C.borderHi}`, borderRadius: 8, padding: "14px 10px", textAlign: "center", cursor: uploading ? "default" : "pointer", background: dragging?`${C.blue}08`:C.bg, transition: "all .15s" }}
+          onMouseEnter={e => !uploading && !dragging && (e.currentTarget.style.borderColor = C.blue)}
+          onMouseLeave={e => !dragging && (e.currentTarget.style.borderColor = C.borderHi)}
         >
           <input ref={ref} type="file" accept="image/jpeg,image/png,image/gif,image/webp" style={{ display: "none" }}
             onChange={e => e.target.files?.[0] && onUpload(e.target.files[0])} />
@@ -323,9 +325,9 @@ function ImageUploadZone({ label, sublabel, url, onUpload, onClear, uploading })
             </div>
           ) : (
             <>
-              <Upload size={14} color={C.muted} strokeWidth={1.5} style={{ marginBottom: 4 }} />
-              <div style={{ fontSize: 11, color: C.muted }}>{sublabel || `Upload ${label}`}</div>
-              <div style={{ fontSize: 10, color: C.muted, marginTop: 2, opacity: 0.7 }}>PNG, JPG, GIF · max 3MB</div>
+              <Upload size={16} color={dragging?C.blue:C.muted} strokeWidth={1.5} style={{ marginBottom: 5 }} />
+              <div style={{ fontSize: 11.5, color: dragging?C.blue:C.muted, fontWeight: dragging?500:400 }}>{dragging?"Drop to upload":sublabel || `Upload ${label}`}</div>
+              <div style={{ fontSize: 10, color: C.muted, marginTop: 2, opacity: 0.7 }}>Drag & drop or click · PNG, JPG, GIF · max 3MB</div>
             </>
           )}
         </div>
@@ -791,6 +793,54 @@ function Spin({ size = 14 }) {
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────
+function EventSwitcher({ events, activeEvent, setActiveEvent, setView, showArchived, C }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const filtered = events.filter(ev =>
+    (showArchived || ev.status !== "archived") &&
+    (!q || ev.name?.toLowerCase().includes(q.toLowerCase()))
+  );
+  return (
+    <div>
+      <button onClick={() => setOpen(p => !p)} style={{ width:"100%", background:C.card, border:`1px solid ${open?C.blue:C.border}`, borderRadius:8, color:C.text, padding:"7px 28px 7px 10px", fontSize:12, fontWeight:500, outline:"none", cursor:"pointer", textAlign:"left", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{activeEvent?.name}</span>
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", left:0, right:0, top:"100%", marginTop:3, background:C.card, border:`1px solid ${C.border}`, borderRadius:9, boxShadow:"0 8px 32px rgba(0,0,0,.5)", zIndex:300, overflow:"hidden" }}>
+          <div style={{ padding:"6px 8px", borderBottom:`1px solid ${C.border}` }}>
+            <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Search events…"
+              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"4px 8px", fontSize:11.5, outline:"none" }} />
+          </div>
+          <div style={{ maxHeight:180, overflowY:"auto" }}>
+            {filtered.length===0 && <div style={{ padding:"10px 10px", fontSize:12, color:C.muted }}>No events found</div>}
+            {filtered.map(ev => {
+              const days = ev.event_date ? Math.ceil((new Date(ev.event_date)-new Date())/(1000*60*60*24)) : null;
+              const col = days===0?C.green:days>0&&days<=7?C.red:days>0?C.amber:C.muted;
+              const isActive = ev.id === activeEvent?.id;
+              return (
+                <div key={ev.id} onClick={() => { setActiveEvent(ev); setOpen(false); setQ(""); }}
+                  style={{ padding:"8px 10px", cursor:"pointer", background:isActive?`${C.blue}10`:"transparent", borderLeft:`2px solid ${isActive?C.blue:"transparent"}` }}
+                  onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background=C.raised; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.background=isActive?`${C.blue}10`:"transparent"; }}>
+                  <div style={{ fontSize:12, fontWeight:isActive?600:400, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ev.name}</div>
+                  <div style={{ display:"flex", gap:6, marginTop:2 }}>
+                    {ev.event_date && <span style={{ fontSize:9.5, color:col, fontWeight:600 }}>{days===0?"TODAY":days>0?`${days}d`:"past"}</span>}
+                    <span style={{ fontSize:9.5, color:C.muted, textTransform:"uppercase" }}>{ev.status||"draft"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding:"6px 8px", borderTop:`1px solid ${C.border}` }}>
+            <div onClick={() => { setOpen(false); setView("overview"); }} style={{ fontSize:11, color:C.blue, cursor:"pointer", textAlign:"center" }}>View all events →</div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MainApp({ session }) {
   const [view, setView] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -1040,53 +1090,7 @@ function MainApp({ session }) {
           {activeEvent ? (
             <div>
               <div style={{ position: "relative", marginBottom: 6 }}>
-                {(() => {
-                  const [open, setOpen] = React.useState(false);
-                  const [q, setQ] = React.useState("");
-                  const filtered = events.filter(ev =>
-                    (showArchived || ev.status !== "archived") &&
-                    (!q || ev.name?.toLowerCase().includes(q.toLowerCase()))
-                  );
-                  return (
-                    <div>
-                      <button onClick={() => setOpen(p => !p)} style={{ width:"100%", background:C.card, border:`1px solid ${open?C.blue:C.border}`, borderRadius:8, color:C.text, padding:"7px 28px 7px 10px", fontSize:12, fontWeight:500, outline:"none", cursor:"pointer", textAlign:"left", position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{activeEvent.name}</span>
-                        <ChevronDown size={11} color={C.muted} style={{ flexShrink:0 }} />
-                      </button>
-                      {open && (
-                        <div style={{ position:"absolute", left:0, right:0, top:"100%", marginTop:3, background:C.card, border:`1px solid ${C.border}`, borderRadius:9, boxShadow:"0 8px 32px rgba(0,0,0,.5)", zIndex:300, overflow:"hidden" }}>
-                          <div style={{ padding:"6px 8px", borderBottom:`1px solid ${C.border}` }}>
-                            <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Search events…"
-                              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"4px 8px", fontSize:11.5, outline:"none" }} />
-                          </div>
-                          <div style={{ maxHeight:180, overflowY:"auto" }}>
-                            {filtered.length===0 && <div style={{ padding:"10px 10px", fontSize:12, color:C.muted }}>No events found</div>}
-                            {filtered.map(ev => {
-                              const days = ev.event_date ? Math.ceil((new Date(ev.event_date)-new Date())/(1000*60*60*24)) : null;
-                              const col = days===0?C.green:days>0&&days<=7?C.red:days>0?C.amber:C.muted;
-                              const isActive = ev.id === activeEvent.id;
-                              return (
-                                <div key={ev.id} onClick={() => { setActiveEvent(ev); setOpen(false); setQ(""); }}
-                                  style={{ padding:"8px 10px", cursor:"pointer", background:isActive?`${C.blue}10`:"transparent", borderLeft:`2px solid ${isActive?C.blue:"transparent"}` }}
-                                  onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background=C.raised; }}
-                                  onMouseLeave={e=>{ e.currentTarget.style.background=isActive?`${C.blue}10`:"transparent"; }}>
-                                  <div style={{ fontSize:12, fontWeight:isActive?600:400, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ev.name}</div>
-                                  <div style={{ display:"flex", gap:6, marginTop:2 }}>
-                                    {ev.event_date && <span style={{ fontSize:9.5, color:col, fontWeight:600 }}>{days===0?"TODAY":days>0?`${days}d`:"past"}</span>}
-                                    <span style={{ fontSize:9.5, color:C.muted, textTransform:"uppercase" }}>{ev.status||"draft"}</span>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                          <div style={{ padding:"6px 8px", borderTop:`1px solid ${C.border}` }}>
-                            <div onClick={() => { setOpen(false); setView("overview"); }} style={{ fontSize:11, color:C.blue, cursor:"pointer", textAlign:"center" }}>View all events →</div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
+                <EventSwitcher events={events} activeEvent={activeEvent} setActiveEvent={setActiveEvent} setView={setView} showArchived={showArchived} C={C} />
               </div>
               {events.filter(e => e.status === "archived").length > 0 && (
                 <button onClick={() => setShowArchived(p => !p)}
@@ -3074,38 +3078,21 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 9px", fontSize: 12, outline: "none", resize: "vertical", minHeight: 56, fontFamily: "inherit", boxSizing: "border-box" }}
                 />
               </div>
-              {/* Event History */}
-              {(() => {
-                const [evHistory, setEvHistory] = React.useState(null);
-                React.useEffect(() => {
-                  if (!c.id) return;
-                  supabase.from("event_contacts").select("*,events(name,event_date,location)").eq("contact_id", c.id).order("created_at", { ascending: false }).limit(10)
-                    .then(({ data }) => setEvHistory(data || []));
-                }, [c.id]);
-                if (evHistory === null) return <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>Loading history…</div>;
-                return (
-                  <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}` }}>
-                    <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:8 }}>Event History ({evHistory.length})</div>
-                    {evHistory.length === 0 && <div style={{ fontSize:12, color:C.muted }}>No event history yet</div>}
-                    {evHistory.map(ec => {
-                      const ev = ec.events || {};
-                      const statusCol = ec.status==="attended"?C.green:ec.status==="confirmed"?C.blue:ec.status==="declined"?C.red:C.muted;
-                      return (
-                        <div key={ec.id} style={{ display:"flex", alignItems:"flex-start", gap:9, padding:"7px 0", borderBottom:`1px solid ${C.border}30` }}>
-                          <div style={{ width:7, height:7, borderRadius:"50%", background:statusCol, flexShrink:0, marginTop:5 }} />
-                          <div style={{ flex:1, minWidth:0 }}>
-                            <div style={{ fontSize:12, fontWeight:500, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ev.name||"Unknown event"}</div>
-                            {ev.event_date && <div style={{ fontSize:10.5, color:C.muted }}>{new Date(ev.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</div>}
-                          </div>
-                          <span style={{ fontSize:10, padding:"1px 6px", borderRadius:3, background:`${statusCol}18`, color:statusCol, fontWeight:600, textTransform:"capitalize", flexShrink:0 }}>
-                            {ec.status||"pending"}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
+              {/* Event History - loaded via contact profile side panel */}
+              <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:6 }}>Event History</div>
+                <button onClick={async () => {
+                  const { data } = await supabase.from("event_contacts").select("*,events(name,event_date)").eq("contact_id", c.id).order("created_at",{ascending:false}).limit(10);
+                  const el = document.getElementById(`evhist-${c.id}`);
+                  if (!el) return;
+                  if (!data?.length) { el.innerHTML = '<div style="font-size:12px;color:#888">No event history yet</div>'; return; }
+                  el.innerHTML = data.map(ec => {
+                    const ev = ec.events||{}; const col = ec.status==="attended"?"#30D158":ec.status==="confirmed"?"#0A84FF":ec.status==="declined"?"#FF453A":"#888";
+                    return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px"><span style="color:#F5F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">${ev.name||"Unknown"}</span><span style="font-size:10px;color:${col};font-weight:600;text-transform:capitalize;flex-shrink:0;margin-left:8px">${ec.status||"pending"}</span></div>`;
+                  }).join("");
+                }} style={{ fontSize:11, color:C.blue, background:"transparent", border:`1px solid ${C.blue}30`, borderRadius:5, padding:"3px 10px", cursor:"pointer", marginBottom:6 }}>Load history</button>
+                <div id={`evhist-${c.id}`} />
+              </div>
             </div>
           </div>
         );
@@ -6827,45 +6814,33 @@ function SettingsView({ supabase, profile, fire }) {
       </div>
 
       {/* ── NOTIFICATION PREFERENCES ── */}
-      {(() => {
-        const [notifPrefs, setNotifPrefs] = React.useState(() => {
-          try { return JSON.parse(localStorage.getItem("evara_notif_prefs")||"{}"); } catch { return {}; }
-        });
-        const savePrefs = (updated) => {
-          setNotifPrefs(updated);
-          localStorage.setItem("evara_notif_prefs", JSON.stringify(updated));
-          fire("Notification preferences saved");
-        };
-        const toggle = (key) => savePrefs({ ...notifPrefs, [key]: !notifPrefs[key] });
-        const PREFS = [
-          { key:"event_countdown", label:"Event countdown alerts", desc:"7-day and 3-day reminders before an event", default:true },
-          { key:"scheduled_email", label:"Scheduled email alerts", desc:"24h warning before a scheduled email goes out", default:true },
-          { key:"unsub_alerts", label:"Unsubscribe alerts", desc:"Notify when contacts unsubscribe", default:true },
-          { key:"open_rate_alerts", label:"Open rate milestones", desc:"Alert when open rate drops below 20% or exceeds 40%", default:false },
-          { key:"post_event_reminder", label:"Post-event prompts", desc:"Remind to send Thank You email after event day", default:true },
-        ];
-        return (
-          <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:20, marginBottom:14 }}>
-            <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:16 }}>Notification Preferences</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-              {PREFS.map(p => {
-                const isOn = notifPrefs[p.key] !== undefined ? notifPrefs[p.key] : p.default;
-                return (
-                  <div key={p.key} style={{ display:"flex", alignItems:"center", gap:14 }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:500, color:C.text }}>{p.label}</div>
-                      <div style={{ fontSize:11.5, color:C.muted, marginTop:2 }}>{p.desc}</div>
-                    </div>
-                    <button onClick={() => toggle(p.key)} style={{ width:40, height:22, borderRadius:11, border:"none", background:isOn?C.blue:C.border, position:"relative", cursor:"pointer", flexShrink:0, transition:"background .2s" }}>
-                      <div style={{ position:"absolute", top:3, left:isOn?20:3, width:16, height:16, borderRadius:"50%", background:"#fff", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,.3)" }} />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:20, marginBottom:14 }}>
+        <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:16 }}>Notification Preferences</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {[
+            { key:"event_countdown", label:"Event countdown alerts", desc:"7-day and 3-day reminders before an event" },
+            { key:"scheduled_email", label:"Scheduled email alerts", desc:"24h warning before a scheduled email goes out" },
+            { key:"unsub_alerts", label:"Unsubscribe alerts", desc:"Notify when contacts unsubscribe" },
+            { key:"post_event_reminder", label:"Post-event prompts", desc:"Remind to send Thank You email after event day" },
+          ].map(p => {
+            const isOn = (() => { try { return JSON.parse(localStorage.getItem("evara_notif_prefs")||"{}")[p.key] !== false; } catch { return true; } })();
+            return (
+              <div key={p.key} style={{ display:"flex", alignItems:"center", gap:14 }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:13, fontWeight:500, color:C.text }}>{p.label}</div>
+                  <div style={{ fontSize:11.5, color:C.muted, marginTop:2 }}>{p.desc}</div>
+                </div>
+                <button onClick={() => {
+                  try { const prefs = JSON.parse(localStorage.getItem("evara_notif_prefs")||"{}"); prefs[p.key] = !isOn; localStorage.setItem("evara_notif_prefs", JSON.stringify(prefs)); } catch {}
+                  fire(isOn ? `${p.label} disabled` : `${p.label} enabled`);
+                }} style={{ width:40, height:22, borderRadius:11, border:"none", background:isOn?C.blue:C.border, position:"relative", cursor:"pointer", flexShrink:0, transition:"background .2s" }}>
+                  <div style={{ position:"absolute", top:3, left:isOn?20:3, width:16, height:16, borderRadius:"50%", background:"#fff", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,.3)" }} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* ── AI BRAND VOICE ── */}
       {bv !== null && (
@@ -7930,67 +7905,45 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
             </div>
           )}
 
-          {/* Cross-event comparison */}
-          {(events||[]).filter(e=>e.id!==activeEvent?.id).length > 0 && (() => {
-            const [compData, setCompData] = React.useState(null);
-            const [compLoading, setCompLoading] = React.useState(false);
-            const [showComp, setShowComp] = React.useState(false);
-            const loadComp = async () => {
-              setCompLoading(true);
-              const others = (events||[]).filter(e=>e.id!==activeEvent?.id).slice(0,5);
-              const results = await Promise.all([activeEvent, ...others].map(async ev => {
-                const [{ data: m }, { data: ecs }] = await Promise.all([
-                  supabase.from("event_summary").select("total_sent,total_opened,total_attended").eq("event_id", ev.id).maybeSingle(),
-                  supabase.from("event_contacts").select("status").eq("event_id", ev.id),
-                ]);
-                const attended = (ecs||[]).filter(e=>e.status==="attended").length;
-                const confirmed = (ecs||[]).filter(e=>e.status==="confirmed"||e.status==="attended").length;
-                return { id:ev.id, name:ev.name.slice(0,22), sent:m?.total_sent||0, opened:m?.total_opened||0, attended, confirmed, openRate: m?.total_sent>0?Math.round((m.total_opened/m.total_sent)*100):0, showRate: confirmed>0?Math.round((attended/confirmed)*100):0 };
-              }));
-              setCompData(results);
-              setCompLoading(false);
-            };
-            return (
-              <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"14px 18px", marginBottom:12 }}>
-                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: showComp?14:0 }}>
-                  <div style={{ fontSize:13, fontWeight:500, color:C.text }}>📊 Cross-Event Comparison</div>
-                  <button onClick={() => { if (!showComp && !compData) loadComp(); setShowComp(p=>!p); }} style={{ fontSize:11, padding:"4px 12px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                    {showComp?"Hide":"Compare events"}
-                  </button>
-                </div>
-                {showComp && (
-                  compLoading ? <div style={{ padding:"20px 0", textAlign:"center", color:C.muted, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Spin />Loading comparison…</div>
-                  : compData && (
-                    <div style={{ overflowX:"auto" }}>
-                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                        <thead>
-                          <tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                            {["Event","Sent","Open rate","Confirmed","Attended","Show rate"].map(h => (
-                              <th key={h} style={{ padding:"7px 10px", textAlign:h==="Event"?"left":"center", color:C.muted, fontWeight:600, fontSize:10.5, textTransform:"uppercase", letterSpacing:"0.5px" }}>{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {compData.map((ev, i) => (
-                            <tr key={ev.id} style={{ borderBottom:`1px solid ${C.border}`, background: i===0?`${C.blue}06`:"transparent" }}>
-                              <td style={{ padding:"9px 10px", color:C.text, fontWeight:i===0?600:400 }}>
-                                {i===0&&<span style={{ fontSize:9, color:C.blue, fontWeight:700, marginRight:4 }}>ACTIVE</span>}{ev.name}
-                              </td>
-                              <td style={{ padding:"9px 10px", textAlign:"center", color:C.sec }}>{ev.sent||"—"}</td>
-                              <td style={{ padding:"9px 10px", textAlign:"center", color:ev.openRate>=25?C.green:ev.openRate>0?C.amber:C.muted, fontWeight:600 }}>{ev.sent>0?`${ev.openRate}%`:"—"}</td>
-                              <td style={{ padding:"9px 10px", textAlign:"center", color:C.sec }}>{ev.confirmed||"—"}</td>
-                              <td style={{ padding:"9px 10px", textAlign:"center", color:C.sec }}>{ev.attended||"—"}</td>
-                              <td style={{ padding:"9px 10px", textAlign:"center", color:ev.showRate>=70?C.green:ev.showRate>0?C.amber:C.muted, fontWeight:600 }}>{ev.confirmed>0?`${ev.showRate}%`:"—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )
-                )}
+          {/* Cross-event comparison - toggle button, data fetched imperatively */}
+          {(events||[]).filter(e=>e.id!==activeEvent?.id).length > 0 && (
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"14px 18px", marginBottom:12 }}>
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ fontSize:13, fontWeight:500, color:C.text }}>📊 Cross-Event Comparison</div>
+                <button onClick={async (e) => {
+                  const btn = e.currentTarget;
+                  const container = btn.parentElement.nextElementSibling;
+                  if (container.childNodes.length > 0) { container.innerHTML = ""; btn.textContent = "Compare events"; return; }
+                  btn.textContent = "Loading…";
+                  const evList = [activeEvent, ...(events||[]).filter(ev=>ev.id!==activeEvent?.id).slice(0,4)];
+                  const rows = await Promise.all(evList.map(async ev => {
+                    const [{ data: m }, { data: ecs }] = await Promise.all([
+                      supabase.from("event_summary").select("total_sent,total_opened").eq("event_id", ev.id).maybeSingle(),
+                      supabase.from("event_contacts").select("status").eq("event_id", ev.id),
+                    ]);
+                    const att = (ecs||[]).filter(e=>e.status==="attended").length;
+                    const conf = (ecs||[]).filter(e=>e.status==="confirmed"||e.status==="attended").length;
+                    const openRate = m?.total_sent>0?Math.round((m.total_opened/m.total_sent)*100):0;
+                    return { name:ev.name.slice(0,22), sent:m?.total_sent||0, openRate, conf, att, showRate:conf>0?Math.round(att/conf*100):0, isActive:ev.id===activeEvent?.id };
+                  }));
+                  container.innerHTML = `<div style="overflow-x:auto;margin-top:12px"><table style="width:100%;border-collapse:collapse;font-size:12px">
+                    <thead><tr style="border-bottom:1px solid rgba(255,255,255,0.08)">${["Event","Sent","Open rate","Confirmed","Attended","Show rate"].map(h=>`<th style="padding:7px 10px;text-align:${h==="Event"?"left":"center"};color:#888;font-weight:600;font-size:10.5px;text-transform:uppercase">${h}</th>`).join("")}</tr></thead>
+                    <tbody>${rows.map((r,i)=>`<tr style="border-bottom:1px solid rgba(255,255,255,0.05);background:${i===0?"rgba(10,132,255,0.06)":"transparent"}">
+                      <td style="padding:9px 10px;color:#F5F5F7;font-weight:${i===0?"600":"400"}">${i===0?"<span style='font-size:9px;color:#0A84FF;font-weight:700;margin-right:4px'>ACTIVE</span>":""}${r.name}</td>
+                      <td style="padding:9px 10px;text-align:center;color:#999">${r.sent||"—"}</td>
+                      <td style="padding:9px 10px;text-align:center;color:${r.openRate>=25?"#30D158":r.openRate>0?"#FF9F0A":"#888"};font-weight:600">${r.sent>0?r.openRate+"%":"—"}</td>
+                      <td style="padding:9px 10px;text-align:center;color:#999">${r.conf||"—"}</td>
+                      <td style="padding:9px 10px;text-align:center;color:#999">${r.att||"—"}</td>
+                      <td style="padding:9px 10px;text-align:center;color:${r.showRate>=70?"#30D158":r.showRate>0?"#FF9F0A":"#888"};font-weight:600">${r.conf>0?r.showRate+"%":"—"}</td>
+                    </tr>`).join("")}</tbody></table></div>`;
+                  btn.textContent = "Hide";
+                }} style={{ fontSize:11, padding:"4px 12px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                  Compare events
+                </button>
               </div>
-            );
-          })()}
+              <div />
+            </div>
+          )}
         </>
       )}
     </div>
