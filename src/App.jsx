@@ -7383,7 +7383,7 @@ Return ONLY valid JSON with this structure:
 }
 
 // ─── ANALYTICS VIEW ───────────────────────────────────────────
-function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
+function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [drillCam, setDrillCam] = useState(null); // campaign being drilled into
@@ -7738,6 +7738,68 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
               })}
             </div>
           )}
+
+          {/* Cross-event comparison */}
+          {(events||[]).filter(e=>e.id!==activeEvent?.id).length > 0 && (() => {
+            const [compData, setCompData] = React.useState(null);
+            const [compLoading, setCompLoading] = React.useState(false);
+            const [showComp, setShowComp] = React.useState(false);
+            const loadComp = async () => {
+              setCompLoading(true);
+              const others = (events||[]).filter(e=>e.id!==activeEvent?.id).slice(0,5);
+              const results = await Promise.all([activeEvent, ...others].map(async ev => {
+                const [{ data: m }, { data: ecs }] = await Promise.all([
+                  supabase.from("event_summary").select("total_sent,total_opened,total_attended").eq("event_id", ev.id).maybeSingle(),
+                  supabase.from("event_contacts").select("status").eq("event_id", ev.id),
+                ]);
+                const attended = (ecs||[]).filter(e=>e.status==="attended").length;
+                const confirmed = (ecs||[]).filter(e=>e.status==="confirmed"||e.status==="attended").length;
+                return { id:ev.id, name:ev.name.slice(0,22), sent:m?.total_sent||0, opened:m?.total_opened||0, attended, confirmed, openRate: m?.total_sent>0?Math.round((m.total_opened/m.total_sent)*100):0, showRate: confirmed>0?Math.round((attended/confirmed)*100):0 };
+              }));
+              setCompData(results);
+              setCompLoading(false);
+            };
+            return (
+              <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"14px 18px", marginBottom:12 }}>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: showComp?14:0 }}>
+                  <div style={{ fontSize:13, fontWeight:500, color:C.text }}>📊 Cross-Event Comparison</div>
+                  <button onClick={() => { if (!showComp && !compData) loadComp(); setShowComp(p=>!p); }} style={{ fontSize:11, padding:"4px 12px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                    {showComp?"Hide":"Compare events"}
+                  </button>
+                </div>
+                {showComp && (
+                  compLoading ? <div style={{ padding:"20px 0", textAlign:"center", color:C.muted, display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}><Spin />Loading comparison…</div>
+                  : compData && (
+                    <div style={{ overflowX:"auto" }}>
+                      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                        <thead>
+                          <tr style={{ borderBottom:`1px solid ${C.border}` }}>
+                            {["Event","Sent","Open rate","Confirmed","Attended","Show rate"].map(h => (
+                              <th key={h} style={{ padding:"7px 10px", textAlign:h==="Event"?"left":"center", color:C.muted, fontWeight:600, fontSize:10.5, textTransform:"uppercase", letterSpacing:"0.5px" }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {compData.map((ev, i) => (
+                            <tr key={ev.id} style={{ borderBottom:`1px solid ${C.border}`, background: i===0?`${C.blue}06`:"transparent" }}>
+                              <td style={{ padding:"9px 10px", color:C.text, fontWeight:i===0?600:400 }}>
+                                {i===0&&<span style={{ fontSize:9, color:C.blue, fontWeight:700, marginRight:4 }}>ACTIVE</span>}{ev.name}
+                              </td>
+                              <td style={{ padding:"9px 10px", textAlign:"center", color:C.sec }}>{ev.sent||"—"}</td>
+                              <td style={{ padding:"9px 10px", textAlign:"center", color:ev.openRate>=25?C.green:ev.openRate>0?C.amber:C.muted, fontWeight:600 }}>{ev.sent>0?`${ev.openRate}%`:"—"}</td>
+                              <td style={{ padding:"9px 10px", textAlign:"center", color:C.sec }}>{ev.confirmed||"—"}</td>
+                              <td style={{ padding:"9px 10px", textAlign:"center", color:C.sec }}>{ev.attended||"—"}</td>
+                              <td style={{ padding:"9px 10px", textAlign:"center", color:ev.showRate>=70?C.green:ev.showRate>0?C.amber:C.muted, fontWeight:600 }}>{ev.confirmed>0?`${ev.showRate}%`:"—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )
+                )}
+              </div>
+            );
+          })()}
         </>
       )}
     </div>
