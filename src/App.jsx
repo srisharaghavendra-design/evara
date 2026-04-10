@@ -391,6 +391,255 @@ export default function App() {
   return <MainApp session={session} />;
 }
 
+// ─── ONBOARDING FLOW ─────────────────────────────────────────
+function OnboardingFlow({ profile, supabase, onComplete }) {
+  const [step, setStep] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+
+  // Step 1 — Company
+  const [companyName, setCompanyName] = useState(profile?.companies?.name || "");
+  const [industry, setIndustry] = useState("");
+
+  // Step 2 — Brand
+  const [fromName, setFromName] = useState(profile?.companies?.from_name || profile?.full_name || "");
+  const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
+
+  // Step 3 — First Event
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [eventType, setEventType] = useState("conference");
+
+  const INDUSTRIES = ["Technology","Finance & Banking","Healthcare","Real Estate","Education","Professional Services","Retail & E-commerce","Media & Entertainment","Not-for-profit","Government","Other"];
+  const EVENT_TYPES = ["conference","seminar","networking","workshop","gala","product launch","webinar","training","awards","other"];
+  const COLORS = ["#0A84FF","#30D158","#FF453A","#FF9F0A","#BF5AF2","#FF375F","#5AC8FA","#FFD60A","#FF6B35","#00C7BE"];
+
+  const totalSteps = 4;
+
+  const handleNext = async () => {
+    if (step === 1) {
+      if (!companyName.trim()) return;
+      setSaving(true);
+      await supabase.from("companies").update({ name: companyName.trim(), industry }).eq("id", profile.company_id);
+      setSaving(false);
+      setStep(2);
+    } else if (step === 2) {
+      setSaving(true);
+      await supabase.from("companies").update({ from_name: fromName, brand_color: brandColor }).eq("id", profile.company_id);
+      setSaving(false);
+      setStep(3);
+    } else if (step === 3) {
+      if (!eventName.trim()) { setStep(4); return; }
+      setCreatingEvent(true);
+      const shareToken = Math.random().toString(36).substring(2,14) + Date.now().toString(36);
+      await supabase.from("events").insert({
+        name: eventName.trim(),
+        event_date: eventDate || null,
+        event_type: eventType,
+        company_id: profile.company_id,
+        status: "draft",
+        created_by: profile.id,
+        share_token: shareToken,
+      });
+      setCreatingEvent(false);
+      setStep(4);
+    } else if (step === 4) {
+      setSaving(true);
+      await supabase.from("companies").update({ onboarding_completed: true }).eq("id", profile.company_id);
+      setSaving(false);
+      onComplete();
+    }
+  };
+
+  const progress = ((step - 1) / (totalSteps - 1)) * 100;
+
+  return (
+    <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:24 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+
+      <div style={{ width:"100%", maxWidth:520, animation:"fadeUp .35s ease" }}>
+        {/* Logo + progress */}
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:40 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ width:28, height:28, borderRadius:7, background:C.blue, display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
+            <span style={{ fontSize:17, fontWeight:700, letterSpacing:"-0.4px" }}>evara</span>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <div style={{ width:120, height:3, background:C.border, borderRadius:2, overflow:"hidden" }}>
+              <div style={{ width:`${progress}%`, height:"100%", background:C.blue, borderRadius:2, transition:"width .4s ease" }} />
+            </div>
+            <span style={{ fontSize:12, color:C.muted }}>{step} / {totalSteps}</span>
+          </div>
+        </div>
+
+        {/* Step 1 — Company */}
+        {step === 1 && (
+          <div key="s1" style={{ animation:"fadeUp .3s ease" }}>
+            <div style={{ marginBottom:8 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 1</span>
+            </div>
+            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>Welcome to evara 👋</h1>
+            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.5 }}>Let's get your account set up in 2 minutes. First, tell us about your company.</p>
+
+            <div style={{ marginBottom:18 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Company name *</label>
+              <input
+                value={companyName}
+                onChange={e => setCompanyName(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleNext()}
+                placeholder="Acme Events Co."
+                autoFocus
+                style={{ width:"100%", background:C.card, border:`1.5px solid ${companyName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"13px 16px", fontSize:15, outline:"none", transition:"border .2s" }}
+              />
+            </div>
+
+            <div style={{ marginBottom:36 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Industry</label>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                {INDUSTRIES.map(ind => (
+                  <button key={ind} onClick={() => setIndustry(ind === industry ? "" : ind)} style={{ padding:"7px 14px", borderRadius:20, border:`1.5px solid ${industry === ind ? C.blue : C.border}`, background: industry === ind ? `${C.blue}20` : C.card, color: industry === ind ? C.blue : C.sec, fontSize:13, fontWeight:500, transition:"all .15s" }}>{ind}</button>
+                ))}
+              </div>
+            </div>
+
+            <button onClick={handleNext} disabled={!companyName.trim() || saving} style={{ width:"100%", padding:"14px", borderRadius:10, border:"none", background: companyName.trim() ? C.blue : C.border, color:"#fff", fontSize:15, fontWeight:600, transition:"all .2s", opacity: saving ? 0.7 : 1 }}>
+              {saving ? "Saving…" : "Continue →"}
+            </button>
+          </div>
+        )}
+
+        {/* Step 2 — Brand */}
+        {step === 2 && (
+          <div key="s2" style={{ animation:"fadeUp .3s ease" }}>
+            <div style={{ marginBottom:8 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 2</span>
+            </div>
+            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>Brand it your way 🎨</h1>
+            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.5 }}>Your sender name appears in every email. Pick a colour that represents your brand.</p>
+
+            <div style={{ marginBottom:18 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Sender name (appears as "From" in emails)</label>
+              <input
+                value={fromName}
+                onChange={e => setFromName(e.target.value)}
+                placeholder="Events Team at Acme"
+                autoFocus
+                style={{ width:"100%", background:C.card, border:`1.5px solid ${fromName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"13px 16px", fontSize:15, outline:"none", transition:"border .2s" }}
+              />
+            </div>
+
+            <div style={{ marginBottom:36 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Brand colour</label>
+              <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:14 }}>
+                {COLORS.map(col => (
+                  <button key={col} onClick={() => setBrandColor(col)} style={{ width:36, height:36, borderRadius:8, background:col, border: brandColor === col ? "3px solid #fff" : "3px solid transparent", outline: brandColor === col ? `2px solid ${col}` : "none", transition:"all .15s", boxShadow: brandColor === col ? `0 0 0 2px ${col}60` : "none" }} />
+                ))}
+              </div>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:36, height:36, borderRadius:8, background:brandColor, flexShrink:0 }} />
+                <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} style={{ width:44, height:36, borderRadius:8, border:`1px solid ${C.border}`, background:C.card, cursor:"pointer", padding:2 }} />
+                <input value={brandColor} onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setBrandColor(e.target.value); }} style={{ flex:1, background:C.card, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"8px 12px", fontSize:14, outline:"none" }} />
+                <div style={{ fontSize:13, color:C.sec, background:C.card, border:`1px solid ${C.border}`, borderRadius:8, padding:"8px 14px", letterSpacing:"-0.2px" }}>Preview</div>
+                <div style={{ width:28, height:12, borderRadius:6, background:brandColor }} />
+              </div>
+            </div>
+
+            {/* Preview card */}
+            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:16, marginBottom:24 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:36, height:36, borderRadius:8, background:brandColor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#fff" }}>{(fromName||"E").charAt(0).toUpperCase()}</div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600 }}>{fromName || "Your Sender Name"}</div>
+                  <div style={{ fontSize:11, color:C.muted }}>hello@evarahq.com · Email preview</div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setStep(1)} style={{ padding:"14px 20px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sec, fontSize:15, fontWeight:500 }}>← Back</button>
+              <button onClick={handleNext} disabled={saving} style={{ flex:1, padding:"14px", borderRadius:10, border:"none", background:C.blue, color:"#fff", fontSize:15, fontWeight:600, opacity:saving?0.7:1 }}>
+                {saving ? "Saving…" : "Continue →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — First Event */}
+        {step === 3 && (
+          <div key="s3" style={{ animation:"fadeUp .3s ease" }}>
+            <div style={{ marginBottom:8 }}>
+              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 3</span>
+            </div>
+            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>Create your first event 🎪</h1>
+            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.5 }}>Add your upcoming event. You can always edit details or skip this now.</p>
+
+            <div style={{ marginBottom:18 }}>
+              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Event name</label>
+              <input
+                value={eventName}
+                onChange={e => setEventName(e.target.value)}
+                placeholder="Annual Client Gala 2025"
+                autoFocus
+                style={{ width:"100%", background:C.card, border:`1.5px solid ${eventName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"13px 16px", fontSize:15, outline:"none", transition:"border .2s" }}
+              />
+            </div>
+
+            <div style={{ display:"flex", gap:12, marginBottom:18 }}>
+              <div style={{ flex:1 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Event date</label>
+                <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:eventDate ? C.text : C.muted, padding:"12px 14px", fontSize:14, outline:"none" }} />
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Event type</label>
+                <select value={eventType} onChange={e => setEventType(e.target.value)} style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"12px 14px", fontSize:14, outline:"none", appearance:"none" }}>
+                  {EVENT_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+              <button onClick={() => setStep(2)} style={{ padding:"14px 20px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sec, fontSize:15, fontWeight:500 }}>← Back</button>
+              <button onClick={handleNext} disabled={creatingEvent} style={{ flex:1, padding:"14px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:15, fontWeight:600, opacity:creatingEvent?0.7:1 }}>
+                {creatingEvent ? "Creating…" : eventName.trim() ? "Create Event →" : "Skip for now →"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Done */}
+        {step === 4 && (
+          <div key="s4" style={{ animation:"fadeUp .3s ease", textAlign:"center" }}>
+            <div style={{ width:72, height:72, borderRadius:20, background:`${C.green}20`, border:`2px solid ${C.green}40`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:32 }}>🎉</div>
+            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:10 }}>You're all set!</h1>
+            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.6 }}>
+              {companyName} is live on evara. Here's what you can do first:
+            </p>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:32, textAlign:"left" }}>
+              {[
+                { icon:"✉️", title:"Build an eDM", desc:"AI writes your email from a sentence", view:"edm" },
+                { icon:"👥", title:"Import contacts", desc:"Upload your guest list via CSV", view:"contacts" },
+                { icon:"📋", title:"Create a form", desc:"RSVP form live in 60 seconds", view:"forms" },
+                { icon:"📊", title:"View analytics", desc:"Track opens, clicks & registrations", view:"analytics" },
+              ].map(item => (
+                <div key={item.view} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:16 }}>
+                  <div style={{ fontSize:22, marginBottom:8 }}>{item.icon}</div>
+                  <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>{item.title}</div>
+                  <div style={{ fontSize:12, color:C.muted, lineHeight:1.4 }}>{item.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={handleNext} disabled={saving} style={{ width:"100%", padding:"15px", borderRadius:10, border:"none", background:C.blue, color:"#fff", fontSize:15, fontWeight:600, boxShadow:`0 0 24px ${C.blue}40` }}>
+              {saving ? "Loading…" : "Enter evara →"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Splash() {
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, fontFamily: "Outfit,sans-serif" }}>
@@ -582,6 +831,7 @@ function MainApp({ session }) {
     setNotifCount(p => p + 1);
   };
   const [profile, setProfile] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [events, setEvents] = useState([]);
   const [activeEvent, setActiveEvent] = useState(null);
   const [toast, setToast] = useState(null);
@@ -621,6 +871,10 @@ function MainApp({ session }) {
       }
       
       setProfile(prof);
+      // Show onboarding for new users (company not yet onboarded)
+      if (prof?.companies && !prof.companies.onboarding_completed) {
+        setShowOnboarding(true);
+      }
       const { data: evts } = await supabase.from("events").select("*").eq("company_id", prof?.company_id).order("event_date", { ascending: true });
       setEvents(evts || []);
       if (evts?.length) setActiveEvent(evts[0]);
@@ -668,6 +922,19 @@ function MainApp({ session }) {
     setNewEventExtra({ event_date: "", event_time: "", location: "" });
     setShowNewEvent(false); setNewEventName(""); setNewEventDate("");
   };
+
+  // Show onboarding for new users
+  if (showOnboarding && profile) {
+    return <OnboardingFlow profile={profile} supabase={supabase} onComplete={() => {
+      setShowOnboarding(false);
+      // Reload events after onboarding (user may have created one)
+      supabase.from("events").select("*").eq("company_id", profile.company_id).order("event_date", { ascending: true })
+        .then(({ data: evts }) => { setEvents(evts || []); if (evts?.length) setActiveEvent(evts[0]); });
+      // Reload profile with updated company
+      supabase.from("profiles").select("*,companies(*)").eq("id", session.user.id).single()
+        .then(({ data: prof }) => { if (prof) setProfile(prof); });
+    }} />;
+  }
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, fontFamily: "Outfit,sans-serif", overflow: "hidden" }}>
