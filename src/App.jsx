@@ -4629,6 +4629,10 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   const [contactSort, setContactSort] = useState("newest"); // newest | name | company
   const [tagFilter, setTagFilter] = useState(""); // filter by specific tag
   const [selContacts, setSelContacts] = useState(new Set());
+  const [showBulkEmail, setShowBulkEmail] = useState(false);
+  const [bulkSubject, setBulkSubject] = useState("");
+  const [bulkBody, setBulkBody] = useState("");
+  const [bulkSending, setBulkSending] = useState(false);
   const toggleSel = (id) => setSelContacts(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const filtered = contacts.filter(c => {
     if (search && !(c.email + (c.first_name||"") + (c.last_name||"") + (c.company_name||"")).toLowerCase().includes(search.toLowerCase())) return false;
@@ -4917,6 +4921,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               a.click();
               fire(`✅ ${toExport.length} contacts exported`);
             }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>⬇ Export CSV</button>
+            <button onClick={() => setShowBulkEmail(true)}
+              style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.blue}40`, background:C.blue+"10", color:C.blue, cursor:"pointer", fontWeight:600 }}>📧 Email selected</button>
             <button onClick={() => setSelContacts(new Set())} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", marginLeft:"auto" }}>✕ Clear</button>
           </div>
         )}
@@ -5158,6 +5164,73 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK EMAIL MODAL ── */}
+      {showBulkEmail && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}
+          onClick={() => setShowBulkEmail(false)}>
+          <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, width:540, maxHeight:"88vh", overflowY:"auto", animation:"fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"18px 22px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <h2 style={{ fontSize:16, fontWeight:700, color:C.text, margin:0 }}>📧 Email {selContacts.size} contacts</h2>
+                <p style={{ fontSize:11, color:C.muted, margin:"3px 0 0" }}>
+                  {[...selContacts].slice(0,3).map(id => filtered.find(c=>c.id===id)?.email).filter(Boolean).join(", ")}
+                  {selContacts.size > 3 ? ` +${selContacts.size-3} more` : ""}
+                </p>
+              </div>
+              <button onClick={() => setShowBulkEmail(false)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ padding:"18px 22px" }}>
+              <div style={{ marginBottom:14 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Subject</label>
+                <input value={bulkSubject} onChange={e => setBulkSubject(e.target.value)} autoFocus
+                  placeholder={`Update from ${profile?.companies?.name || "us"}`}
+                  style={{ width:"100%", background:C.bg, border:`1.5px solid ${bulkSubject?C.blue:C.border}`, borderRadius:8, color:C.text, padding:"10px 13px", fontSize:13.5, outline:"none", boxSizing:"border-box" }} />
+              </div>
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Message</label>
+                <textarea value={bulkBody} onChange={e => setBulkBody(e.target.value)} rows={8}
+                  placeholder={"Hi {first_name},\n\nWrite your message here…\n\nBest regards,\n" + (profile?.companies?.name || "The Team")}
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 13px", fontSize:13, outline:"none", resize:"vertical", lineHeight:1.6, boxSizing:"border-box", fontFamily:"Outfit,sans-serif" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                <div style={{ fontSize:11, color:C.muted, marginTop:5 }}>Use <code style={{ background:C.raised, padding:"1px 5px", borderRadius:3 }}>{"{first_name}"}</code> for personalisation — it auto-fills each recipient's name.</div>
+              </div>
+              <div style={{ background:C.raised, borderRadius:8, padding:"10px 13px", marginBottom:16, fontSize:12, color:C.sec, lineHeight:1.6 }}>
+                <strong style={{ color:C.text }}>Preview:</strong> "{bulkSubject || "(no subject)"}" → Hi {filtered.find(c => selContacts.has(c.id))?.first_name || "John"},…
+              </div>
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={() => setShowBulkEmail(false)} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+                <button onClick={async () => {
+                  if (!bulkSubject.trim() || !bulkBody.trim()) { fire("Subject and message required","err"); return; }
+                  const ids = [...selContacts];
+                  const toSend = filtered.filter(c => ids.includes(c.id) && !c.unsubscribed);
+                  if (!toSend.length) { fire("No sendable contacts (all unsubscribed?)","err"); return; }
+                  fire(`📤 Sending to ${toSend.length} contacts…`);
+                  setShowBulkEmail(false);
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const recipients = toSend.map(c => ({ email: c.email, first_name: c.first_name || "", last_name: c.last_name || "" }));
+                    const htmlContent = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.7;color:#111;max-width:600px;margin:0 auto;padding:32px 24px">${
+                      bulkBody.split("\n").map(line => line ? `<p style="margin:0 0 12px">${line.replace(/{first_name}/g,'[first_name]')}</p>` : '<br/>').join("")
+                    }<hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="font-size:11px;color:#999">You received this because you're a contact of ${profile?.companies?.name||"our organisation"}. <a href="{{unsubscribeUrl}}">Unsubscribe</a></p></div>`;
+                    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                      method:"POST",
+                      headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                      body: JSON.stringify({ to: recipients, subject: bulkSubject, htmlContent, companyId: profile?.company_id, personalise: true })
+                    });
+                    const d = await res.json();
+                    fire(d.sent > 0 ? `✅ Sent to ${d.sent} contacts!` : `Failed: ${d.error||"check SendGrid"}`, d.sent>0?"ok":"err");
+                    setBulkSubject(""); setBulkBody(""); setSelContacts(new Set());
+                  } catch(err) { fire("Send failed: "+err.message,"err"); }
+                }} disabled={!bulkSubject.trim()||!bulkBody.trim()} style={{ flex:2, padding:11, background:bulkSubject.trim()&&bulkBody.trim()?C.blue:C.border, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:600, cursor:bulkSubject.trim()&&bulkBody.trim()?"pointer":"default", display:"flex", alignItems:"center", justifyContent:"center", gap:8 }}>
+                  📧 Send to {selContacts.size} contact{selContacts.size!==1?"s":""}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
