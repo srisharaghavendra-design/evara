@@ -7662,8 +7662,9 @@ Return ONLY valid JSON with this structure:
                 const text = d.post || d.caption || "";
                 const tags = (d.hashtags||[]).map(t=>`#${t.replace(/^#/,"")}`).join(" ");
                 const full = `${text}\n\n${tags}`;
-                const charLimit = plat.id==="twitter"?280:plat.id==="instagram"?2200:null;
-                const overLimit = charLimit && text.length > charLimit;
+                const charLimit = plat.id==="twitter"?280:plat.id==="instagram"?2200:plat.id==="linkedin"?3000:null;
+                const fullLength = full.length;
+                const overLimit = charLimit && fullLength > charLimit;
                 const shareUrl = plat.id==="linkedin"
                   ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`
                   : plat.id==="twitter"
@@ -7675,7 +7676,7 @@ Return ONLY valid JSON with this structure:
                       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                         <span style={{ fontSize:16 }}>{plat.emoji}</span>
                         <span style={{ fontSize:13.5, fontWeight:700, color:C.text }}>{plat.label}</span>
-                        {charLimit && <span style={{ fontSize:10.5, color:overLimit?C.red:C.muted, fontWeight:overLimit?700:400 }}>{text.length}/{charLimit}</span>}
+                        {charLimit && <span style={{ fontSize:10.5, color:overLimit?C.red:fullLength>charLimit*0.9?C.amber:C.muted, fontWeight:overLimit?700:400 }}>{fullLength}/{charLimit}</span>}
                       </div>
                       <div style={{ display:"flex", gap:6 }}>
                         {shareUrl && <a href={shareUrl} target="_blank" rel="noopener" style={{ fontSize:11.5, padding:"4px 12px", borderRadius:5, background:`${plat.color}15`, color:plat.color, border:`1px solid ${plat.color}30`, fontWeight:600 }}>Share ↗</a>}
