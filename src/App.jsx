@@ -4207,8 +4207,46 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
+  const [importPreview, setImportPreview] = useState(null); // parsed rows to preview
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [mergingDup, setMergingDup] = useState(false);
+
+  const PERSONAL_DOMAINS = ["gmail","yahoo","hotmail","outlook","icloud","rediffmail","aol","protonmail","zoho","live","msn","me","mac","ymail","googlemail"];
+  const parseImportText = (text) => {
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const rows = [];
+    const isCSV = lines.length > 1 && lines[0].includes(",");
+    if (isCSV) {
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/['"]/g,""));
+      const col = (kws) => headers.findIndex(h => kws.some(k => h.includes(k)));
+      const emailCol = col(["email","e-mail"]), firstCol = col(["first","given"]), lastCol = col(["last","surname","family"]);
+      const phoneCol = col(["phone","mobile","tel"]), companyCol = col(["company","org","organisation","organization"]), titleCol = col(["title","role","position","job"]);
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map(c => c.trim().replace(/^["']|["']$/g,""));
+        const email = emailCol >= 0 ? cols[emailCol]?.toLowerCase() : "";
+        if (!email?.includes("@")) continue;
+        const domain = email.split("@")[1]?.split(".")[0];
+        const nameRaw = firstCol >= 0 ? cols[firstCol] : "";
+        const nameParts = nameRaw.split(" ");
+        rows.push({ email, first_name: nameParts[0]||"", last_name: lastCol>=0?cols[lastCol]:(nameParts[1]||""), phone: phoneCol>=0?cols[phoneCol]:"", company_name: companyCol>=0?cols[companyCol]:"", job_title: titleCol>=0?cols[titleCol]:"", _personal: PERSONAL_DOMAINS.includes(domain) });
+      }
+    } else {
+      for (const raw of lines) {
+        const angleMatch = raw.match(/^(.+?)<(.+@.+)>$/);
+        if (angleMatch) {
+          const nameParts = angleMatch[1].trim().split(" ");
+          const email = angleMatch[2].trim().toLowerCase();
+          const domain = email.split("@")[1]?.split(".")[0];
+          rows.push({ email, first_name: nameParts[0]||"", last_name: nameParts[1]||"", phone:"", company_name:"", job_title:"", _personal: PERSONAL_DOMAINS.includes(domain) });
+        } else if (raw.includes("@")) {
+          const email = raw.toLowerCase().trim();
+          const domain = email.split("@")[1]?.split(".")[0];
+          rows.push({ email, first_name:"", last_name:"", phone:"", company_name:"", job_title:"", _personal: PERSONAL_DOMAINS.includes(domain) });
+        }
+      }
+    }
+    return rows;
+  };
 
   // Find duplicates: same email or same name+company
   const duplicates = (() => {
@@ -4493,7 +4531,23 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           </button>
         ))}
       </div>
-      <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+      <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+        {/* Stats bar */}
+        {contacts.length > 0 && (
+          <div style={{ display:"flex", gap:0, borderBottom:`1px solid ${C.border}`, background:C.raised }}>
+            {[
+              { label:"Total", val:contacts.length, color:C.text },
+              { label:"Active", val:contacts.filter(c=>!c.unsubscribed).length, color:C.green },
+              { label:"VIP", val:contacts.filter(c=>c.tags?.includes("vip")).length, color:C.amber },
+              { label:"Unsubscribed", val:contacts.filter(c=>c.unsubscribed).length, color:C.red },
+            ].map((s,i) => (
+              <div key={s.label} style={{ flex:1, padding:"8px 14px", borderRight: i<3?`1px solid ${C.border}`:"none", textAlign:"center" }}>
+                <div style={{ fontSize:16, fontWeight:700, color:s.color }}>{s.val}</div>
+                <div style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        )}
         {selContacts.size > 0 && (
           <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", background:C.blue+"10", borderBottom:`1px solid ${C.blue}25`, flexWrap:"wrap" }}>
             <span style={{ fontSize:12, color:C.blue, fontWeight:600 }}>{selContacts.size} selected</span>
@@ -4680,51 +4734,100 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         </div>
       )}
       {showImport && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
-          onClick={() => setShowImport(false)}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease" }}
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}
+          onClick={() => { setShowImport(false); setImportText(""); setImportPreview(null); }}>
+          <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:28, width:600, maxHeight:"85vh", display:"flex", flexDirection:"column", animation:"fadeUp .2s ease" }}
             onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, marginBottom: 4 }}>Import Contacts</h2>
-            <p style={{ fontSize: 12, color: C.muted, marginBottom: 12 }}>Paste emails, CSV data, LinkedIn export, or "First Last &lt;email&gt;" format. Business emails only.</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
-              <label style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 14px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, cursor: "pointer", fontWeight: 500 }}>
-                📁 Upload CSV
-                <input type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => {
-                  const f = e.target.files?.[0]; if (!f) return;
-                  const r = new FileReader(); r.onload = ev => setImportText(ev.target.result); r.readAsText(f);
-                  e.target.value = "";
-                }} />
-              </label>
-              <span style={{ fontSize: 11, color: C.muted }}>or paste below ↓</span>
-            </div>
-            <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              {[
-                { label: "CSV format", ex: `first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
-                { label: "Email list", ex: `john@acme.com\njane@corp.com\nbob@startup.io` },
-                { label: "Name + email", ex: `John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
-              ].map(t => (
-                <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex: 1, fontSize: 10, padding: "4px 6px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, cursor: "pointer" }}>
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <textarea value={importText} onChange={e => setImportText(e.target.value)}
-              placeholder={"Paste CSV, emails, or names here…\n\nfirst_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,,Acme Corp\n\n— or —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
-              rows={9} autoFocus
-              style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "10px 12px", fontSize: 12, outline: "none", resize: "vertical", fontFamily: "monospace", boxSizing: "border-box" }}
-              onFocus={e => e.target.style.borderColor = C.blue}
-              onBlur={e => e.target.style.borderColor = C.border} />
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 6, marginBottom: 16 }}>
-              {importText.split(/[\n,]/).filter(e => e.includes("@")).length} email(s) detected
-            </div>
-            <div style={{ display: "flex", gap: 9 }}>
-              <button onClick={() => { setShowImport(false); setImportText(""); }}
-                style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-              <button onClick={doImport} disabled={importing || !importText.trim()}
-                style={{ flex: 1, padding: 11, background: importing ? C.raised : C.blue, border: "none", borderRadius: 8, color: importing ? C.muted : "#fff", fontSize: 13, fontWeight: 500, cursor: importing ? "default" : "pointer" }}>
-                {importing ? "Importing…" : "Import Contacts"}
-              </button>
-            </div>
+            <h2 style={{ fontSize:17, fontWeight:600, color:C.text, marginBottom:4 }}>Import Contacts</h2>
+            <p style={{ fontSize:12, color:C.muted, marginBottom:12 }}>Paste emails, CSV, LinkedIn export, or "First Last &lt;email&gt;". Business emails only.</p>
+
+            {!importPreview ? (
+              <>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                  <label style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:12, padding:"6px 14px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, cursor:"pointer", fontWeight:500 }}>
+                    📁 Upload CSV
+                    <input type="file" accept=".csv,.txt" style={{ display:"none" }} onChange={e => {
+                      const f = e.target.files?.[0]; if (!f) return;
+                      const r = new FileReader(); r.onload = ev => { setImportText(ev.target.result); }; r.readAsText(f);
+                      e.target.value = "";
+                    }} />
+                  </label>
+                  <span style={{ fontSize:11, color:C.muted }}>or paste below ↓</span>
+                </div>
+                <div style={{ display:"flex", gap:6, marginBottom:10 }}>
+                  {[
+                    { label:"CSV format", ex:`first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
+                    { label:"Email list", ex:`john@acme.com\njane@corp.com\nbob@startup.io` },
+                    { label:"Name + email", ex:`John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
+                  ].map(t => (
+                    <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex:1, fontSize:10, padding:"4px 6px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:5, color:C.muted, cursor:"pointer" }}>{t.label}</button>
+                  ))}
+                </div>
+                <textarea value={importText} onChange={e => setImportText(e.target.value)} autoFocus rows={9}
+                  placeholder={"Paste CSV, emails, or names here…\n\nfirst_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,,Acme Corp\n\n— or —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12, outline:"none", resize:"vertical", fontFamily:"monospace", boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                <div style={{ fontSize:11, color:C.muted, marginTop:6, marginBottom:14 }}>
+                  {importText ? `${parseImportText(importText).filter(r=>!r._personal).length} valid · ${parseImportText(importText).filter(r=>r._personal).length} personal (will skip)` : "Paste data above to preview"}
+                </div>
+                <div style={{ display:"flex", gap:9 }}>
+                  <button onClick={() => { setShowImport(false); setImportText(""); }} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+                  <button onClick={() => { const rows = parseImportText(importText); if (rows.length) setImportPreview(rows); else fire("No valid contacts found","err"); }} disabled={!importText.trim()} style={{ flex:1, padding:11, background:importText.trim()?C.blue:C.border, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:500, cursor:importText.trim()?"pointer":"default" }}>
+                    Preview Import →
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Preview table */}
+                <div style={{ fontSize:13, color:C.text, marginBottom:10, fontWeight:500 }}>
+                  Preview — {importPreview.filter(r=>!r._personal).length} contacts ready
+                  {importPreview.filter(r=>r._personal).length > 0 && <span style={{ fontSize:11, color:C.amber, marginLeft:8 }}>· {importPreview.filter(r=>r._personal).length} personal emails skipped</span>}
+                </div>
+                <div style={{ flex:1, overflow:"auto", border:`1px solid ${C.border}`, borderRadius:8, marginBottom:14 }}>
+                  <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+                    <thead>
+                      <tr style={{ background:C.raised, borderBottom:`1px solid ${C.border}` }}>
+                        {["","Name","Email","Company","Job Title"].map(h => (
+                          <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:C.muted, fontWeight:500, fontSize:10.5, textTransform:"uppercase" }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.map((r,i) => (
+                        <tr key={i} style={{ borderBottom:`1px solid ${C.border}`, opacity:r._personal?0.4:1 }}>
+                          <td style={{ padding:"6px 10px", fontSize:10 }}>{r._personal ? <span style={{ color:C.amber }}>⚠</span> : <span style={{ color:C.green }}>✓</span>}</td>
+                          <td style={{ padding:"6px 10px", color:C.text }}>{[r.first_name,r.last_name].filter(Boolean).join(" ")||<span style={{color:C.muted}}>—</span>}</td>
+                          <td style={{ padding:"6px 10px", color:r._personal?C.amber:C.sec, fontFamily:"monospace", fontSize:11 }}>{r.email}</td>
+                          <td style={{ padding:"6px 10px", color:C.sec }}>{r.company_name||<span style={{color:C.muted}}>—</span>}</td>
+                          <td style={{ padding:"6px 10px", color:C.sec }}>{r.job_title||<span style={{color:C.muted}}>—</span>}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div style={{ display:"flex", gap:9 }}>
+                  <button onClick={() => setImportPreview(null)} style={{ padding:"10px 20px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>← Back</button>
+                  <button onClick={async () => {
+                    const rows = importPreview.filter(r => !r._personal);
+                    if (!rows.length || !profile) return;
+                    setImporting(true);
+                    const toInsert = rows.map(r => { const {_personal,...rest}=r; return {...rest, company_id:profile.company_id}; });
+                    const { data, error } = await supabase.from("contacts").upsert(toInsert, { onConflict:"email,company_id", ignoreDuplicates:true }).select();
+                    if (error) { fire(`Import error: ${error.message}`,"err"); }
+                    else {
+                      const newOnes = (data||[]).filter(Boolean);
+                      setContacts(p => { const ex = new Set(p.map(c=>c.email)); return [...p,...newOnes.filter(c=>!ex.has(c.email))]; });
+                      fire(`✅ ${newOnes.length} contacts imported · ${rows.length-newOnes.length} already existed`);
+                      setImportText(""); setImportPreview(null); setShowImport(false);
+                    }
+                    setImporting(false);
+                  }} disabled={importing || !importPreview.filter(r=>!r._personal).length} style={{ flex:1, padding:11, background:C.blue, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                    {importing ? "Importing…" : `Import ${importPreview.filter(r=>!r._personal).length} Contacts →`}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
