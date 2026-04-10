@@ -6027,19 +6027,15 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
     (c.contacts?.first_name + " " + c.contacts?.last_name + " " + c.contacts?.email + " " + c.contacts?.company_name)
       .toLowerCase().includes(search.toLowerCase()));
 
+  const attendancePct = stats.total > 0 ? Math.round((stats.attended/stats.total)*100) : 0;
+  const lastIn = contacts.filter(c => c.attended_at).sort((a,b) => new Date(b.attended_at)-new Date(a.attended_at))[0];
+
   const STAT_CARDS = [
-    { label: "Expected", val: stats.total, color: C.muted, sub: stats.attended > 0 && stats.total > 0 ? `${Math.round(stats.attended/stats.total*100)}%` : null },
-    { label: "Checked In", val: stats.attended, color: C.green, sub: stats.total > 0 ? `${Math.round(stats.attended/stats.total*100)}%` : null },
-    { label: "Pending", val: stats.total - stats.attended, color: C.amber },
-    { label: "Walk-ins", val: stats.walkin, color: C.blue },
-    { label: "Last in", val: (() => {
-      const last = contacts.filter(c => c.attended_at).sort((a,b) => new Date(b.attended_at)-new Date(a.attended_at))[0];
-      return last?.attended_at ? new Date(last.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—";
-    })(), color: C.muted },
-    { label: "Last in", val: (() => {
-      const last = contacts.filter(c => c.attended_at).sort((a,b) => new Date(b.attended_at)-new Date(a.attended_at))[0];
-      return last?.attended_at ? new Date(last.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—";
-    })(), color: C.muted },
+    { label:"Expected", val:stats.total, color:C.muted },
+    { label:"Checked In", val:stats.attended, color:C.green, sub:`${attendancePct}% of expected` },
+    { label:"Pending", val:stats.total - stats.attended, color:C.amber },
+    { label:"Walk-ins", val:stats.walkin, color:C.blue },
+    { label:"Last in", val: lastIn?.attended_at ? new Date(lastIn.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—", color:C.muted },
   ];
 
   if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event</div>;
@@ -6117,17 +6113,40 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
-        {STAT_CARDS.map(s => (
-          <div key={s.label} style={{ background: C.card, borderRadius: 10, padding: "16px", border: `1px solid ${C.border}`, borderTop: `2px solid ${s.color}40` }}>
-            <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>{s.label}</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: s.color }}>{s.val}</div>
-            {s.label === "Checked In" && stats.total > 0 && (
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 4 }}>{Math.round((s.val / stats.total) * 100)}% attendance</div>
-            )}
+      {/* Stats + attendance ring */}
+      <div style={{ display:"grid", gridTemplateColumns:"auto 1fr", gap:16, marginBottom:16 }}>
+        {/* Attendance ring */}
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"20px 24px", display:"flex", alignItems:"center", gap:20, minWidth:260 }}>
+          <div style={{ position:"relative", width:80, height:80, flexShrink:0 }}>
+            <svg viewBox="0 0 80 80" width="80" height="80">
+              <circle cx="40" cy="40" r="32" fill="none" stroke={C.raised} strokeWidth="8" />
+              <circle cx="40" cy="40" r="32" fill="none" stroke={C.green} strokeWidth="8"
+                strokeDasharray={`${(attendancePct/100)*201.1} 201.1`}
+                strokeLinecap="round" transform="rotate(-90 40 40)"
+                style={{ transition:"stroke-dasharray .6s ease" }} />
+            </svg>
+            <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ fontSize:20, fontWeight:800, color:C.green, lineHeight:1 }}>{attendancePct}%</span>
+            </div>
           </div>
-        ))}
+          <div>
+            <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>Attendance Rate</div>
+            <div style={{ fontSize:26, fontWeight:800, color:C.green, letterSpacing:"-1px" }}>{stats.attended}<span style={{ fontSize:14, color:C.muted, fontWeight:400 }}>/{stats.total}</span></div>
+            <div style={{ fontSize:11, color:C.muted, marginTop:4 }}>
+              {stats.total - stats.attended > 0 ? `${stats.total - stats.attended} still pending` : "✓ Everyone in!"}
+            </div>
+          </div>
+        </div>
+        {/* Stat cards */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10 }}>
+          {STAT_CARDS.filter(s => s.label !== "Checked In").map(s => (
+            <div key={s.label} style={{ background:C.card, borderRadius:10, padding:"14px", border:`1px solid ${C.border}`, borderTop:`2px solid ${s.color}40` }}>
+              <div style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:8 }}>{s.label}</div>
+              <div style={{ fontSize:24, fontWeight:700, color:s.color }}>{s.val}</div>
+              {s.sub && <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>{s.sub}</div>}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Progress bar */}
