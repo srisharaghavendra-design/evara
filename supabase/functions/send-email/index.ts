@@ -37,7 +37,9 @@ serve(async (req) => {
         .replace(/\{\{FIRST_NAME\}\}/gi, contact.first_name || "")
         .replace(/Dear \[First Name\]/gi, `Dear ${contact.first_name || "there"}`)
         .replace(/\[Last Name\]/gi, contact.last_name || "")
-        .replace(/\[Full Name\]/gi, `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.email);
+        .replace(/\[Full Name\]/gi, `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.email)
+        .replace(/\{\{UNSUBSCRIBE_URL\}\}/gi, `https://evara-tau.vercel.app/unsubscribe?email=${encodeURIComponent(contact.email)}`)
+        .replace(/\{\{REGISTRATION_URL\}\}/gi, "#");
 
       const payload = {
         personalizations: [{ to: [{ email: contact.email, name: `${contact.first_name || ""} ${contact.last_name || ""}`.trim() || contact.email }] }],

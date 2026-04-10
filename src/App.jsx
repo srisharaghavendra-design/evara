@@ -1986,8 +1986,8 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         </div>
       </div>
 
-      {/* Event lifecycle timeline */}
-      {activeEvent && daysToEvent !== null && (
+      {/* Event lifecycle timeline — only show once campaigns exist */}
+      {activeEvent && daysToEvent !== null && campaigns.length > 0 && (
         <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:"12px 16px", marginBottom:14, overflowX:"auto" }}>
           <div style={{ display:"flex", alignItems:"center", gap:0, minWidth:520 }}>
             {[
@@ -2115,7 +2115,22 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
       )}
 
       {/* ─── GUEST LIST WITH BULK ACTIONS ─── */}
-      {activeEvent && contacts.length > 0 && (
+      {activeEvent && loading && (
+        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:11, padding:"20px 16px", marginBottom:16 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:14 }}>
+            <div style={{ width:80, height:14, background:C.raised, borderRadius:4 }} />
+          </div>
+          {[1,2,3,4].map(i => (
+            <div key={i} style={{ display:"flex", gap:12, padding:"10px 0", borderBottom:`1px solid ${C.border}`, alignItems:"center" }}>
+              <div style={{ width:16, height:16, background:C.raised, borderRadius:3 }} />
+              <div style={{ flex:2, height:13, background:C.raised, borderRadius:4 }} />
+              <div style={{ flex:1.5, height:12, background:C.raised, borderRadius:4, opacity:0.6 }} />
+              <div style={{ width:64, height:20, background:C.raised, borderRadius:999 }} />
+            </div>
+          ))}
+        </div>
+      )}
+      {activeEvent && !loading && contacts.length > 0 && (
         <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:11, overflow:"hidden", marginBottom:16 }}>
           {/* Header + filter tabs */}
           <div style={{ padding:"11px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>

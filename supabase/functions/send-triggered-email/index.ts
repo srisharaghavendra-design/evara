@@ -8,7 +8,7 @@ const corsHeaders = {
 const buildHtml = (opts: {
   headline: string; subheadline?: string; body: string;
   cta?: string; ctaUrl?: string; orgName: string;
-  eventDate?: string; eventTime?: string; location?: string;
+  eventDate?: string; eventTime?: string; location?: string; email?: string;
 }) => `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -41,7 +41,7 @@ const buildHtml = (opts: {
         <table width="100%" cellpadding="0" cellspacing="0" border="0">
           <tr>
             <td style="font-family:Arial,sans-serif;font-size:12px;color:#999;">© ${new Date().getFullYear()} ${opts.orgName}. All rights reserved.</td>
-            <td align="right" style="font-family:Arial,sans-serif;font-size:12px;"><a href="https://evara-tau.vercel.app/unsubscribe" style="color:#999;text-decoration:underline;">Unsubscribe</a></td>
+            <td align="right" style="font-family:Arial,sans-serif;font-size:12px;"><a href="https://evara-tau.vercel.app/unsubscribe?email=${encodeURIComponent(opts.email || "")}" style="color:#999;text-decoration:underline;">Unsubscribe</a></td>
           </tr>
         </table>
       </td></tr>
@@ -60,7 +60,7 @@ const TEMPLATES: Record<string, (p: Record<string, string>) => { subject: string
              <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 16px;line-height:1.6;">Great news — your place at <strong>${p.eventName}</strong> is confirmed. We're looking forward to seeing you there!</p>`,
       eventDate: p.eventDate, eventTime: p.eventTime, location: p.location,
       cta: "Add to Calendar", ctaUrl: p.calendarUrl || "#",
-      orgName: p.orgName,
+      orgName: p.orgName, email: p.email,
     }),
     plain: `Hi ${p.firstName || "there"},\n\nYou're confirmed for ${p.eventName}!\n\nDate: ${p.eventDate || ""}\nTime: ${p.eventTime || ""}\nLocation: ${p.location || ""}\n\nSee you there!\n${p.orgName}`,
   }),
@@ -73,7 +73,7 @@ const TEMPLATES: Record<string, (p: Record<string, string>) => { subject: string
              <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 16px;line-height:1.6;">Just a friendly reminder that <strong>${p.eventName}</strong> is coming up soon. We can't wait to see you!</p>`,
       eventDate: p.eventDate, eventTime: p.eventTime, location: p.location,
       cta: "View Event Details", ctaUrl: p.eventUrl || "#",
-      orgName: p.orgName,
+      orgName: p.orgName, email: p.email,
     }),
     plain: `Hi ${p.firstName || "there"},\n\nReminder: ${p.eventName} is coming up!\n\nDate: ${p.eventDate || ""}\nTime: ${p.eventTime || ""}\nLocation: ${p.location || ""}\n\nSee you there!\n${p.orgName}`,
   }),
@@ -83,7 +83,7 @@ const TEMPLATES: Record<string, (p: Record<string, string>) => { subject: string
       headline: `Sorry you can't make it`,
       body: `<p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 14px;">Hi ${p.firstName || "there"},</p>
              <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 16px;line-height:1.6;">Thanks for letting us know you won't be able to attend <strong>${p.eventName}</strong>. We'll miss you and hope to see you at a future event!</p>`,
-      orgName: p.orgName,
+      orgName: p.orgName, email: p.email,
     }),
     plain: `Hi ${p.firstName || "there"},\n\nThanks for letting us know. We'll miss you at ${p.eventName} and hope to see you next time.\n\n${p.orgName}`,
   }),
@@ -95,7 +95,7 @@ const TEMPLATES: Record<string, (p: Record<string, string>) => { subject: string
       body: `<p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 14px;">Hi ${p.firstName || "there"},</p>
              <p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 16px;line-height:1.6;">Thank you for attending <strong>${p.eventName}</strong>! It was wonderful to have you there. We hope you found it valuable and would love to hear your thoughts.</p>`,
       cta: "Share Your Feedback", ctaUrl: p.feedbackUrl || "#",
-      orgName: p.orgName,
+      orgName: p.orgName, email: p.email,
     }),
     plain: `Hi ${p.firstName || "there"},\n\nThank you for attending ${p.eventName}! We hope you enjoyed it.\n\nWe'd love your feedback: ${p.feedbackUrl || ""}\n\n${p.orgName}`,
   }),
@@ -117,7 +117,7 @@ serve(async (req) => {
     let sent = 0;
     for (const contact of (contacts || [])) {
       if (contact.unsubscribed || !contact.email) continue;
-      const params = { firstName: contact.first_name || "", eventName: eventName || "", eventDate: eventDate || "", eventTime: eventTime || "", location: location || "", orgName: orgName || "evara", calendarUrl: calendarUrl || "", feedbackUrl: feedbackUrl || "", eventUrl: eventUrl || "" };
+      const params = { firstName: contact.first_name || "", eventName: eventName || "", eventDate: eventDate || "", eventTime: eventTime || "", location: location || "", orgName: orgName || "evara", calendarUrl: calendarUrl || "", feedbackUrl: feedbackUrl || "", eventUrl: eventUrl || "", email: contact.email || "" };
       const tmpl = templateFn(params);
       const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
         method: "POST",
