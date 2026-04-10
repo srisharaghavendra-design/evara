@@ -1737,6 +1737,37 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
         </div>
       </div>
 
+      {/* Quick actions strip */}
+      {activeEvent && (
+        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+          {[
+            { label:"✉️ Build email", action:() => setView("edm"), color:C.blue },
+            { label:"📅 Schedule", action:() => setView("schedule"), color:C.blue },
+            { label:"👥 Contacts", action:() => setView("contacts"), color:C.blue },
+            { label:"📊 Analytics", action:() => setView("analytics"), color:C.blue },
+            { label:"🎪 Check-in", action:() => setView("checkin"), color:C.green },
+            { label:"📋 Feedback", action:() => setView("feedback"), color:C.blue },
+            { label:"✨ AI Report", action: async () => {
+              fire("🤖 Generating…");
+              const { data: { session } } = await supabase.auth.getSession();
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
+                method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                body: JSON.stringify({ eventId: activeEvent.id, companyId: profile?.company_id })
+              });
+              const d = await res.json();
+              if (d.success && d.html) { const w = window.open("","_blank"); w.document.write(d.html); w.document.close(); fire("✅ Report ready!"); }
+              else fire("Report failed","err");
+            }, color:"#BF5AF2" },
+          ].map(({label, action, color}) => (
+            <button key={label} onClick={action} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 13px", borderRadius:7, border:`1px solid ${color}30`, background:`${color}0a`, color, cursor:"pointer", fontWeight:500, transition:"all .1s" }}
+              onMouseEnter={e=>{ e.currentTarget.style.background=`${color}18`; }}
+              onMouseLeave={e=>{ e.currentTarget.style.background=`${color}0a`; }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Go Live checklist */}
       {goLiveChecklist.length > 0 && goLiveDone < goLiveChecklist.length && (
         <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"14px 16px", marginBottom:12 }}>
