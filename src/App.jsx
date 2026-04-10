@@ -3391,27 +3391,11 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
             <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Preview</div>
-            <div style={{ display:"flex", gap:3 }}>
-              <button onClick={() => setPreviewWidth("100%")} title="Desktop"
-                style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${previewWidth==="100%"?C.blue:C.border}`, background:"transparent", color:previewWidth==="100%"?C.blue:C.muted, cursor:"pointer" }}>🖥 Desktop</button>
-              <button onClick={() => setPreviewWidth("375px")} title="Mobile"
-                style={{ fontSize:10, padding:"1px 7px", borderRadius:4, border:`1px solid ${previewWidth==="375px"?C.blue:C.border}`, background:"transparent", color:previewWidth==="375px"?C.blue:C.muted, cursor:"pointer" }}>📱 Mobile</button>
-            </div>
             {preview?.html && (() => {
               const words = preview.html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
               const mins = Math.max(1, Math.round(words / 200));
               return <span style={{ fontSize: 10, color: C.muted }}>{words} words · ~{mins} min read{words < 50 ? " ⚠️ too short" : words > 500 ? " ⚠️ too long" : ""}</span>;
             })()}
-          </div>
-          <div style={{ display: "flex", gap: 5, marginBottom: 10, justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 5 }}>
-            {[{ label: "📱 Mobile", width: "375px" }, { label: "📧 Email (600px)", width: "600px" }, { label: "🖥 Desktop", width: "100%" }].map(v => (
-              <button key={v.width} onClick={() => setPreviewWidth(v.width)}
-                style={{ fontSize: 11, padding: "3px 10px", borderRadius: 4, border: `1px solid ${(previewWidth || "100%") === v.width ? C.blue : C.border}`, background: (previewWidth || "100%") === v.width ? C.blue + "14" : "transparent", color: (previewWidth || "100%") === v.width ? C.blue : C.muted, cursor: "pointer" }}>
-                {v.label}
-              </button>
-            ))}
-            </div>
             <span style={{ fontSize: 10, color: C.muted }}>⌘S to save</span>
           </div>
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
