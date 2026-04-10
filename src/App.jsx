@@ -4686,8 +4686,13 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             <div style={{ display: "flex", gap: 9 }}>
               <button onClick={() => setSendModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
               <button onClick={sendNow} disabled={sending || sendModal.recipientCount === 0}
-                style={{ flex: 2, padding: "11px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 8, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 500, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
-                {sending ? <><Spin />{sendProgress.total > 1 ? `Sending ${sendProgress.sent}/${sendProgress.total}…` : "Sending…"}</> : <><Send size={14} />Confirm & Send ({sendModal.recipientCount})</>}
+                style={{ flex: 2, padding: "11px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 8, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 500, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, position:"relative", overflow:"hidden" }}>
+                {sending && sendProgress.total > 0 && (
+                  <div style={{ position:"absolute", inset:0, background:`${C.green}40`, width:`${Math.round(sendProgress.sent/sendProgress.total*100)}%`, transition:"width .3s", borderRadius:8 }} />
+                )}
+                <span style={{ position:"relative", zIndex:1, display:"flex", alignItems:"center", gap:8 }}>
+                  {sending ? <><Spin />{sendProgress.total > 1 ? `Sending ${sendProgress.sent}/${sendProgress.total}…` : "Sending…"}</> : <><Send size={14} />Confirm & Send ({sendModal.recipientCount})</>}
+                </span>
               </button>
             </div>
           </div>
