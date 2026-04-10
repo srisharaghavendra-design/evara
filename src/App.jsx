@@ -9557,7 +9557,7 @@ function MultiEventView({ supabase, profile, events, setActiveEvent, setView, fi
 
   return (
     <div style={{ animation:"fadeUp .2s ease" }}>
-      <div style={{ marginBottom:20, display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
+      <div style={{ marginBottom:16, display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
         <div>
           <h1 style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:"-0.6px" }}>All Events</h1>
           <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>{events.filter(e=>e.status!=="archived").length} events · overview across your full portfolio</p>
@@ -9568,6 +9568,33 @@ function MultiEventView({ supabase, profile, events, setActiveEvent, setView, fi
           ))}
         </div>
       </div>
+
+      {/* Aggregate totals */}
+      {!loading && Object.keys(stats).length > 0 && (() => {
+        const totals = Object.values(stats).reduce((a,s) => ({
+          sent: a.sent+(s.sent||0), opened: a.opened+(s.opened||0),
+          confirmed: a.confirmed+(s.confirmed||0), attended: a.attended+(s.attended||0),
+          total: a.total+(s.total||0)
+        }), { sent:0, opened:0, confirmed:0, attended:0, total:0 });
+        const overallOpenRate = totals.sent>0?Math.round(totals.opened/totals.sent*100):0;
+        return (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:10, marginBottom:20 }}>
+            {[
+              { label:"Total contacts", val:totals.total, color:C.text, icon:"👥" },
+              { label:"Emails sent", val:totals.sent.toLocaleString(), color:C.blue, icon:"📧" },
+              { label:"Overall open rate", val:totals.sent>0?`${overallOpenRate}%`:"—", color:overallOpenRate>=25?C.green:overallOpenRate>0?C.amber:C.muted, icon:"👁" },
+              { label:"Confirmed", val:totals.confirmed, color:C.green, icon:"✅" },
+              { label:"Attended", val:totals.attended, color:C.blue, icon:"🎪" },
+            ].map(s => (
+              <div key={s.label} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:"14px 16px", textAlign:"center" }}>
+                <div style={{ fontSize:18, marginBottom:6 }}>{s.icon}</div>
+                <div style={{ fontSize:22, fontWeight:700, color:s.color, letterSpacing:"-0.5px" }}>{s.val}</div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:3, textTransform:"uppercase", letterSpacing:"0.4px" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {loading && <div style={{ padding:60, textAlign:"center", color:C.muted, display:"flex", alignItems:"center", justifyContent:"center", gap:10 }}><Spin />Loading event stats…</div>}
 
