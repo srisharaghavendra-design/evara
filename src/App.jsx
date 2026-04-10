@@ -5704,15 +5704,67 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
     ? `${window.location.hostname === 'localhost' ? 'https://evara-tau.vercel.app' : window.location.origin}/form/${activeForm.share_token}`
     : "Save form first";
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", gap: 10, color: C.muted }}><Spin />Loading…</div>;
+
+  const FORM_TEMPLATES = [
+    { label:"📋 RSVP", fields:[
+      { id:1, type:"text", label:"First Name", required:true, options:[] },
+      { id:2, type:"text", label:"Last Name", required:false, options:[] },
+      { id:3, type:"email", label:"Email Address", required:true, options:[] },
+      { id:4, type:"text", label:"Company", required:false, options:[] },
+      { id:5, type:"radio", label:"Will you attend?", required:true, options:["Yes, I'll attend","Unable to attend"] },
+      { id:6, type:"checkbox", label:"I consent to receive event communications.", required:true, options:[] },
+    ]},
+    { label:"📝 Full Reg", fields:[
+      { id:1, type:"text", label:"First Name", required:true, options:[] },
+      { id:2, type:"text", label:"Last Name", required:true, options:[] },
+      { id:3, type:"email", label:"Email Address", required:true, options:[] },
+      { id:4, type:"phone", label:"Phone Number", required:false, options:[] },
+      { id:5, type:"text", label:"Company / Organisation", required:false, options:[] },
+      { id:6, type:"text", label:"Job Title", required:false, options:[] },
+      { id:7, type:"radio", label:"Will you attend?", required:true, options:["Yes, I'll attend","Unable to attend","Sending a colleague"] },
+      { id:8, type:"dietary", label:"Dietary requirements", required:false, options:["None","Vegetarian","Vegan","Gluten free","Halal","Kosher","Other"] },
+      { id:9, type:"checkbox", label:"I consent to receive event communications.", required:true, options:[] },
+    ]},
+    { label:"⭐ Feedback", fields:[
+      { id:1, type:"rating", label:"How would you rate this event overall?", required:true, options:[] },
+      { id:2, type:"radio", label:"Would you attend our next event?", required:true, options:["Definitely","Probably","Unsure","Probably not"] },
+      { id:3, type:"textarea", label:"What did you enjoy most?", required:false, options:[] },
+      { id:4, type:"textarea", label:"What could we improve?", required:false, options:[] },
+      { id:5, type:"text", label:"Any other comments?", required:false, options:[] },
+    ]},
+    { label:"📋 Waitlist", fields:[
+      { id:1, type:"text", label:"Full Name", required:true, options:[] },
+      { id:2, type:"email", label:"Email Address", required:true, options:[] },
+      { id:3, type:"text", label:"Company", required:false, options:[] },
+      { id:4, type:"textarea", label:"Why are you interested in attending?", required:false, options:[] },
+      { id:5, type:"checkbox", label:"Notify me if a spot opens up.", required:true, options:[] },
+    ]},
+  ];
+
   return (
     <div style={{ animation: "fadeUp .2s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 110px)" }}>
-      <div style={{ marginBottom: 16, display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexShrink: 0 }}>
+      <div style={{ marginBottom: 12, display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexShrink: 0 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Registration Forms</h1>
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Build your form, save it, then share the link or embed it.</p>
         </div>
-        <button onClick={saveForm} disabled={saving} style={{ fontSize: 13, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{saving ? <><Spin />Saving…</> : activeForm ? "Save changes →" : "Create form →"}</button>
+        <div style={{ display:"flex", gap:8 }}>
+          <button onClick={saveForm} disabled={saving} style={{ fontSize: 13, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{saving ? <><Spin />Saving…</> : activeForm ? "Save changes →" : "Create form →"}</button>
+        </div>
       </div>
+
+      {/* Template quick-start */}
+      {!activeForm && (
+        <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
+          <span style={{ fontSize:11, color:C.muted, alignSelf:"center", flexShrink:0 }}>Start from template:</span>
+          {FORM_TEMPLATES.map(t => (
+            <button key={t.label} onClick={() => { setFields(t.fields.map((f,i)=>({...f,id:i+1}))); setNextId(t.fields.length+1); fire(`Loaded ${t.label} template`); }}
+              style={{ fontSize:12, padding:"5px 12px", borderRadius:6, border:`1px solid ${C.border}`, background:C.raised, color:C.text, cursor:"pointer" }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Prominent form URL bar ── */}
       {activeForm?.share_token && (
