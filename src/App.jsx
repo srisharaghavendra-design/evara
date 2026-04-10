@@ -2915,7 +2915,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               </div>
 
               {/* Description */}
-              <div style={{ marginBottom:20 }}>
+              <div style={{ marginBottom:16 }}>
                 <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Description</label>
                 <textarea
                   value={editForm.description !== undefined ? editForm.description : activeEvent.description ?? ""}
@@ -2923,6 +2923,18 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                   placeholder="Brief description of the event..."
                   rows={3}
                   style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", resize:"none", lineHeight:1.5, boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+              </div>
+
+              {/* Internal notes */}
+              <div style={{ marginBottom:20 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Internal Notes <span style={{ color:C.muted, fontSize:10, fontWeight:400, textTransform:"none" }}>(private — not shown on landing page)</span></label>
+                <textarea
+                  value={editForm.internal_notes !== undefined ? editForm.internal_notes : activeEvent.internal_notes ?? ""}
+                  onChange={e => setEditForm(p => ({ ...p, internal_notes: e.target.value }))}
+                  placeholder="e.g. AV team contact: John +61 400 000 000. Catering order ref: #12345. Dress code: business formal."
+                  rows={2}
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5, boxSizing:"border-box" }}
                   onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
               </div>
 
@@ -2942,7 +2954,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                 <button onClick={() => { setShowEditEvent(false); setEditForm({}); }} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
                 <button onClick={async () => {
                   const updates = {};
-                  ["name","event_date","event_time","location","description","capacity","rsvp_deadline","event_type","event_format"].forEach(k => {
+                  ["name","event_date","event_time","location","description","internal_notes","capacity","rsvp_deadline","event_type","event_format"].forEach(k => {
                     if (editForm[k] !== undefined) updates[k] = editForm[k] || null;
                   });
                   if (!Object.keys(updates).length) { setShowEditEvent(false); return; }
