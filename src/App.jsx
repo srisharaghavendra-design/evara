@@ -3765,7 +3765,37 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
             {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
-            {gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, minHeight: 300 }}><Spin size={28} /><span style={{ fontSize: 13, color: "#AEAEB2", fontFamily: "Outfit,sans-serif" }}>Claude is writing your email…</span></div>}
+            {gen && (() => {
+              const steps = ["Reading your event brief…","Crafting the subject line…","Writing the body copy…","Adding personalisation tokens…","Polishing the HTML…"];
+              const [step, setStep] = useState(0);
+              useEffect(() => {
+                if (!gen) return;
+                setStep(0);
+                const t1 = setTimeout(() => setStep(1), 2000);
+                const t2 = setTimeout(() => setStep(2), 5000);
+                const t3 = setTimeout(() => setStep(3), 9000);
+                const t4 = setTimeout(() => setStep(4), 12000);
+                return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+              }, [gen]);
+              return (
+                <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, minHeight:300, padding:32 }}>
+                  <div style={{ position:"relative", width:56, height:56 }}>
+                    <svg viewBox="0 0 56 56" width="56" height="56" style={{ animation:"spin 1.2s linear infinite", position:"absolute", top:0, left:0 }}>
+                      <circle cx="28" cy="28" r="24" fill="none" stroke="#0A84FF20" strokeWidth="4"/>
+                      <circle cx="28" cy="28" r="24" fill="none" stroke="#0A84FF" strokeWidth="4" strokeDasharray="38 113" strokeLinecap="round"/>
+                    </svg>
+                    <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>✨</div>
+                  </div>
+                  <div style={{ textAlign:"center" }}>
+                    <div style={{ fontSize:14, fontWeight:600, color:"#1C1C1E", marginBottom:6 }}>Claude is writing your email…</div>
+                    <div style={{ fontSize:12, color:"#AEAEB2", transition:"all .4s" }}>{steps[step]}</div>
+                  </div>
+                  <div style={{ display:"flex", gap:5 }}>
+                    {steps.map((_,i) => <div key={i} style={{ width:6, height:6, borderRadius:"50%", background:i<=step?"#0A84FF":"#E5E5EA", transition:"background .3s" }} />)}
+                  </div>
+                </div>
+              );
+            })()}
             {preview && (
               <div>
                 <div style={{ padding: "12px 16px", background: "white", borderBottom: "1px solid #E5E5EA", fontFamily: "Arial,sans-serif" }}>
