@@ -1059,9 +1059,9 @@ function MainApp({ session }) {
               <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px", padding: "10px 10px 4px", opacity: 0.7 }}>{group.label}</div>
               {group.items.map(({ id, label, icon: Icon, badge }) => {
                 const on = view === id;
-                return (<button key={id} data-view={id} className="nb" onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 6, border: "none", background: on ? C.raised : "transparent", color: on ? C.text : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 500 : 400, borderLeft: `2px solid ${on ? C.blue : "transparent"}`, transition: "all .12s", marginBottom: 1 }}>
-                  <Icon size={13} strokeWidth={on ? 2 : 1.5} /><span style={{ flex: 1 }}>{label}</span>
-                  {badge && <span style={{ fontSize: 9, fontWeight: 700, background: C.blue, color: "#fff", padding: "1px 5px", borderRadius: 3 }}>{badge}</span>}
+                return (<button key={id} data-view={id} className="nb" onClick={() => setView(id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", borderRadius: 7, border: "none", background: on ? `${C.blue}18` : "transparent", color: on ? C.blue : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: `2px solid ${on ? C.blue : "transparent"}`, transition: "all .1s", marginBottom: 1 }}>
+                  <Icon size={13} strokeWidth={on ? 2.5 : 1.5} color={on ? C.blue : C.muted} /><span style={{ flex: 1 }}>{label}</span>
+                  {badge && <span style={{ fontSize: 9, fontWeight: 700, background: on ? C.blue : C.raised, color: on ? "#fff" : C.muted, padding: "1px 5px", borderRadius: 3 }}>{badge}</span>}
                 </button>);
               })}
             </div>
