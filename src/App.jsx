@@ -6927,6 +6927,22 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
   const [walkinCompany, setWalkinCompany] = useState("");
   const [showWalkin, setShowWalkin] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [selCheckin, setSelCheckin] = useState(new Set());
+  const [bulkMarking, setBulkMarking] = useState(false);
+
+  const bulkMarkAttended = async () => {
+    if (!selCheckin.size) return;
+    setBulkMarking(true);
+    const ids = [...selCheckin];
+    await supabase.from("event_contacts")
+      .update({ status: "attended", attended_at: new Date().toISOString() })
+      .in("id", ids);
+    setContacts(p => p.map(c => ids.includes(c.id) ? { ...c, status: "attended", attended_at: new Date().toISOString() } : c));
+    setStats(p => ({ ...p, attended: p.attended + ids.length }));
+    setSelCheckin(new Set());
+    fire(`✅ ${ids.length} guest${ids.length !== 1 ? "s" : ""} marked as attended`);
+    setBulkMarking(false);
+  };
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
@@ -7170,23 +7186,39 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           </div>
           <button onClick={load} style={{ padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer" }}>Refresh</button>
         </div>
+        {/* Bulk action bar */}
+        {selCheckin.size > 0 && (
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 14px", background:`${C.green}10`, borderBottom:`1px solid ${C.green}25` }}>
+            <span style={{ fontSize:12, color:C.green, fontWeight:600 }}>{selCheckin.size} selected</span>
+            <button onClick={bulkMarkAttended} disabled={bulkMarking} style={{ fontSize:12, padding:"5px 14px", background:C.green, border:"none", borderRadius:6, color:"#fff", cursor:"pointer", fontWeight:600, display:"flex", alignItems:"center", gap:5 }}>
+              {bulkMarking ? <><Spin />Marking…</> : "✓ Mark all attended"}
+            </button>
+            <button onClick={() => setSelCheckin(new Set())} style={{ fontSize:12, padding:"5px 10px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:6, color:C.muted, cursor:"pointer", marginLeft:"auto" }}>✕ Clear</button>
+          </div>
+        )}
         {loading ? (
           <div style={{ padding: 40, textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading guests…</div>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
+              <th style={{ padding:"9px 10px 9px 14px", width:32 }}>
+                <input type="checkbox" onChange={e => setSelCheckin(e.target.checked ? new Set(filtered.filter(ec=>ec.status!=="attended").map(ec=>ec.id)) : new Set())} style={{ cursor:"pointer" }} />
+              </th>
               {["Name", "Company", "Email", "Status", "Action"].map(h => (
                 <th key={h} style={{ padding: "9px 14px", textAlign: "left", fontSize: 10.5, color: C.muted, fontWeight: 500, textTransform: "uppercase" }}>{h}</th>
               ))}
             </tr></thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan={5} style={{ padding: 32, textAlign: "center", color: C.muted }}>No guests found</td></tr>
+                <tr><td colSpan={6} style={{ padding: 32, textAlign: "center", color: C.muted }}>No guests found</td></tr>
               ) : filtered.map((ec, i) => {
                 const c = ec.contacts || {};
                 const attended = ec.status === "attended";
                 return (
-                  <tr key={ec.id} className="rh" style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : undefined, background: attended ? `${C.green}06` : "transparent" }}>
+                  <tr key={ec.id} className="rh" style={{ borderBottom: i < filtered.length - 1 ? `1px solid ${C.border}` : undefined, background: attended ? `${C.green}06` : selCheckin.has(ec.id)?`${C.blue}05`:"transparent" }}>
+                    <td style={{ padding:"12px 10px 12px 14px" }}>
+                      {!attended && <input type="checkbox" checked={selCheckin.has(ec.id)} onChange={e => { setSelCheckin(p => { const n=new Set(p); e.target.checked?n.add(ec.id):n.delete(ec.id); return n; }); }} style={{ cursor:"pointer" }} />}
+                    </td>
                     <td style={{ padding: "12px 14px" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
                         <div style={{ width: 32, height: 32, borderRadius: "50%", background: attended ? `${C.green}20` : `${C.blue}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: attended ? C.green : C.blue }}>
