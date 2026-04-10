@@ -6638,6 +6638,99 @@ function SettingsView({ supabase, profile, fire }) {
         </div>
       </div>
 
+      {/* ── AI BRAND VOICE ── */}
+      {bv !== null && (
+        <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:20, marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:2 }}>AI Brand Voice</div>
+              <div style={{ fontSize:12, color:C.sec }}>Claude uses this to match your tone in every generated email</div>
+            </div>
+            <button onClick={saveBrandVoice} disabled={bvSaving} style={{ fontSize:12, padding:"6px 14px", background:bvSaving?C.raised:C.blue, border:"none", borderRadius:7, color:bvSaving?C.muted:"#fff", cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+              {bvSaving?<><Spin />Saving…</>:"Save voice"}
+            </button>
+          </div>
+
+          {/* Tone adjectives */}
+          <div style={{ marginBottom:14 }}>
+            <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Tone adjectives <span style={{ color:C.muted, fontSize:10, fontWeight:400 }}>(comma-separated)</span></label>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom:6 }}>
+              {["professional","warm","exclusive","exciting","authoritative","friendly","bold","elegant","approachable","concise"].map(t => (
+                <button key={t} onClick={() => setBv(p => ({ ...p, tone_adjectives: (p.tone_adjectives||[]).includes(t) ? (p.tone_adjectives||[]).filter(x=>x!==t) : [...(p.tone_adjectives||[]), t] }))}
+                  style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${(bv.tone_adjectives||[]).includes(t)?C.blue:C.border}`, background:(bv.tone_adjectives||[]).includes(t)?`${C.blue}15`:"transparent", color:(bv.tone_adjectives||[]).includes(t)?C.blue:C.muted, cursor:"pointer" }}>
+                  {t}
+                </button>
+              ))}
+            </div>
+            <div style={{ fontSize:11, color:C.muted }}>Selected: {(bv.tone_adjectives||[]).join(", ") || "none"}</div>
+          </div>
+
+          {/* Industry + Audience */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+            <div>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Industry</label>
+              <select value={bv.industry||""} onChange={e=>setBv(p=>({...p,industry:e.target.value}))}
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none" }}>
+                <option value="">Select…</option>
+                {["Financial Services","Technology","Healthcare","Professional Services","Education","Property & Real Estate","Government","NFP / Charity","Hospitality","Retail","Media & Events","Other"].map(i=><option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Target audience</label>
+              <input value={bv.audience||""} onChange={e=>setBv(p=>({...p,audience:e.target.value}))} placeholder="e.g. senior executives, CFOs, HR managers"
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none" }}
+                onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+            </div>
+          </div>
+
+          {/* Sign-off + CTA */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+            <div>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Email sign-off</label>
+              <input value={bv.email_sign_off||""} onChange={e=>setBv(p=>({...p,email_sign_off:e.target.value}))} placeholder="e.g. Warm regards, Kind regards, Cheers"
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none" }}
+                onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Preferred CTA phrase</label>
+              <input value={bv.preferred_cta||""} onChange={e=>setBv(p=>({...p,preferred_cta:e.target.value}))} placeholder="e.g. Register Now, Reserve Your Seat, Join Us"
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none" }}
+                onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+            </div>
+          </div>
+
+          {/* Phrases to use/avoid */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:14 }}>
+            <div>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Signature phrases <span style={{ fontSize:10 }}>(comma-separated)</span></label>
+              <textarea value={(bv.signature_phrases||[]).join(", ")} onChange={e=>setBv(p=>({...p,signature_phrases:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)}))}
+                rows={2} placeholder="e.g. Join us, We're delighted to invite you"
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 12px", fontSize:12.5, outline:"none", resize:"none", boxSizing:"border-box" }}
+                onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+            </div>
+            <div>
+              <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Phrases to avoid <span style={{ fontSize:10 }}>(comma-separated)</span></label>
+              <textarea value={(bv.avoid_phrases||[]).join(", ")} onChange={e=>setBv(p=>({...p,avoid_phrases:e.target.value.split(",").map(s=>s.trim()).filter(Boolean)}))}
+                rows={2} placeholder="e.g. ASAP, Urgent, Free offer"
+                style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 12px", fontSize:12.5, outline:"none", resize:"none", boxSizing:"border-box" }}
+                onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+            </div>
+          </div>
+
+          {/* Extra context */}
+          <div>
+            <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>Extra context for AI <span style={{ fontSize:10 }}>(anything Claude should know)</span></label>
+            <textarea value={bv.extra_context||""} onChange={e=>setBv(p=>({...p,extra_context:e.target.value}))} rows={2}
+              placeholder="e.g. We host events for senior bankers. Always mention RSVPs close 5 days before the event. Our events are invitation-only."
+              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"8px 12px", fontSize:12.5, outline:"none", resize:"none", boxSizing:"border-box" }}
+              onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+          </div>
+          <div style={{ marginTop:10, padding:"8px 12px", background:`${C.blue}08`, borderRadius:7, border:`1px solid ${C.blue}20`, fontSize:11.5, color:C.sec, lineHeight:1.5 }}>
+            💡 <strong>How it works:</strong> evara passes your brand voice to Claude when generating emails — your tone, phrases, and audience context are applied automatically. No prompt engineering needed.
+          </div>
+        </div>
+      )}
+
       {/* ── DANGER ZONE ── */}
       <DangerZone profile={profile} supabase={supabase} fire={fire} />
 
