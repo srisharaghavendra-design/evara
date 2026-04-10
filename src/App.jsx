@@ -4970,6 +4970,177 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
 }
 
 // ─── SETTINGS ─────────────────────────────────────────────────
+// ─── BRAND KIT SECTION ───────────────────────────────────────
+function BrandKitSection({ profile, supabase, fire, fromEmail, setFromEmail, fromName, setFromName, brandColor, setBrandColor }) {
+  const [logoUrl, setLogoUrl] = useState(profile?.companies?.logo_url || "");
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [font, setFont] = useState(profile?.companies?.brand_font || "Outfit");
+  const [kitSaving, setKitSaving] = useState(false);
+  const fileRef = useRef(null);
+
+  const COLORS = ["#0A84FF","#30D158","#FF453A","#FF9F0A","#BF5AF2","#FF375F","#5AC8FA","#00C7BE","#FF6B35","#FFD60A","#1C1C1E","#E5E5EA"];
+  const FONTS = ["Outfit","Inter","Georgia","Helvetica Neue","Arial","Trebuchet MS"];
+
+  const uploadLogo = async (file) => {
+    if (!file || !profile?.company_id) return;
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `logos/${profile.company_id}/logo.${ext}`;
+      const { error: upErr } = await supabase.storage.from("assets").upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: { publicUrl } } = supabase.storage.from("assets").getPublicUrl(path);
+      setLogoUrl(publicUrl);
+      await supabase.from("companies").update({ logo_url: publicUrl }).eq("id", profile.company_id);
+      fire("✅ Logo uploaded!");
+    } catch (e) { fire(e.message || "Upload failed", "err"); }
+    setLogoUploading(false);
+  };
+
+  const saveKit = async () => {
+    if (!profile?.company_id) return;
+    setKitSaving(true);
+    await supabase.from("companies").update({ from_email: fromEmail, from_name: fromName, brand_color: brandColor, brand_font: font, logo_url: logoUrl }).eq("id", profile.company_id);
+    setKitSaving(false);
+    fire("✅ Brand kit saved!");
+  };
+
+  return (
+    <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Brand Kit</div>
+          <div style={{ fontSize: 12, color: C.muted, marginTop: 3 }}>Logo, colours and sender settings — applied across all emails</div>
+        </div>
+        <button onClick={saveKit} disabled={kitSaving} style={{ padding:"7px 16px", borderRadius:7, border:"none", background:C.blue, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", opacity:kitSaving?0.6:1 }}>
+          {kitSaving ? "Saving…" : "Save brand kit"}
+        </button>
+      </div>
+
+      {/* Logo upload */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8, fontWeight: 500 }}>Logo</div>
+        <div style={{ display:"flex", alignItems:"center", gap: 14 }}>
+          <div onClick={() => !logoUploading && fileRef.current?.click()}
+            style={{ width:80, height:80, borderRadius:12, border:`2px dashed ${logoUrl ? brandColor : C.border}`, background: logoUrl ? "transparent" : C.bg, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, overflow:"hidden", transition:"border .2s", position:"relative" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = brandColor}
+            onMouseLeave={e => e.currentTarget.style.borderColor = logoUrl ? brandColor : C.border}>
+            {logoUploading ? (
+              <div style={{ width:18, height:18, border:`2px solid ${C.blue}25`, borderTop:`2px solid ${C.blue}`, borderRadius:"50%", animation:"spin .7s linear infinite" }} />
+            ) : logoUrl ? (
+              <img src={logoUrl} alt="logo" style={{ width:"100%", height:"100%", objectFit:"contain", padding:6 }} />
+            ) : (
+              <div style={{ textAlign:"center" }}>
+                <Upload size={18} color={C.muted} />
+                <div style={{ fontSize:10, color:C.muted, marginTop:4 }}>Upload</div>
+              </div>
+            )}
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" style={{ display:"none" }} onChange={e => { if (e.target.files[0]) uploadLogo(e.target.files[0]); }} />
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:13, color:C.sec, marginBottom:6, lineHeight:1.5 }}>Upload your company logo. It appears in email headers, landing pages and the dashboard.</div>
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => fileRef.current?.click()} disabled={logoUploading} style={{ padding:"6px 14px", borderRadius:6, border:`1px solid ${C.border}`, background:C.bg, color:C.sec, fontSize:12, cursor:"pointer" }}>
+                {logoUrl ? "Replace logo" : "Choose file"}
+              </button>
+              {logoUrl && <button onClick={async () => { setLogoUrl(""); await supabase.from("companies").update({ logo_url: null }).eq("id", profile.company_id); fire("Logo removed"); }} style={{ padding:"6px 12px", borderRadius:6, border:`1px solid ${C.red}30`, background:"transparent", color:C.red, fontSize:12, cursor:"pointer" }}>Remove</button>}
+            </div>
+            <div style={{ fontSize:11, color:C.muted, marginTop:6 }}>PNG, JPG or SVG · Max 2MB · Transparent background recommended</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Brand colour */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8, fontWeight: 500 }}>Brand colour</div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+          {COLORS.map(col => (
+            <button key={col} onClick={() => setBrandColor(col)} style={{ width:30, height:30, borderRadius:6, background:col, border: brandColor === col ? "3px solid #fff" : "3px solid transparent", outline: brandColor === col ? `2px solid ${col}` : "none", cursor:"pointer", transition:"all .12s", boxShadow: brandColor === col ? `0 0 0 2px ${col}50` : "none" }} />
+          ))}
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} style={{ width:38, height:34, border:"none", background:"none", cursor:"pointer", padding:0 }} />
+          <input value={brandColor} onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setBrandColor(e.target.value); }} style={{ width:100, background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"7px 10px", fontSize:13, outline:"none" }} />
+          <div style={{ display:"flex", gap:6, flex:1 }}>
+            {["Buttons","Headers","Accents"].map((lbl,i) => (
+              <div key={lbl} style={{ flex:1, height:34, borderRadius:7, background: i===0?brandColor: i===1?brandColor+"30":"transparent", border: i===2?`2px solid ${brandColor}`:"none", display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, color: i===0?"#fff":brandColor, fontWeight:600 }}>{lbl}</div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Font */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8, fontWeight: 500 }}>Email font</div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+          {FONTS.map(f => (
+            <button key={f} onClick={() => setFont(f)} style={{ padding:"6px 14px", borderRadius:20, border:`1.5px solid ${font===f ? brandColor : C.border}`, background: font===f ? brandColor+"20" : C.bg, color: font===f ? brandColor : C.sec, fontSize:13, fontFamily:f, cursor:"pointer", transition:"all .15s" }}>{f}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Sender details */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8, fontWeight: 500 }}>Sender details</div>
+        <div style={{ display:"flex", gap:10, marginBottom:10 }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>From name <span style={{ color:C.muted }}>(shown in recipient's inbox)</span></div>
+            <input value={fromName} onChange={e => setFromName(e.target.value)} placeholder="Events Team at Acme"
+              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none" }}
+              onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, color:C.muted, marginBottom:4 }}>From email <span style={{ color:C.green, fontSize:10 }}>✓ Verified</span></div>
+            <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
+              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"9px 12px", fontSize:13, outline:"none" }}
+              onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+          </div>
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div>
+        <div style={{ fontSize: 11.5, color: C.muted, marginBottom: 8, fontWeight: 500 }}>Email header preview</div>
+        <div style={{ border:`1px solid ${C.border}`, borderRadius:10, overflow:"hidden" }}>
+          {/* Email client chrome */}
+          <div style={{ background:"#1C1C1E", padding:"8px 14px", display:"flex", alignItems:"center", gap:8 }}>
+            <div style={{ display:"flex", gap:5 }}>{["#FF5F57","#FEBC2E","#28C840"].map(c=><div key={c} style={{ width:10,height:10,borderRadius:"50%",background:c }} />)}</div>
+            <div style={{ flex:1, background:"#2C2C2E", borderRadius:5, height:22, display:"flex", alignItems:"center", paddingLeft:10 }}>
+              <span style={{ fontSize:11, color:"#636366" }}>📧 {fromEmail || "hello@evarahq.com"}</span>
+            </div>
+          </div>
+          {/* Email body preview */}
+          <div style={{ background:"#F2F2F7", padding:0 }}>
+            <div style={{ background:brandColor, height:5 }} />
+            <div style={{ padding:"20px 24px", fontFamily:font+",sans-serif" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+                {logoUrl ? (
+                  <img src={logoUrl} alt="logo" style={{ height:36, maxWidth:120, objectFit:"contain" }} />
+                ) : (
+                  <div style={{ width:36, height:36, borderRadius:8, background:brandColor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#fff" }}>{(fromName||"E").charAt(0).toUpperCase()}</div>
+                )}
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"#111", fontFamily:font+",sans-serif" }}>{fromName || "Your Sender Name"}</div>
+                  <div style={{ fontSize:11, color:"#888" }}>to: Guest &lt;guest@example.com&gt;</div>
+                </div>
+              </div>
+              <div style={{ height:8, background:brandColor, borderRadius:4, marginBottom:8, width:"60%", opacity:0.2 }} />
+              <div style={{ height:6, background:"#D1D1D6", borderRadius:4, marginBottom:6, width:"80%" }} />
+              <div style={{ height:6, background:"#D1D1D6", borderRadius:4, marginBottom:6, width:"65%" }} />
+              <div style={{ height:6, background:"#D1D1D6", borderRadius:4, marginBottom:16, width:"72%" }} />
+              <div style={{ display:"inline-block", background:brandColor, color:"#fff", padding:"9px 20px", borderRadius:7, fontSize:12, fontWeight:600, fontFamily:font+",sans-serif" }}>Register Now →</div>
+            </div>
+            <div style={{ background:brandColor+"18", borderTop:`1px solid ${brandColor}25`, padding:"10px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <span style={{ fontSize:10, color:"#888" }}>© 2025 {profile?.companies?.name || "Your Company"}</span>
+              <span style={{ fontSize:10, color:brandColor }}>Unsubscribe</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsView({ supabase, profile, fire }) {
   const [name, setName] = useState(profile?.full_name || "");
   const [company, setComp] = useState(profile?.companies?.name || "");
@@ -5069,34 +5240,11 @@ function SettingsView({ supabase, profile, fire }) {
           <div style={{ padding: "10px 12px", background: C.raised, borderRadius: 7, fontSize: 13, color: C.muted, border: `1px solid ${C.border}` }}>{profile?.email}</div>
         </div>
       </div>
-      <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 16 }}>Brand Kit</div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>From email address <span style={{ color: C.green, fontSize: 10 }}>✓ Verified: hello@evarahq.com</span></label>
-          <input value={fromEmail} onChange={e => setFromEmail(e.target.value)}
-            style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
-            onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
-        </div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>
-            From name <span style={{ fontSize: 10, color: C.muted }}>— shown as sender name in recipients' inboxes</span>
-          </label>
-          <input value={fromName} onChange={e => setFromName(e.target.value)}
-            placeholder="e.g. Orbis Events Team"
-            style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }}
-            onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
-        </div>
-        <div>
-          <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>Brand colour</label>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)}
-              style={{ width: 40, height: 36, border: "none", background: "none", cursor: "pointer" }} />
-            <input value={brandColor} onChange={e => setBrandColor(e.target.value)}
-              style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none" }} />
-            <div style={{ width: 36, height: 36, borderRadius: 6, background: brandColor, flexShrink: 0, border: `1px solid ${C.border}` }} />
-          </div>
-        </div>
-      </div>
+      {/* ── BRAND KIT ── */}
+      <BrandKitSection profile={profile} supabase={supabase} fire={fire}
+        fromEmail={fromEmail} setFromEmail={setFromEmail}
+        fromName={fromName} setFromName={setFromName}
+        brandColor={brandColor} setBrandColor={setBrandColor} />
       <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, padding: 20, marginBottom: 14 }}>
         <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12 }}>Email & AI Configuration</div>
         <p style={{ fontSize: 12, color: C.muted, marginBottom: 12, lineHeight: 1.6 }}>
