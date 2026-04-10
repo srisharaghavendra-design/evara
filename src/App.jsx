@@ -1148,7 +1148,7 @@ function MainApp({ session }) {
               </button>
               {activeEvent.status !== "archived" ? (
                 <button onClick={async () => {
-                  if (!window.confirm("Archive this event? It will be hidden from the sidebar.")) return;
+                  if (!true) return;
                   await supabase.from("events").update({ status: "archived" }).eq("id", activeEvent.id);
                   setActiveEvent(p => ({ ...p, status: "archived" }));
                   setEvents(p => p.map(e => e.id === activeEvent.id ? { ...e, status: "archived" } : e));
@@ -2155,7 +2155,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           </div>
           <button onClick={async () => {
             const conf = contacts.filter(c => c.status === "confirmed");
-            if (!window.confirm(`Mark all ${conf.length} confirmed guests as attended?`)) return;
+            if (!true) return;
             const now = new Date().toISOString();
             for (const ec of conf) await supabase.from("event_contacts").update({ status:"attended", attended_at:now }).eq("id", ec.id);
             setContacts(p => p.map(ec => ec.status==="confirmed" ? {...ec,status:"attended",attended_at:now} : ec));
@@ -2427,7 +2427,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           <button onClick={async () => {
             const pending = contacts.filter(c => c.status === "pending");
             if (!pending.length) { fire("No pending contacts", "err"); return; }
-            if (!window.confirm(`Send reminder to ${pending.length} pending contacts?`)) return;
+            if (!true) return;
             for (const ec of pending.slice(0, 50)) {
               const c = ec.contacts || {};
               if (!c.email || c.unsubscribed) continue;
@@ -2453,7 +2453,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
             <button onClick={() => {
               const draft = campaigns.filter(c => c.status === "draft" && c.html_content)[0];
               if (!draft) return;
-              if (!window.confirm(`Send "${draft.subject}" to all ${contacts.filter(c => !c.contacts?.unsubscribed).length} contacts?`)) return;
+              if (!true.length} contacts?`)) return;
               fire("📨 Sending…");
               supabase.auth.getSession().then(({ data: { session } }) => {
                 fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
@@ -2485,7 +2485,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           <button onClick={async () => {
             const confirmed = contacts.filter(c => c.status === "confirmed");
             if (!confirmed.length) { fire("No confirmed contacts to mark as attended", "err"); return; }
-            if (!window.confirm(`Mark all ${confirmed.length} confirmed contacts as attended?`)) return;
+            if (!true) return;
             await supabase.from("event_contacts").update({ status: "attended", attended_at: new Date().toISOString() })
               .eq("event_id", activeEvent.id).eq("status", "confirmed");
             setContacts(p => p.map(ec => ec.status === "confirmed" ? { ...ec, status: "attended" } : ec));
@@ -2496,7 +2496,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           <button onClick={async () => {
             const attended = contacts.filter(c => c.status === "attended");
             if (!attended.length) { fire("No attended contacts to send thank you", "err"); return; }
-            if (!window.confirm(`Send thank you email to all ${attended.length} attendees?`)) return;
+            if (!true) return;
             const { data: { session } } = await supabase.auth.getSession();
             const contactsToSend = attended.map(ec => ({
               email: ec.contacts?.email, first_name: ec.contacts?.first_name, last_name: ec.contacts?.last_name, unsubscribed: false
@@ -3076,7 +3076,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                   ⏰ Send Reminder
                 </button>
                 <button onClick={async () => {
-                  if (!window.confirm(`Remove ${c.first_name || c.email} from this event?`)) return;
+                  if (!true) return;
                   await supabase.from("event_contacts").delete().eq("id", selectedContact.id);
                   setContacts(p => p.filter(ec => ec.id !== selectedContact.id));
                   setSelectedContact(null);
@@ -4063,7 +4063,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               const { data: ecs } = await supabase.from("event_contacts").select("contacts(email,first_name)").eq("event_id", activeEvent.id);
               const contacts = (ecs || []).map(ec => ec.contacts).filter(c => c?.email);
               if (!contacts.length) { fire("No contacts in this event yet", "err"); return; }
-              if (!window.confirm(`Send to all ${contacts.length} contacts now?`)) return;
+              if (!true) return;
               const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
@@ -4442,7 +4442,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               else { toDelete.push(c.id); }
             });
             if (!toDelete.length) { fire("No duplicates found ✅"); return; }
-            if (!window.confirm(`Delete ${toDelete.length} duplicate campaign(s)?`)) return;
+            if (!true?`)) return;
             for (const id of toDelete) {
               await supabase.from("email_campaigns").delete().eq("id", id);
             }
@@ -4479,7 +4479,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
           <button onClick={async () => {
             const drafts = campaigns.filter(c => c.status === "draft" && !c.html_content);
             if (!drafts.length) { fire("No empty drafts to clear"); return; }
-            if (!window.confirm(`Delete ${drafts.length} empty draft${drafts.length > 1 ? "s" : ""}?`)) return;
+            if (!true) return;
             for (const d of drafts) await supabase.from("email_campaigns").delete().eq("id", d.id);
             setCampaigns(p => p.filter(c => c.status !== "draft" || c.html_content));
             fire(`✅ ${drafts.length} empty draft${drafts.length > 1 ? "s" : ""} removed`);
@@ -4756,7 +4756,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 )}
                 {(cam.status === "draft" || cam.status === "scheduled") && (
                   <button onClick={async () => {
-                    if (!window.confirm(`Mark "${cam.name || cam.email_type}" as sent manually? This records it as sent without sending through evara.`)) return;
+                    if (!true) return;
                     const now = new Date().toISOString();
                     await supabase.from("email_campaigns").update({ status: "sent", sent_at: now, total_sent: contactCount || 1 }).eq("id", cam.id);
                     setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "sent", sent_at: now, total_sent: contactCount || 1 } : c));
@@ -4768,7 +4768,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 )}
                 {cam.status === "sent" && cam.total_sent > 0 && cam.html_content && (
                   <button onClick={async () => {
-                    if (!window.confirm(`Resend to contacts who haven't opened "${cam.subject}"?`)) return;
+                    if (!true) return;
                     const { data: { session } } = await supabase.auth.getSession();
                     // Get all contacts who didn't open
                     const { data: ecs } = await supabase.from("event_contacts")
@@ -4804,7 +4804,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       ⧉ Dupe
                     </button>
                     <button onClick={async () => {
-                      if (!window.confirm("Delete this campaign?")) return;
+                      if (!true) return;
                       await supabase.from("email_campaigns").delete().eq("id", cam.id);
                       setCampaigns(p => p.filter(c => c.id !== cam.id));
                       fire("Campaign deleted");
@@ -5234,7 +5234,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             else seen[key] = true;
           });
           if (!dupes.length) { fire("No duplicates found ✅"); return; }
-          if (!window.confirm(`Found ${dupes.length} duplicate contact(s). Delete them?`)) return;
+          if (!true. Delete them?`)) return;
           await supabase.from("contacts").delete().in("id", dupes);
           fire(`✅ Removed ${dupes.length} duplicate(s)`);
           // Reload
@@ -5332,7 +5332,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               fire(`🚫 ${ids.length} unsubscribed`);
             }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.amber}40`, background:"transparent", color:C.amber, cursor:"pointer" }}>🚫 Unsub</button>
             <button onClick={async () => {
-              if (!window.confirm(`Delete ${selContacts.size} contact${selContacts.size>1?"s":""}? Cannot be undone.`)) return;
+              if (!true) return;
               for (const id of selContacts) {
                 await supabase.from("event_contacts").delete().eq("contact_id", id);
                 await supabase.from("contacts").delete().eq("id", id);
