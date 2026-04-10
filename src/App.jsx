@@ -1666,6 +1666,78 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         </div>
       )}
 
+      {/* ── EVENT HEALTH SCORE ── */}
+      {!loading && (() => {
+        const sent = metrics?.total_sent || 0;
+        const opened = metrics?.total_opened || 0;
+        const confirmed = metrics?.total_confirmed || 0;
+        const total = contacts.length || 0;
+        const openRate = sent > 0 ? Math.round((opened/sent)*100) : 0;
+        const confirmRate = total > 0 ? Math.round((confirmed/total)*100) : 0;
+        const daysLeft = activeEvent?.event_date ? Math.ceil((new Date(activeEvent.event_date)-new Date())/(1000*60*60*24)) : null;
+
+        // Score factors (0-100)
+        let score = 0;
+        const checks = [];
+        if (total > 0)           { score += 20; checks.push({ ok:true,  label:`${total} contacts added` }); }
+        else                     { checks.push({ ok:false, label:"No contacts yet" }); }
+        if (formShareLink)       { score += 20; checks.push({ ok:true,  label:"Registration form live" }); }
+        else                     { checks.push({ ok:false, label:"No registration form" }); }
+        if (sent > 0)            { score += 15; checks.push({ ok:true,  label:`${sent} emails sent` }); }
+        else                     { checks.push({ ok:false, label:"No emails sent yet" }); }
+        if (openRate >= 25)      { score += 20; checks.push({ ok:true,  label:`${openRate}% open rate (target 25%)` }); }
+        else if (openRate > 0)   { score += 8;  checks.push({ ok:"warn", label:`${openRate}% open rate (aim for 25%+)` }); }
+        else if (sent > 0)       { checks.push({ ok:false, label:"No opens tracked yet" }); }
+        if (confirmRate >= 50)   { score += 15; checks.push({ ok:true,  label:`${confirmRate}% confirmation rate` }); }
+        else if (confirmRate > 0){ score += 6;  checks.push({ ok:"warn", label:`${confirmRate}% confirmed (aim 50%+)` }); }
+        if (campaigns.some(c => c.status==="scheduled")) { score += 10; checks.push({ ok:true, label:"Emails scheduled" }); }
+        else if (sent === 0)     { checks.push({ ok:false, label:"No emails scheduled" }); }
+
+        const color = score >= 80 ? C.green : score >= 50 ? C.amber : C.red;
+        const label = score >= 80 ? "On Track" : score >= 50 ? "Needs Attention" : "Action Required";
+        const emoji = score >= 80 ? "🟢" : score >= 50 ? "🟡" : "🔴";
+
+        return (
+          <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"14px 18px", marginBottom:16, display:"flex", alignItems:"center", gap:20 }}>
+            {/* Score ring */}
+            <div style={{ position:"relative", width:64, height:64, flexShrink:0 }}>
+              <svg viewBox="0 0 64 64" width="64" height="64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke={C.raised} strokeWidth="6" />
+                <circle cx="32" cy="32" r="26" fill="none" stroke={color} strokeWidth="6"
+                  strokeDasharray={`${(score/100)*163.4} 163.4`}
+                  strokeLinecap="round" transform="rotate(-90 32 32)" style={{ transition:"stroke-dasharray .6s ease" }} />
+              </svg>
+              <div style={{ position:"absolute", inset:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontSize:16, fontWeight:800, color, lineHeight:1 }}>{score}</span>
+                <span style={{ fontSize:8, color:C.muted, lineHeight:1.2 }}>/ 100</span>
+              </div>
+            </div>
+            {/* Label + status */}
+            <div style={{ minWidth:120 }}>
+              <div style={{ fontSize:11, color:C.muted, marginBottom:3 }}>Event Health</div>
+              <div style={{ fontSize:15, fontWeight:700, color }}>{emoji} {label}</div>
+              {daysLeft !== null && daysLeft > 0 && (
+                <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>{daysLeft}d to go</div>
+              )}
+            </div>
+            {/* Progress bar + checks */}
+            <div style={{ flex:1 }}>
+              <div style={{ height:5, background:C.raised, borderRadius:3, marginBottom:10, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${score}%`, background:`linear-gradient(90deg, ${color}80, ${color})`, borderRadius:3, transition:"width .6s ease" }} />
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 16px" }}>
+                {checks.slice(0,4).map((c,i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:4, fontSize:11, color: c.ok===true?C.green:c.ok==="warn"?C.amber:C.muted }}>
+                    <span>{c.ok===true?"✓":c.ok==="warn"?"⚠":"✗"}</span>
+                    <span>{c.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", gap: 9, marginBottom: 22 }}>
         {METRICS.map((m, i) => (
           <div key={i} className="mc" style={{ background: C.card, borderRadius: 10, padding: "13px 12px", border: `1px solid ${C.border}`, borderTop: `2px solid ${m.color}28`, transition: "all .18s", cursor: "default" }}>
