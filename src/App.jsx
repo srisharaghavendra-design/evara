@@ -2960,6 +2960,38 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 9px", fontSize: 12, outline: "none", resize: "vertical", minHeight: 56, fontFamily: "inherit", boxSizing: "border-box" }}
                 />
               </div>
+              {/* Event History */}
+              {(() => {
+                const [evHistory, setEvHistory] = React.useState(null);
+                React.useEffect(() => {
+                  if (!c.id) return;
+                  supabase.from("event_contacts").select("*,events(name,event_date,location)").eq("contact_id", c.id).order("created_at", { ascending: false }).limit(10)
+                    .then(({ data }) => setEvHistory(data || []));
+                }, [c.id]);
+                if (evHistory === null) return <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}`, fontSize:12, color:C.muted }}>Loading history…</div>;
+                return (
+                  <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}` }}>
+                    <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:8 }}>Event History ({evHistory.length})</div>
+                    {evHistory.length === 0 && <div style={{ fontSize:12, color:C.muted }}>No event history yet</div>}
+                    {evHistory.map(ec => {
+                      const ev = ec.events || {};
+                      const statusCol = ec.status==="attended"?C.green:ec.status==="confirmed"?C.blue:ec.status==="declined"?C.red:C.muted;
+                      return (
+                        <div key={ec.id} style={{ display:"flex", alignItems:"flex-start", gap:9, padding:"7px 0", borderBottom:`1px solid ${C.border}30` }}>
+                          <div style={{ width:7, height:7, borderRadius:"50%", background:statusCol, flexShrink:0, marginTop:5 }} />
+                          <div style={{ flex:1, minWidth:0 }}>
+                            <div style={{ fontSize:12, fontWeight:500, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ev.name||"Unknown event"}</div>
+                            {ev.event_date && <div style={{ fontSize:10.5, color:C.muted }}>{new Date(ev.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</div>}
+                          </div>
+                          <span style={{ fontSize:10, padding:"1px 6px", borderRadius:3, background:`${statusCol}18`, color:statusCol, fontWeight:600, textTransform:"capitalize", flexShrink:0 }}>
+                            {ec.status||"pending"}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         );
