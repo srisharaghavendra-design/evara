@@ -2413,45 +2413,154 @@ function DashView({ supabase, profile, activeEvent, fire }) {
         )}
       {/* EDIT EVENT MODAL */}
       {showEditEvent && activeEvent && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}
           onClick={() => setShowEditEvent(false)}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 460, animation: "fadeUp .2s ease" }}
+          <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, width:520, maxHeight:"88vh", overflowY:"auto", animation:"fadeUp .2s ease" }}
             onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 20 }}>Edit event</h2>
-            {[
-              { key: "name",        label: "Event name",       ph: "Tech Summit 2026",              type: "text" },
-              { key: "event_date",  label: "Date",             ph: "",                               type: "date" },
-              { key: "event_time",  label: "Time",             ph: "6:30 PM",                       type: "text" },
-              { key: "location",    label: "Venue / Location", ph: "Marina Bay Sands",              type: "text" },
-              { key: "description", label: "Description",      ph: "Brief description",             type: "text" },
-              { key: "capacity",    label: "Capacity",             ph: "e.g. 150",                      type: "number" },
-            ].map(f => (
-              <div key={f.key} style={{ marginBottom: 12 }}>
-                <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 4 }}>{f.label}</label>
-                <input type={f.type}
-                  value={editForm[f.key] !== undefined ? editForm[f.key] : (f.key === "event_date" && activeEvent[f.key] ? activeEvent[f.key].slice(0,10) : activeEvent[f.key] ?? "")}
-                  onChange={e => setEditForm(p => ({ ...p, [f.key]: e.target.value }))}
-                  placeholder={f.ph}
-                  style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "9px 12px", fontSize: 13, outline: "none", boxSizing: "border-box" }}
-                  onFocus={e => e.target.style.borderColor = C.blue}
-                  onBlur={e => e.target.style.borderColor = C.border} />
+            {/* Header */}
+            <div style={{ padding:"20px 24px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div>
+                <h2 style={{ fontSize:17, fontWeight:700, color:C.text, margin:0 }}>Edit Event</h2>
+                <p style={{ fontSize:12, color:C.muted, margin:"3px 0 0" }}>{activeEvent.name}</p>
               </div>
-            ))}
-            <div style={{ display: "flex", gap: 9, marginTop: 8 }}>
-              <button onClick={() => { setShowEditEvent(false); setEditForm({}); }} style={{ flex: 1, padding: 11, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
-              <button onClick={async () => {
-                const updates = {};
-                ["name","event_date","event_time","location","description","capacity","rsvp_deadline","expected_attendees"].forEach(k => {
-                  if (editForm[k] !== undefined) updates[k] = editForm[k] || null;
-                });
-                if (!updates.name && !activeEvent.name) return;
-                await supabase.from("events").update(updates).eq("id", activeEvent.id);
-                setActiveEvent(p => ({ ...p, ...updates }));
-                setEvents(p => p.map(e => e.id === activeEvent.id ? { ...e, ...updates } : e));
-                setEditForm({});
-                setShowEditEvent(false);
-                fire("✅ Event updated");
-              }} style={{ flex: 1, padding: 11, background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>Save changes</button>
+              <button onClick={() => setShowEditEvent(false)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+            </div>
+
+            <div style={{ padding:"20px 24px" }}>
+              {/* Event name */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Event Name *</label>
+                <input autoFocus
+                  value={editForm.name !== undefined ? editForm.name : activeEvent.name ?? ""}
+                  onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))}
+                  placeholder="Annual Client Gala 2026"
+                  style={{ width:"100%", background:C.bg, border:`1.5px solid ${C.blue}`, borderRadius:8, color:C.text, padding:"10px 13px", fontSize:14, outline:"none", boxSizing:"border-box" }} />
+              </div>
+
+              {/* Date + Time */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Date</label>
+                  <input type="date"
+                    value={editForm.event_date !== undefined ? editForm.event_date : (activeEvent.event_date?.slice(0,10) ?? "")}
+                    onChange={e => setEditForm(p => ({ ...p, event_date: e.target.value }))}
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Time</label>
+                  <input
+                    value={editForm.event_time !== undefined ? editForm.event_time : activeEvent.event_time ?? ""}
+                    onChange={e => setEditForm(p => ({ ...p, event_time: e.target.value }))}
+                    placeholder="6:30 PM"
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+              </div>
+
+              {/* Location */}
+              <div style={{ marginBottom:16 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Venue / Location</label>
+                <input
+                  value={editForm.location !== undefined ? editForm.location : activeEvent.location ?? ""}
+                  onChange={e => setEditForm(p => ({ ...p, location: e.target.value }))}
+                  placeholder="e.g. The Ritz-Carlton, Sydney"
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+              </div>
+
+              {/* Event type + Format */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Event Type</label>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+                    {[["conference","🎤"],["seminar","📚"],["networking","🤝"],["gala","🥂"],["workshop","🛠"],["webinar","🖥"],["awards","🏆"],["launch","🚀"],["training","📋"],["other","📅"]].map(([type,icon]) => {
+                      const cur = editForm.event_type !== undefined ? editForm.event_type : activeEvent.event_type;
+                      return (
+                        <button key={type} onClick={() => setEditForm(p=>({...p, event_type:type}))}
+                          style={{ padding:"4px 9px", borderRadius:6, border:`1px solid ${cur===type?C.blue:C.border}`, background:cur===type?`${C.blue}15`:"transparent", color:cur===type?C.blue:C.muted, fontSize:11.5, cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+                          {icon} {type}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Format</label>
+                  <div style={{ display:"flex", gap:5 }}>
+                    {[["In-person","📍"],["Online","💻"],["Hybrid","🌐"]].map(([fmt,icon]) => {
+                      const cur = editForm.event_format !== undefined ? editForm.event_format : activeEvent.event_format;
+                      return (
+                        <button key={fmt} onClick={() => setEditForm(p=>({...p, event_format:fmt}))}
+                          style={{ flex:1, padding:"7px 6px", borderRadius:7, border:`1px solid ${cur===fmt?C.blue:C.border}`, background:cur===fmt?`${C.blue}15`:"transparent", color:cur===fmt?C.blue:C.muted, fontSize:12, cursor:"pointer" }}>
+                          {icon}<br/><span style={{ fontSize:10 }}>{fmt}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Capacity + RSVP deadline */}
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Capacity</label>
+                  <input type="number"
+                    value={editForm.capacity !== undefined ? editForm.capacity : activeEvent.capacity ?? ""}
+                    onChange={e => setEditForm(p => ({ ...p, capacity: e.target.value }))}
+                    placeholder="e.g. 200"
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>RSVP Deadline</label>
+                  <input type="date"
+                    value={editForm.rsvp_deadline !== undefined ? editForm.rsvp_deadline : (activeEvent.rsvp_deadline?.slice(0,10) ?? "")}
+                    onChange={e => setEditForm(p => ({ ...p, rsvp_deadline: e.target.value }))}
+                    style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", boxSizing:"border-box" }}
+                    onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                </div>
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom:20 }}>
+                <label style={{ display:"block", fontSize:11.5, fontWeight:600, color:C.muted, marginBottom:5, textTransform:"uppercase", letterSpacing:"0.5px" }}>Description</label>
+                <textarea
+                  value={editForm.description !== undefined ? editForm.description : activeEvent.description ?? ""}
+                  onChange={e => setEditForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Brief description of the event..."
+                  rows={3}
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"9px 12px", fontSize:13, outline:"none", resize:"none", lineHeight:1.5, boxSizing:"border-box" }}
+                  onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+              </div>
+
+              {/* Preview card */}
+              <div style={{ background:C.raised, borderRadius:10, border:`1px solid ${C.border}`, padding:"12px 14px", marginBottom:20 }}>
+                <div style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>Preview</div>
+                <div style={{ fontSize:15, fontWeight:700, color:C.text }}>{editForm.name||activeEvent.name}</div>
+                <div style={{ fontSize:12, color:C.sec, marginTop:4, display:"flex", gap:12, flexWrap:"wrap" }}>
+                  {(editForm.event_date||activeEvent.event_date) && <span>📅 {new Date((editForm.event_date||activeEvent.event_date)).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</span>}
+                  {(editForm.event_time||activeEvent.event_time) && <span>🕐 {editForm.event_time||activeEvent.event_time}</span>}
+                  {(editForm.location||activeEvent.location) && <span>📍 {editForm.location||activeEvent.location}</span>}
+                  {(editForm.capacity||activeEvent.capacity) && <span>👥 {editForm.capacity||activeEvent.capacity} capacity</span>}
+                </div>
+              </div>
+
+              <div style={{ display:"flex", gap:10 }}>
+                <button onClick={() => { setShowEditEvent(false); setEditForm({}); }} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+                <button onClick={async () => {
+                  const updates = {};
+                  ["name","event_date","event_time","location","description","capacity","rsvp_deadline","event_type","event_format"].forEach(k => {
+                    if (editForm[k] !== undefined) updates[k] = editForm[k] || null;
+                  });
+                  if (!Object.keys(updates).length) { setShowEditEvent(false); return; }
+                  await supabase.from("events").update(updates).eq("id", activeEvent.id);
+                  setActiveEvent(p => ({ ...p, ...updates }));
+                  setEvents(p => p.map(e => e.id === activeEvent.id ? { ...e, ...updates } : e));
+                  setEditForm({}); setShowEditEvent(false);
+                  fire("✅ Event updated");
+                }} style={{ flex:2, padding:11, background:C.blue, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:600, cursor:"pointer" }}>Save changes</button>
+              </div>
             </div>
           </div>
         </div>
