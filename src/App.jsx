@@ -769,17 +769,37 @@ function MainApp({ session }) {
       const { data: profileData } = await supabase.from("profiles").select("company_id").eq("id", session.user.id).single();
       const compId = profileData?.company_id;
       if (!compId) return;
-      const { data: events } = await supabase.from("events").select("id,name,event_date,status").eq("company_id", compId).order("event_date");
-      if (!events?.length) return;
+      const [{ data: events }, { data: campaigns }, { data: unsubs }] = await Promise.all([
+        supabase.from("events").select("id,name,event_date,status").eq("company_id", compId).order("event_date"),
+        supabase.from("email_campaigns").select("id,name,email_type,status,total_sent,total_opened,scheduled_at").eq("company_id", compId).eq("status","scheduled").order("scheduled_at").limit(5),
+        supabase.from("contacts").select("id",{count:"exact"}).eq("company_id", compId).eq("unsubscribed",true).limit(1),
+      ]);
       const now = new Date();
       const newNotifs = [];
-      for (const ev of events.slice(0, 5)) {
+
+      // Event countdown alerts
+      for (const ev of (events||[]).slice(0, 5)) {
         if (!ev.event_date) continue;
         const days = Math.ceil((new Date(ev.event_date) - now) / (1000*60*60*24));
-        if (days > 0 && days <= 7) newNotifs.push({ icon: "🔴", message: `${ev.name} is in ${days} day${days !== 1 ? "s" : ""}!`, time: "Due soon" });
-        else if (days === 0) newNotifs.push({ icon: "🎉", message: `${ev.name} is TODAY!`, time: "Today" });
-        else if (days > 0 && days <= 21 && ev.status === "draft") newNotifs.push({ icon: "⚠️", message: `${ev.name} is ${days} days away — still on Draft`, time: `${days}d to go` });
+        if (days === 0) newNotifs.push({ icon:"🎉", message:`${ev.name} is TODAY!`, time:"Today" });
+        else if (days > 0 && days <= 7) newNotifs.push({ icon:"🔴", message:`${ev.name} is in ${days} day${days!==1?"s":""}!`, time:"Due soon" });
+        else if (days > 0 && days <= 21 && ev.status==="draft") newNotifs.push({ icon:"⚠️", message:`${ev.name} is ${days}d away — still on Draft`, time:`${days}d to go` });
       }
+
+      // Scheduled email alerts
+      for (const cam of (campaigns||[])) {
+        if (!cam.scheduled_at) continue;
+        const hoursUntil = Math.round((new Date(cam.scheduled_at) - now) / (1000*60*60));
+        if (hoursUntil <= 24 && hoursUntil > 0) {
+          newNotifs.push({ icon:"📅", message:`"${cam.name?.slice(0,30)}" sends in ${hoursUntil}h`, time:"Scheduled" });
+        }
+      }
+
+      // Unsubscribe alert
+      if ((unsubs?.count || 0) > 0) {
+        newNotifs.push({ icon:"🚫", message:`${unsubs.count} contact${unsubs.count>1?"s":""} unsubscribed — check Contacts`, time:"Action" });
+      }
+
       if (newNotifs.length > 0) {
         setNotifs(newNotifs);
         setNotifCount(newNotifs.length);
