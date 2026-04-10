@@ -839,6 +839,7 @@ function MainApp({ session }) {
   const [showNewEvent, setShowNewEvent] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
   const [newEventName, setNewEventName] = useState("");
+  const [newEventDate, setNewEventDate] = useState("");
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
 
