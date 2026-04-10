@@ -4071,7 +4071,13 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [importing, setImporting] = useState(false);
-  const [importPreview, setImportPreview] = useState(null); // parsed rows to preview
+  const [importPreview, setImportPreview] = useState(null);
+  const [importStep, setImportStep] = useState("input"); // "input" | "map" | "preview"
+  const [csvHeaders, setCsvHeaders] = useState([]);
+  const [columnMap, setColumnMap] = useState({});
+  const [addToEvent, setAddToEvent] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const importFileRef = useRef(null);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [mergingDup, setMergingDup] = useState(false);
 
@@ -4178,8 +4184,128 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
     if (contactSort === "score") return (scores[b.id]?.score||0) - (scores[a.id]?.score||0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
-  const importCSV = () => { setShowImport(true); };
+  const resetImport = () => { setShowImport(false); setImportText(""); setImportPreview(null); setImportStep("input"); setCsvHeaders([]); setColumnMap({}); setAddToEvent(false); setDragOver(false); };
+
+  // Parse a single CSV line, handling quoted fields and multiple delimiters
+  const parseCSVLine = (line) => {
+    const result = []; let cur = ""; let inQ = false;
+    const delim = line.includes("\t") ? "\t" : line.includes(";") ? ";" : ",";
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQ = !inQ; }
+      else if (line[i] === delim && !inQ) { result.push(cur.trim().replace(/^["']|["']$/g,"")); cur = ""; }
+      else { cur += line[i]; }
+    }
+    result.push(cur.trim().replace(/^["']|["']$/g,""));
+    return result;
+  };
+
+  const autoDetectColumns = (headers) => {
+    const h = headers.map(x => x.toLowerCase().replace(/[^a-z]/g,""));
+    const find = (kws) => { const i = h.findIndex(x => kws.some(k => x.includes(k))); return i >= 0 ? i : null; };
+    return {
+      email:        find(["email","emailaddress","mail"]),
+      first_name:   find(["first","firstname","given"]),
+      last_name:    find(["last","lastname","surname","family"]),
+      phone:        find(["phone","mobile","tel","cell"]),
+      company_name: find(["company","org","organisation","organization","employer","account"]),
+      job_title:    find(["title","role","position","job"]),
+    };
+  };
+
+  const buildRowsFromMap = (text, map) => {
+    const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = parseCSVLine(lines[i]);
+      const get = (k) => (map[k] !== null && map[k] !== undefined && map[k] !== "") ? (cols[map[k]] || "").trim() : "";
+      const email = get("email").toLowerCase();
+      if (!email.includes("@")) continue;
+      const domain = email.split("@")[1]?.split(".")[0];
+      rows.push({ email, first_name: get("first_name"), last_name: get("last_name"), phone: get("phone"), company_name: get("company_name"), job_title: get("job_title"), _personal: PERSONAL_DOMAINS.includes(domain) });
+    }
+    return rows;
+  };
+
+  const handleImportFile = (file) => {
+    if (!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+      const text = ev.target.result;
+      setImportText(text);
+      const firstLine = text.split("\n")[0];
+      const hasDelim = firstLine.includes(",") || firstLine.includes(";") || firstLine.includes("\t");
+      if (hasDelim) {
+        const hdrs = parseCSVLine(firstLine);
+        setCsvHeaders(hdrs);
+        setColumnMap(autoDetectColumns(hdrs));
+        setImportStep("map");
+      }
+    };
+    r.readAsText(file);
+  };
+
+  const handleImportProceed = () => {
+    const firstLine = importText.split("\n")[0];
+    const hasDelim = firstLine.includes(",") || firstLine.includes(";") || firstLine.includes("\t");
+    if (hasDelim) {
+      const hdrs = parseCSVLine(firstLine);
+      setCsvHeaders(hdrs);
+      setColumnMap(autoDetectColumns(hdrs));
+      setImportStep("map");
+    } else {
+      const rows = parseImportText(importText);
+      if (!rows.length) { fire("No valid emails found", "err"); return; }
+      setImportPreview(rows);
+      setImportStep("preview");
+    }
+  };
+
+  const importCSV = () => { setImportStep("input"); setShowImport(true); };
   const doImport = async () => {
+    if (!importText.trim() || !profile) return;
+    setImporting(true);
+    const lines = importText.split('\n').map(l => l.trim()).filter(Boolean);
+    const rows = [];
+    const isCSV = lines.length > 1 && lines[0].includes(',');
+    if (isCSV) {
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, ''));
+      const emailCol = headers.findIndex(h => h.includes('email') || h.includes('e-mail'));
+      const firstCol = headers.findIndex(h => h.includes('first') || h === 'name' || h === 'firstname');
+      const lastCol = headers.findIndex(h => h.includes('last') || h === 'surname' || h === 'lastname');
+      const phoneCol = headers.findIndex(h => h.includes('phone') || h.includes('mobile') || h.includes('tel'));
+      const companyCol = headers.findIndex(h => h.includes('company') || h.includes('organisation') || h.includes('organization') || h.includes('org'));
+      const titleCol = headers.findIndex(h => h.includes('title') || h.includes('role') || h.includes('position') || h.includes('job'));
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^["']|["']$/g, ''));
+        const email = emailCol >= 0 ? cols[emailCol]?.toLowerCase() : '';
+        if (!email || !email.includes('@')) continue;
+        const nameRaw = firstCol >= 0 ? cols[firstCol] : '';
+        const nameParts = nameRaw.split(' ');
+        rows.push({ email, first_name: nameParts[0] || '', last_name: lastCol >= 0 ? cols[lastCol] : (nameParts[1] || ''), phone: phoneCol >= 0 ? cols[phoneCol] : '', company_name: companyCol >= 0 ? cols[companyCol] : '', job_title: titleCol >= 0 ? cols[titleCol] : '' });
+      }
+    } else {
+      for (const raw of lines) {
+        const angleMatch = raw.match(/^(.+?)<(.+@.+)>$/);
+        if (angleMatch) {
+          const nameParts = angleMatch[1].trim().split(' ');
+          rows.push({ email: angleMatch[2].trim().toLowerCase(), first_name: nameParts[0] || '', last_name: nameParts[1] || '', phone: '', company_name: '', job_title: '' });
+        } else if (raw.includes('@')) {
+          rows.push({ email: raw.toLowerCase().trim(), first_name: '', last_name: '', phone: '', company_name: '', job_title: '' });
+        }
+      }
+    }
+    if (!rows.length) { fire("No valid emails found", "err"); setImporting(false); return; }
+    const toInsert = rows.map(r => ({ ...r, company_id: profile.company_id }));
+    const { data, error } = await supabase.from("contacts").upsert(toInsert, { onConflict: "email,company_id", ignoreDuplicates: true }).select();
+    if (error) { fire(`Import error: ${error.message}`, "err"); }
+    else {
+      const newOnes = (data || []).filter(Boolean);
+      setContacts(p => { const ex = new Set(p.map(c => c.email)); return [...p, ...newOnes.filter(c => !ex.has(c.email))]; });
+      fire(`✅ ${newOnes.length} contacts imported · ${rows.length - newOnes.length} already existed`);
+      setImportText(''); setShowImport(false);
+    }
+    setImporting(false);
+  }
     if (!importText.trim() || !profile) return;
     setImporting(true);
     
@@ -4633,111 +4759,255 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
       )}
       {showImport && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}
-          onClick={() => { setShowImport(false); setImportText(""); setImportPreview(null); }}>
-          <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:28, width:600, maxHeight:"85vh", display:"flex", flexDirection:"column", animation:"fadeUp .2s ease" }}
+          onClick={resetImport}>
+          <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:28, width:640, maxHeight:"90vh", display:"flex", flexDirection:"column", animation:"fadeUp .2s ease", gap:0 }}
             onClick={e => e.stopPropagation()}>
-            <h2 style={{ fontSize:17, fontWeight:600, color:C.text, marginBottom:4 }}>Import Contacts</h2>
-            <p style={{ fontSize:12, color:C.muted, marginBottom:12 }}>Paste emails, CSV, LinkedIn export, or "First Last &lt;email&gt;". Business emails only.</p>
 
-            {!importPreview ? (
-              <>
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
-                  <label style={{ display:"inline-flex", alignItems:"center", gap:6, fontSize:12, padding:"6px 14px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, cursor:"pointer", fontWeight:500 }}>
-                    📁 Upload CSV
-                    <input type="file" accept=".csv,.txt" style={{ display:"none" }} onChange={e => {
-                      const f = e.target.files?.[0]; if (!f) return;
-                      const r = new FileReader(); r.onload = ev => { setImportText(ev.target.result); }; r.readAsText(f);
-                      e.target.value = "";
-                    }} />
-                  </label>
-                  <span style={{ fontSize:11, color:C.muted }}>or paste below ↓</span>
-                </div>
-                <div style={{ display:"flex", gap:6, marginBottom:10 }}>
-                  {[
-                    { label:"📋 CSV", ex:`first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
-                    { label:"📧 Emails", ex:`john@acme.com\njane@corp.com\nbob@startup.io` },
-                    { label:"👤 Name+Email", ex:`John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
-                    { label:"💼 LinkedIn", ex:`First Name,Last Name,Email Address,Company,Position,Connected On\nJohn,Smith,john@acme.com,Acme Corp,CEO,01 Jan 2024\nJane,Lee,jane@corp.com,Beta Inc,Director,15 Mar 2024` },
-                  ].map(t => (
-                    <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex:1, fontSize:10, padding:"5px 4px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:5, color:C.muted, cursor:"pointer" }}>{t.label}</button>
+            {/* ── Header ── */}
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:18 }}>
+              <div>
+                <h2 style={{ fontSize:17, fontWeight:700, color:C.text, margin:0 }}>
+                  {importStep === "input" ? "Import Contacts" : importStep === "map" ? "Map Columns" : "Preview & Import"}
+                </h2>
+                <div style={{ display:"flex", gap:6, marginTop:8 }}>
+                  {["input","map","preview"].map((s,i) => (
+                    <div key={s} style={{ display:"flex", alignItems:"center", gap:5 }}>
+                      <div style={{ width:20, height:20, borderRadius:"50%", background: importStep===s ? C.blue : i < ["input","map","preview"].indexOf(importStep) ? C.green : C.border, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:"#fff", fontWeight:700, flexShrink:0, transition:"all .2s" }}>
+                        {i < ["input","map","preview"].indexOf(importStep) ? "✓" : i+1}
+                      </div>
+                      <span style={{ fontSize:10.5, color: importStep===s ? C.text : C.muted, fontWeight: importStep===s ? 600 : 400 }}>
+                        {{input:"Upload",map:"Map",preview:"Preview"}[s]}
+                      </span>
+                      {i < 2 && <span style={{ color:C.border, fontSize:12 }}>›</span>}
+                    </div>
                   ))}
                 </div>
+              </div>
+              <button onClick={resetImport} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:22, lineHeight:1, flexShrink:0 }}>×</button>
+            </div>
+
+            {/* ── Step 1: Upload / Paste ── */}
+            {importStep === "input" && (
+              <>
+                {/* Drag-and-drop zone */}
+                <div
+                  onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) handleImportFile(f); }}
+                  onClick={() => importFileRef.current?.click()}
+                  style={{ border:`2px dashed ${dragOver ? C.blue : C.border}`, borderRadius:10, padding:"28px 20px", textAlign:"center", cursor:"pointer", background: dragOver ? C.blue+"08" : C.raised, marginBottom:14, transition:"all .15s" }}>
+                  <input ref={importFileRef} type="file" accept=".csv,.txt,.tsv" style={{ display:"none" }} onChange={e => { handleImportFile(e.target.files?.[0]); e.target.value=""; }} />
+                  <div style={{ fontSize:32, marginBottom:8 }}>📂</div>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:4 }}>Drop your CSV file here</div>
+                  <div style={{ fontSize:12, color:C.muted }}>or click to browse · CSV, TSV, TXT · any column order</div>
+                  <div style={{ display:"flex", gap:8, justifyContent:"center", marginTop:10, flexWrap:"wrap" }}>
+                    {["Salesforce","HubSpot","LinkedIn","Eventbrite","Excel"].map(s => (
+                      <span key={s} style={{ fontSize:10, padding:"2px 8px", borderRadius:4, background:C.card, border:`1px solid ${C.border}`, color:C.muted }}>{s}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+                  <div style={{ flex:1, height:1, background:C.border }} />
+                  <span style={{ fontSize:11, color:C.muted }}>or paste directly</span>
+                  <div style={{ flex:1, height:1, background:C.border }} />
+                </div>
+
+                {/* Paste examples */}
+                <div style={{ display:"flex", gap:6, marginBottom:8 }}>
+                  {[
+                    { label:"📋 CSV", ex:`first_name,last_name,email,company\nJohn,Smith,john@acme.com,Acme Corp\nJane,Lee,jane@corp.com,Corp Inc` },
+                    { label:"📧 Emails", ex:`john@acme.com\njane@corp.com\nbob@startup.io` },
+                    { label:"👤 Name+Email", ex:`John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
+                    { label:"💼 LinkedIn", ex:`First Name,Last Name,Email Address,Company,Position\nJohn,Smith,john@acme.com,Acme Corp,CEO\nJane,Lee,jane@corp.com,Beta Inc,Director` },
+                  ].map(t => (
+                    <button key={t.label} onClick={() => setImportText(t.ex)}
+                      style={{ flex:1, fontSize:10, padding:"5px 4px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:5, color:C.muted, cursor:"pointer" }}>{t.label}</button>
+                  ))}
+                </div>
+
                 {importText.trim() && (() => {
                   const fl = importText.split("\n")[0].toLowerCase();
                   const isLI = fl.includes("connected on") || (fl.includes("first name") && fl.includes("position"));
-                  const isCSV = fl.includes(",") && (fl.includes("email") || fl.includes("first"));
-                  const fmt = isLI ? { label:"💼 LinkedIn Export", col:C.blue } : isCSV ? { label:"📋 CSV", col:C.green } : { label:"📧 Email list", col:C.teal };
-                  return <div style={{ marginBottom:6 }}><span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:`${fmt.col}15`, color:fmt.col, border:`1px solid ${fmt.col}30` }}>Detected: {fmt.label}</span></div>;
+                  const isCSV = fl.includes(",") || fl.includes(";") || fl.includes("\t");
+                  const fmt = isLI ? { label:"💼 LinkedIn Export", col:C.blue } : isCSV ? { label:"📋 CSV detected", col:C.green } : { label:"📧 Email list", col:C.teal };
+                  return <div style={{ marginBottom:6 }}><span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:`${fmt.col}15`, color:fmt.col, border:`1px solid ${fmt.col}30` }}>{fmt.label}</span></div>;
                 })()}
-                <textarea value={importText} onChange={e => setImportText(e.target.value)} autoFocus rows={9}
-                  placeholder={"Paste CSV, emails, or names here…\n\nfirst_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,,Acme Corp\n\n— or —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
-                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12, outline:"none", resize:"vertical", fontFamily:"monospace", boxSizing:"border-box" }}
+
+                <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={7}
+                  placeholder={"first_name,last_name,email,company_name,job_title\nJohn,Smith,john@acme.com,Acme Corp,CEO\n\n— or just paste emails —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12, outline:"none", resize:"vertical", fontFamily:"monospace", boxSizing:"border-box", marginBottom:6 }}
                   onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
-                <div style={{ fontSize:11, color:C.muted, marginTop:6, marginBottom:14 }}>
-                  {importText ? `${parseImportText(importText).filter(r=>!r._personal).length} valid · ${parseImportText(importText).filter(r=>r._personal).length} personal (will skip)` : "Paste data above to preview"}
+
+                <div style={{ fontSize:11, color:C.muted, marginBottom:14 }}>
+                  {importText.trim() ? `${parseImportText(importText).length} contacts detected` : "Paste data above or drop a file to continue"}
                 </div>
+
                 <div style={{ display:"flex", gap:9 }}>
-                  <button onClick={() => { setShowImport(false); setImportText(""); }} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
-                  <button onClick={() => { const rows = parseImportText(importText); if (rows.length) setImportPreview(rows); else fire("No valid contacts found","err"); }} disabled={!importText.trim()} style={{ flex:1, padding:11, background:importText.trim()?C.blue:C.border, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:500, cursor:importText.trim()?"pointer":"default" }}>
-                    Preview Import →
+                  <button onClick={resetImport} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+                  <button onClick={handleImportProceed} disabled={!importText.trim()}
+                    style={{ flex:2, padding:11, background:importText.trim()?C.blue:C.border, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:importText.trim()?"pointer":"default" }}>
+                    Continue →
                   </button>
                 </div>
               </>
-            ) : (
+            )}
+
+            {/* ── Step 2: Column Mapping ── */}
+            {importStep === "map" && (
               <>
-                {/* Preview table */}
-                <div style={{ fontSize:13, color:C.text, marginBottom:10, fontWeight:500 }}>
-                  Preview — {importPreview.filter(r=>!r._personal).length} contacts ready
-                  {importPreview.filter(r=>r._personal).length > 0 && <span style={{ fontSize:11, color:C.amber, marginLeft:8 }}>· {importPreview.filter(r=>r._personal).length} personal emails skipped</span>}
+                <div style={{ marginBottom:14, padding:"10px 14px", background:C.raised, borderRadius:8, border:`1px solid ${C.border}` }}>
+                  <div style={{ fontSize:12, color:C.muted, marginBottom:6 }}>Detected {csvHeaders.length} columns in your file. Map them to evara fields:</div>
+                  <div style={{ fontSize:10.5, color:C.blue }}>⚡ Auto-mapped where column names matched</div>
                 </div>
-                <div style={{ flex:1, overflow:"auto", border:`1px solid ${C.border}`, borderRadius:8, marginBottom:14 }}>
+
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 32px 1fr", gap:"8px 12px", alignItems:"center", marginBottom:18, overflowY:"auto", maxHeight:320 }}>
+                  {[
+                    { key:"email",        label:"📧 Email",      required:true },
+                    { key:"first_name",   label:"👤 First Name",  required:false },
+                    { key:"last_name",    label:"   Last Name",   required:false },
+                    { key:"company_name", label:"🏢 Company",     required:false },
+                    { key:"job_title",    label:"💼 Job Title",   required:false },
+                    { key:"phone",        label:"📞 Phone",       required:false },
+                  ].map(f => (
+                    <>
+                      <div key={f.key+"label"} style={{ fontSize:12.5, color:C.text, fontWeight: f.required ? 600 : 400 }}>
+                        {f.label}{f.required && <span style={{ color:C.red, marginLeft:3 }}>*</span>}
+                      </div>
+                      <div key={f.key+"arrow"} style={{ textAlign:"center", color:C.muted, fontSize:16 }}>→</div>
+                      <select key={f.key+"sel"} value={columnMap[f.key] !== null && columnMap[f.key] !== undefined ? columnMap[f.key] : ""}
+                        onChange={e => setColumnMap(m => ({ ...m, [f.key]: e.target.value === "" ? null : Number(e.target.value) }))}
+                        style={{ fontSize:12, padding:"6px 10px", borderRadius:7, border:`1px solid ${columnMap[f.key] !== null && columnMap[f.key] !== undefined && columnMap[f.key] !== "" ? C.blue : C.border}`, background:C.raised, color: columnMap[f.key] !== null && columnMap[f.key] !== undefined && columnMap[f.key] !== "" ? C.text : C.muted, outline:"none" }}>
+                        <option value="">— skip this field —</option>
+                        {csvHeaders.map((h, i) => <option key={i} value={i}>{h || `Column ${i+1}`}</option>)}
+                      </select>
+                    </>
+                  ))}
+                </div>
+
+                {/* Sample preview of first data row */}
+                {(() => {
+                  const firstDataLine = importText.split("\n").filter(l => l.trim())[1];
+                  if (!firstDataLine) return null;
+                  const sample = parseCSVLine(firstDataLine);
+                  return (
+                    <div style={{ marginBottom:14, padding:"10px 14px", background:C.raised, borderRadius:8, border:`1px solid ${C.border}` }}>
+                      <div style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:6 }}>Sample row preview</div>
+                      <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                        {Object.entries(columnMap).filter(([,v]) => v !== null && v !== undefined && v !== "").map(([k, vi]) => (
+                          <span key={k} style={{ fontSize:11, padding:"2px 8px", borderRadius:4, background:C.card, border:`1px solid ${C.border}`, color:C.text }}>
+                            <span style={{ color:C.muted }}>{k}: </span>{sample[vi] || "—"}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div style={{ display:"flex", gap:9 }}>
+                  <button onClick={() => setImportStep("input")} style={{ padding:"10px 20px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>← Back</button>
+                  <button onClick={() => {
+                    if (columnMap.email === null || columnMap.email === undefined || columnMap.email === "") { fire("Email column is required","err"); return; }
+                    const rows = buildRowsFromMap(importText, columnMap);
+                    if (!rows.length) { fire("No valid emails found in mapped column","err"); return; }
+                    setImportPreview(rows);
+                    setImportStep("preview");
+                  }} style={{ flex:1, padding:11, background:C.blue, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                    Preview {buildRowsFromMap(importText, columnMap).length} contacts →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── Step 3: Preview + Confirm ── */}
+            {importStep === "preview" && importPreview && (
+              <>
+                <div style={{ display:"flex", gap:10, marginBottom:12, flexWrap:"wrap" }}>
+                  {[
+                    { label:"Ready to import", val: importPreview.filter(r=>!r._personal).length, col:C.green },
+                    { label:"Personal emails", val: importPreview.filter(r=>r._personal).length, col:C.amber },
+                    { label:"Total detected", val: importPreview.length, col:C.text },
+                  ].map(s => (
+                    <div key={s.label} style={{ padding:"8px 14px", background:C.raised, borderRadius:8, border:`1px solid ${C.border}` }}>
+                      <div style={{ fontSize:18, fontWeight:700, color:s.col }}>{s.val}</div>
+                      <div style={{ fontSize:10, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ flex:1, overflowY:"auto", border:`1px solid ${C.border}`, borderRadius:8, marginBottom:12, maxHeight:300 }}>
                   <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-                    <thead>
+                    <thead style={{ position:"sticky", top:0, zIndex:1 }}>
                       <tr style={{ background:C.raised, borderBottom:`1px solid ${C.border}` }}>
-                        {["","Name","Email","Company","Job Title"].map(h => (
-                          <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:C.muted, fontWeight:500, fontSize:10.5, textTransform:"uppercase" }}>{h}</th>
+                        {["","Name","Email","Company","Title"].map(h => (
+                          <th key={h} style={{ padding:"7px 10px", textAlign:"left", color:C.muted, fontWeight:600, fontSize:10, textTransform:"uppercase", letterSpacing:"0.5px" }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {importPreview.map((r,i) => (
-                        <tr key={i} style={{ borderBottom:`1px solid ${C.border}`, opacity:r._personal?0.4:1 }}>
-                          <td style={{ padding:"6px 10px", fontSize:10 }}>{r._personal ? <span style={{ color:C.amber }}>⚠</span> : <span style={{ color:C.green }}>✓</span>}</td>
+                        <tr key={i} style={{ borderBottom:`1px solid ${C.border}`, opacity:r._personal?0.55:1, background:r._personal?`${C.amber}04`:"transparent" }}>
+                          <td style={{ padding:"6px 10px", width:24 }}>
+                            {r._personal ? <span title="Personal email — will be skipped" style={{ color:C.amber, fontSize:13 }}>⚠</span> : <span style={{ color:C.green, fontSize:13 }}>✓</span>}
+                          </td>
                           <td style={{ padding:"6px 10px", color:C.text }}>{[r.first_name,r.last_name].filter(Boolean).join(" ")||<span style={{color:C.muted}}>—</span>}</td>
                           <td style={{ padding:"6px 10px", color:r._personal?C.amber:C.sec, fontFamily:"monospace", fontSize:11 }}>{r.email}</td>
-                          <td style={{ padding:"6px 10px", color:C.sec }}>{r.company_name||<span style={{color:C.muted}}>—</span>}</td>
+                          <td style={{ padding:"6px 10px", color:C.sec, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.company_name||<span style={{color:C.muted}}>—</span>}</td>
                           <td style={{ padding:"6px 10px", color:C.sec }}>{r.job_title||<span style={{color:C.muted}}>—</span>}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {importPreview.filter(r=>r._personal).length > 0 && (
+                  <div style={{ padding:"8px 12px", background:`${C.amber}10`, borderRadius:7, border:`1px solid ${C.amber}30`, marginBottom:10, fontSize:11.5, color:C.amber }}>
+                    ⚠️ {importPreview.filter(r=>r._personal).length} personal email addresses (Gmail, Yahoo, etc.) will be skipped. Only business emails will be imported.
+                  </div>
+                )}
+
+                {activeEvent && (
+                  <label style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:C.raised, borderRadius:8, border:`1px solid ${addToEvent?C.blue:C.border}`, marginBottom:12, cursor:"pointer", transition:"border-color .15s" }}>
+                    <input type="checkbox" checked={addToEvent} onChange={e => setAddToEvent(e.target.checked)}
+                      style={{ width:15, height:15, accentColor:C.blue, cursor:"pointer" }} />
+                    <div>
+                      <div style={{ fontSize:12.5, fontWeight:600, color:C.text }}>Also add to "{activeEvent.name}"</div>
+                      <div style={{ fontSize:11, color:C.muted }}>Contacts will appear in this event's guest list immediately</div>
+                    </div>
+                  </label>
+                )}
+
                 <div style={{ display:"flex", gap:9 }}>
-                  <button onClick={() => setImportPreview(null)} style={{ padding:"10px 20px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>← Back</button>
+                  <button onClick={() => { setImportStep(csvHeaders.length ? "map" : "input"); }} style={{ padding:"10px 20px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>← Back</button>
                   <button onClick={async () => {
                     const rows = importPreview.filter(r => !r._personal);
                     if (!rows.length || !profile) return;
                     setImporting(true);
-                    const toInsert = rows.map(r => { const {_personal,...rest}=r; return {...rest, company_id:profile.company_id}; });
+                    const toInsert = rows.map(r => { const {_personal,...rest}=r; return { ...rest, company_id:profile.company_id }; });
                     const { data, error } = await supabase.from("contacts").upsert(toInsert, { onConflict:"email,company_id", ignoreDuplicates:true }).select();
-                    if (error) { fire(`Import error: ${error.message}`,"err"); }
-                    else {
-                      const newOnes = (data||[]).filter(Boolean);
-                      setContacts(p => { const ex = new Set(p.map(c=>c.email)); return [...p,...newOnes.filter(c=>!ex.has(c.email))]; });
-                      fire(`✅ ${newOnes.length} contacts imported · ${rows.length-newOnes.length} already existed`);
-                      setImportText(""); setImportPreview(null); setShowImport(false);
+                    if (error) { fire(`Import error: ${error.message}`,"err"); setImporting(false); return; }
+                    const newOnes = (data||[]).filter(Boolean);
+                    setContacts(p => { const ex = new Set(p.map(c=>c.email)); return [...p,...newOnes.filter(c=>!ex.has(c.email))]; });
+                    // Optionally link to event
+                    if (addToEvent && activeEvent && newOnes.length) {
+                      const ecRows = newOnes.map(c => ({ contact_id:c.id, event_id:activeEvent.id, company_id:profile.company_id, status:"pending" }));
+                      await supabase.from("event_contacts").upsert(ecRows, { onConflict:"event_id,contact_id", ignoreDuplicates:true });
                     }
+                    const skipped = rows.length - newOnes.length;
+                    fire(`✅ ${newOnes.length} imported${skipped?` · ${skipped} already existed`:""}${addToEvent&&activeEvent?` · added to ${activeEvent.name}`:""}!`);
+                    resetImport();
                     setImporting(false);
-                  }} disabled={importing || !importPreview.filter(r=>!r._personal).length} style={{ flex:1, padding:11, background:C.blue, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                    {importing ? "Importing…" : `Import ${importPreview.filter(r=>!r._personal).length} Contacts →`}
+                  }} disabled={importing || !importPreview.filter(r=>!r._personal).length}
+                    style={{ flex:1, padding:11, background:C.blue, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                    {importing ? "Importing…" : `Import ${importPreview.filter(r=>!r._personal).length} Contact${importPreview.filter(r=>!r._personal).length!==1?"s":""}${addToEvent&&activeEvent?" + Add to Event":""} →`}
                   </button>
                 </div>
               </>
             )}
+
           </div>
         </div>
       )}
-
       {/* ── BULK EMAIL MODAL ── */}
       {showBulkEmail && (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}
