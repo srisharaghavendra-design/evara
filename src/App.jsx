@@ -10321,12 +10321,12 @@ function PublicFormPage({ token }) {
                 onFocus={e => { e.target.style.borderColor = "#0A84FF"; setSubmitError(""); }}
                 onBlur={e => e.target.style.borderColor = "#D1D1D6"}
               />
-              {field.type === "email" && answers[field.id]?.includes("@") && !isBusinessEmail(answers[field.id]) && (
+              {field.type === "email" && answers[field.id]?.includes("@") && !isFeedback && !isBusinessEmail(answers[field.id]) && (
                 <div style={{ fontSize: 12, color: "#FF453A", marginTop: 5 }}>
                   ⚠️ Personal emails (Gmail, Yahoo, Hotmail, Rediffmail etc.) are not accepted — use your work email
                 </div>
               )}
-              {field.type === "email" && answers[field.id]?.includes("@") && isBusinessEmail(answers[field.id]) && (
+              {field.type === "email" && answers[field.id]?.includes("@") && !isFeedback && isBusinessEmail(answers[field.id]) && (
                 <div style={{ fontSize: 12, color: "#30D158", marginTop: 5 }}>✅ Business email accepted</div>
               )}
             </>)}
@@ -10409,7 +10409,7 @@ function PublicFormPage({ token }) {
         )}
 
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 12, color: "#AEAEB2" }}>
-          🔒 Your data is encrypted and secure · A confirmation email will be sent to you · Powered by evara
+          🔒 Your data is encrypted and secure{!isFeedback ? " · A confirmation email will be sent to you" : ""} · Powered by evara
         </div>
       </div>
     </div>
