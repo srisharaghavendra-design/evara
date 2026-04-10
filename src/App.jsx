@@ -3907,25 +3907,33 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             );
           })()}
           {campaigns.length === 0 && (
-            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "48px", textAlign: "center", color: C.muted }}>
-              <div style={{ fontSize: 36, marginBottom: 10 }}>✉️</div>
-              <div style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 6 }}>No email drafts yet</div>
-              <div style={{ fontSize: 13, marginBottom: 20, lineHeight: 1.6 }}>Describe your event above and click Generate — AI writes a polished invite in seconds.</div>
-              <div style={{ display: "flex", gap: 6, justifyContent: "center", flexWrap: "wrap", marginBottom: 16 }}>
-                {["Save the Date","Invitation","Reminder","Day-of","Thank You"].map(t => (
-                  <span key={t} style={{ fontSize: 11, padding: "3px 10px", background: C.raised, borderRadius: 12, color: C.muted }}>{t}</span>
+            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "36px 40px", textAlign: "center" }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>✉️</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 8 }}>No email campaigns yet</div>
+              <div style={{ fontSize: 13, color: C.muted, marginBottom: 24, lineHeight: 1.7, maxWidth: 400, margin: "0 auto 24px" }}>
+                Build your emails in the eDM Builder — AI generates polished, on-brand emails from a single sentence. They'll appear here ready to schedule or send.
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, maxWidth: 480, margin: "0 auto 20px" }}>
+                {[
+                  { icon: "📅", title: "Save the Date", desc: "First touchpoint — lock in calendars" },
+                  { icon: "✉️", title: "Invitation", desc: "Full details + RSVP link" },
+                  { icon: "⏰", title: "Reminder", desc: "1 week and 1 day before" },
+                ].map(e => (
+                  <div key={e.title} style={{ padding: "12px", background: C.raised, borderRadius: 8, border: `1px solid ${C.border}`, textAlign: "left" }}>
+                    <div style={{ fontSize: 18, marginBottom: 4 }}>{e.icon}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{e.title}</div>
+                    <div style={{ fontSize: 10.5, color: C.muted }}>{e.desc}</div>
+                  </div>
                 ))}
               </div>
-              <div style={{ fontSize: 11, color: C.muted }}>💡 Or use Campaigns → Generate 7-Email Campaign for a full sequence</div>
-              {campaigns.length > 0 && (
-                <button onClick={() => {
-                  const latest = campaigns.find(c => c.html_content);
-                  if (latest) setPreview({ subject: latest.subject, html: latest.html_content, plain_text: latest.plain_text, campaign_id: latest.id });
-                }} style={{ marginTop: 14, fontSize: 12, padding: "7px 18px", borderRadius: 20, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer" }}>
-                  📧 Load latest draft
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                <button onClick={() => setView("edm")} style={{ fontSize: 13, padding: "9px 20px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                  ✨ Build emails with AI →
                 </button>
-              )}
-              <div style={{ fontSize: 13 }}>Generate emails in eDM Builder, then send or schedule them here</div>
+                <button onClick={() => setView("campaign")} style={{ fontSize: 13, padding: "9px 20px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, cursor: "pointer" }}>
+                  ⚡ Generate full 7-email campaign
+                </button>
+              </div>
             </div>
           )}
           {[...campaigns].sort((a, b) => {
@@ -4175,26 +4183,51 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       {/* SEND NOW MODAL */}
       {sendModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 460, animation: "fadeUp .2s ease" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text }}>Send campaign</h2>
               <button onClick={() => setSendModal(null)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer" }}><X size={16} /></button>
             </div>
-            <div style={{ background: C.raised, borderRadius: 8, padding: "14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{sendModal.name}</div>
+
+            {/* Email summary card */}
+            <div style={{ background: C.raised, borderRadius: 8, padding: "12px 14px", marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>{sendModal.name}</div>
               {sendModal.subject && (
-              <div>
-                <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>"{sendModal.subject}"</div>
-                <div style={{ fontSize: 10, color: sendModal.subject.length > 60 ? C.amber : C.green }}>
-                  {sendModal.subject.length}/60 chars {sendModal.subject.length > 60 ? "⚠️ may truncate in inbox" : "✅ good length"}
+                <div>
+                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>"{sendModal.subject}"</div>
+                  <div style={{ fontSize: 10, color: sendModal.subject.length > 60 ? C.amber : C.green }}>
+                    {sendModal.subject.length}/60 chars {sendModal.subject.length > 60 ? "⚠️ may truncate in inbox" : "✅ good length"}
+                  </div>
                 </div>
+              )}
+              {/* Preview + Test buttons inline */}
+              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                <button onClick={() => { setPreviewCam(sendModal); setSendModal(null); }}
+                  style={{ fontSize: 11, padding: "4px 12px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                  👁 Preview email
+                </button>
+                <button onClick={async () => {
+                  const testTo = profile?.email;
+                  if (!testTo) { fire("No email on your profile", "err"); return; }
+                  fire(`📧 Sending test to ${testTo}…`);
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ contacts: [{ email: testTo, first_name: profile?.full_name?.split(" ")[0] || "Test" }], subject: `[TEST] ${sendModal.subject}`, htmlContent: sendModal.html_content, plainText: sendModal.plain_text })
+                  });
+                  const d = await res.json();
+                  fire(d.success ? `✅ Test sent to ${testTo}! Check your inbox.` : "Send failed", d.success ? "ok" : "err");
+                }} style={{ fontSize: 11, padding: "4px 12px", borderRadius: 5, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                  🧪 Send test to me
+                </button>
               </div>
-            )}
             </div>
-            <div style={{ background: `${C.blue}10`, border: `1px solid ${C.blue}25`, borderRadius: 8, padding: "12px 14px", marginBottom: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.blue, marginBottom: 6 }}>📬 Sending to {sendModal.recipientCount} contacts</div>
+
+            {/* Recipient section */}
+            <div style={{ background: `${C.blue}08`, border: `1px solid ${C.blue}20`, borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 500, color: C.blue, marginBottom: 8 }}>📬 {sendModal.recipientCount} contacts will receive this email</div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, color: C.muted }}>Segment:</span>
+                <span style={{ fontSize: 11, color: C.muted }}>Send to:</span>
                 <select value={sendModal.segment || "all"} onChange={async (e) => {
                   const seg = e.target.value;
                   const { data: ecs } = await supabase.from("event_contacts").select("*").eq("event_id", activeEvent.id).eq("company_id", profile.company_id);
@@ -4203,25 +4236,27 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 }} style={{ fontSize: 11, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "3px 8px", outline: "none", cursor: "pointer" }}>
                   <option value="all">All contacts</option>
                   <option value="confirmed">Confirmed only</option>
-                  <option value="pending">Pending</option>
-                  <option value="declined">Declined</option>
+                  <option value="pending">Pending only</option>
+                  <option value="declined">Declined only</option>
                 </select>
               </div>
-              <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2 }}>Each email is personalised with the recipient's first name.</div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Each email is personalised with the recipient's first name.</div>
             </div>
+
             {sendModal.recipientCount === 0 && (
               <div style={{ background: `${C.amber}10`, border: `1px solid ${C.amber}30`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: C.amber }}>
                 ⚠️ No contacts match this segment. Add contacts in the Dashboard first.
               </div>
             )}
+
             <div style={{ display: "flex", gap: 9 }}>
               <button onClick={() => setSendModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
               <button onClick={sendNow} disabled={sending || sendModal.recipientCount === 0}
-                style={{ flex: 2, padding: "11px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 8, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 500, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, position:"relative", overflow:"hidden" }}>
+                style={{ flex: 2, padding: "11px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 8, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 600, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, position: "relative", overflow: "hidden" }}>
                 {sending && sendProgress.total > 0 && (
-                  <div style={{ position:"absolute", inset:0, background:`${C.green}40`, width:`${Math.round(sendProgress.sent/sendProgress.total*100)}%`, transition:"width .3s", borderRadius:8 }} />
+                  <div style={{ position: "absolute", inset: 0, background: `${C.green}40`, width: `${Math.round(sendProgress.sent / sendProgress.total * 100)}%`, transition: "width .3s", borderRadius: 8 }} />
                 )}
-                <span style={{ position:"relative", zIndex:1, display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 8 }}>
                   {sending ? <><Spin />{sendProgress.total > 1 ? `Sending ${sendProgress.sent}/${sendProgress.total}…` : "Sending…"}</> : <><Send size={14} />Confirm & Send ({sendModal.recipientCount})</>}
                 </span>
               </button>
@@ -7514,6 +7549,28 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
         <div style={{ padding: 60, textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading analytics…</div>
       ) : (
         <>
+          {/* Zero-state explanation when no emails sent yet */}
+          {(!data?.total_sent || data.total_sent === 0) && (
+            <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}20`, borderRadius:10, padding:"16px 20px", marginBottom:16, display:"flex", alignItems:"flex-start", gap:14 }}>
+              <div style={{ fontSize:28, flexShrink:0 }}>💡</div>
+              <div>
+                <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:6 }}>Data populates automatically once you send emails</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+                  {[
+                    { step:"1", label:"Build an email in eDM Builder → AI generates it in 15 seconds" },
+                    { step:"2", label:"Go to Scheduling → click Send on any campaign" },
+                    { step:"3", label:"Open rates, click rates and contact activity appear here live" },
+                  ].map(s => (
+                    <div key={s.step} style={{ display:"flex", gap:8, alignItems:"flex-start" }}>
+                      <span style={{ fontSize:10, fontWeight:700, background:C.blue, color:"#fff", borderRadius:"50%", width:16, height:16, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>{s.step}</span>
+                      <span style={{ fontSize:12, color:C.sec, lineHeight:1.5 }}>{s.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:8 }}>Industry benchmark: 25%+ open rate is excellent. Click rate 3–5% is strong.</div>
+              </div>
+            </div>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
             {METRICS.map((m, i) => (
               <div key={i} style={{ background: C.card, borderRadius: 10, padding: "16px 14px", border: `1px solid ${C.border}`, borderTop: `2px solid ${m.color}35` }}>
