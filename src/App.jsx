@@ -1877,6 +1877,48 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
         </div>
       </div>
 
+      {/* Event lifecycle timeline */}
+      {activeEvent && daysToEvent !== null && (
+        <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:"12px 16px", marginBottom:14, overflowX:"auto" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:0, minWidth:520 }}>
+            {[
+              { label:"Save the Date", icon:"📅", phase:"pre", daysKey:"save_the_date", refDay:-56 },
+              { label:"Invitation", icon:"✉️", phase:"pre", daysKey:"invitation", refDay:-28 },
+              { label:"Reminder", icon:"⏰", phase:"pre", daysKey:"reminder", refDay:-7 },
+              { label:"Event Day", icon:"🎪", phase:"event", refDay:0 },
+              { label:"Thank You", icon:"🙏", phase:"post", daysKey:"thank_you", refDay:1 },
+              { label:"Feedback", icon:"⭐", phase:"post", daysKey:"confirmation", refDay:7 },
+            ].map((stage, i, arr) => {
+              const isEvent = stage.phase === "event";
+              const isPast = !isEvent && daysToEvent > -stage.refDay;
+              const isCurrent = isEvent && daysToEvent === 0;
+              const sentCam = stage.daysKey && campaigns.find(c => c.email_type === stage.daysKey && c.status === "sent");
+              const scheduledCam = stage.daysKey && campaigns.find(c => c.email_type === stage.daysKey && c.status === "scheduled");
+              const hasDraft = stage.daysKey && campaigns.find(c => c.email_type === stage.daysKey && c.status === "draft");
+              const dotCol = isCurrent ? C.green : sentCam ? C.green : scheduledCam ? C.blue : isPast ? C.muted+"60" : C.muted;
+              const dotBg = isCurrent ? C.green+"20" : sentCam ? C.green+"20" : scheduledCam ? C.blue+"15" : "transparent";
+              return (
+                <div key={stage.label} style={{ display:"flex", alignItems:"center", flex:1 }}>
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, flex:1 }}>
+                    <div style={{ width:32, height:32, borderRadius:"50%", background:dotBg, border:`2px solid ${dotCol}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, transition:"all .2s" }}
+                      title={sentCam?"Sent":scheduledCam?"Scheduled":hasDraft?"Draft":"Not started"}>
+                      {sentCam?"✓":isCurrent?stage.icon:stage.icon}
+                    </div>
+                    <div style={{ fontSize:9.5, color:sentCam?C.green:scheduledCam?C.blue:isCurrent?C.text:C.muted, fontWeight:sentCam||scheduledCam||isCurrent?600:400, textAlign:"center", lineHeight:1.2 }}>{stage.label}</div>
+                    <div style={{ fontSize:8.5, color:C.muted, textAlign:"center" }}>
+                      {sentCam?"✓ sent":scheduledCam?"scheduled":hasDraft?"draft":stage.refDay===0?"Event day":stage.refDay>0?`+${stage.refDay}d`:`${stage.refDay}d`}
+                    </div>
+                  </div>
+                  {i < arr.length-1 && (
+                    <div style={{ height:2, flex:0.5, background:sentCam?`${C.green}60`:scheduledCam?`${C.blue}40`:C.border, marginBottom:20, borderRadius:1 }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Quick actions strip */}
       {activeEvent && (
         <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
