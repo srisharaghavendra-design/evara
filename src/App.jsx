@@ -6690,39 +6690,52 @@ Return ONLY valid JSON with this structure:
             </div>
           )}
           {posts && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {PLATFORMS.map(plat => {
-                const data = posts[plat.id] || {};
-                const text = data.post || data.caption || "";
-                const tags = (data.hashtags || []).map(t => `#${t.replace(/^#/, "")}`).join(" ");
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {[
+                { id:"linkedin", label:"LinkedIn", color:"#0077B5", emoji:"💼" },
+                { id:"twitter", label:"Twitter / X", color:"#000", emoji:"🐦" },
+                { id:"instagram", label:"Instagram", color:"#E1306C", emoji:"📸" },
+                { id:"facebook", label:"Facebook", color:"#1877F2", emoji:"📘" },
+              ].map(plat => {
+                const d = posts[plat.id] || {};
+                const text = d.post || d.caption || "";
+                const tags = (d.hashtags||[]).map(t=>`#${t.replace(/^#/,"")}`).join(" ");
                 const full = `${text}\n\n${tags}`;
+                const charLimit = plat.id==="twitter"?280:plat.id==="instagram"?2200:null;
+                const overLimit = charLimit && text.length > charLimit;
+                const shareUrl = plat.id==="linkedin"
+                  ? `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}`
+                  : plat.id==="twitter"
+                  ? `https://twitter.com/intent/tweet?text=${encodeURIComponent(text.slice(0,240))}&hashtags=${encodeURIComponent((d.hashtags||[]).join(","))}`
+                  : null;
                 return (
-                  <div key={plat.id} style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-                    <div style={{ padding: "12px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <span style={{ fontSize: 18 }}>{plat.emoji}</span>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{plat.label}</span>
-                        {plat.id === "twitter" && <span style={{ fontSize: 11, color: C.muted }}>({text.length}/280 chars)</span>}
+                  <div key={plat.id} style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+                    <div style={{ padding:"11px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", background:`${plat.color}0a` }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                        <span style={{ fontSize:16 }}>{plat.emoji}</span>
+                        <span style={{ fontSize:13.5, fontWeight:700, color:C.text }}>{plat.label}</span>
+                        {charLimit && <span style={{ fontSize:10.5, color:overLimit?C.red:C.muted, fontWeight:overLimit?700:400 }}>{text.length}/{charLimit}</span>}
                       </div>
-                      <button onClick={() => copy(full, plat.id)}
-                        style={{ fontSize: 12, padding: "5px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: copied === plat.id ? C.green + "15" : "transparent", color: copied === plat.id ? C.green : C.muted, cursor: "pointer" }}>
-                        {copied === plat.id ? "✅ Copied!" : "Copy"}
-                      </button>
+                      <div style={{ display:"flex", gap:6 }}>
+                        {shareUrl && <a href={shareUrl} target="_blank" rel="noopener" style={{ fontSize:11.5, padding:"4px 12px", borderRadius:5, background:`${plat.color}15`, color:plat.color, border:`1px solid ${plat.color}30`, fontWeight:600 }}>Share ↗</a>}
+                        <button onClick={() => { navigator.clipboard?.writeText(full); setCopied(plat.id); setTimeout(()=>setCopied(null),2000); fire("Copied!"); }}
+                          style={{ fontSize:11.5, padding:"4px 12px", borderRadius:5, border:`1px solid ${C.border}`, background:copied===plat.id?`${C.green}15`:"transparent", color:copied===plat.id?C.green:C.muted, cursor:"pointer", fontWeight:500 }}>
+                          {copied===plat.id?"✅ Copied":"Copy"}
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ padding: "14px 16px" }}>
-                      <p style={{ fontSize: 13, color: C.sec, lineHeight: 1.7, marginBottom: 10, whiteSpace: "pre-wrap" }}>{text}</p>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                        {(data.hashtags || []).map(t => (
-                          <span key={t} style={{ fontSize: 11, color: C.blue, background: C.blue + "12", padding: "2px 8px", borderRadius: 4 }}>#{t.replace(/^#/, "")}</span>
+                    <div style={{ padding:"14px 16px" }}>
+                      <p style={{ fontSize:13, color:C.sec, lineHeight:1.75, marginBottom:10, whiteSpace:"pre-wrap" }}>{text}</p>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:5, marginBottom: plat.id==="instagram"&&d.story_ideas?.length?10:0 }}>
+                        {(d.hashtags||[]).map(t => (
+                          <span key={t} style={{ fontSize:11, color:plat.color, background:`${plat.color}12`, padding:"2px 8px", borderRadius:4 }}>#{t.replace(/^#/,"")}</span>
                         ))}
                       </div>
-                      {plat.id === "instagram" && data.story_ideas?.length > 0 && (
-                        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}` }}>
-                          <div style={{ fontSize: 11, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Story Ideas</div>
-                          {data.story_ideas.map((s, i) => (
-                            <div key={i} style={{ fontSize: 12, color: C.sec, padding: "5px 0", borderBottom: i < data.story_ideas.length - 1 ? `1px solid ${C.border}` : undefined }}>
-                              📱 {s}
-                            </div>
+                      {plat.id==="instagram" && d.story_ideas?.length > 0 && (
+                        <div style={{ marginTop:10, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
+                          <div style={{ fontSize:10.5, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:8 }}>📱 Story Ideas</div>
+                          {d.story_ideas.map((s,i) => (
+                            <div key={i} style={{ fontSize:12, color:C.sec, padding:"5px 0", borderBottom:i<d.story_ideas.length-1?`1px solid ${C.border}`:undefined }}>→ {s}</div>
                           ))}
                         </div>
                       )}
@@ -6730,6 +6743,36 @@ Return ONLY valid JSON with this structure:
                   </div>
                 );
               })}
+
+              {/* Email blurb */}
+              {posts.email && (
+                <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+                  <div style={{ padding:"11px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between", background:`${C.blue}0a` }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:16 }}>✉️</span>
+                      <span style={{ fontSize:13.5, fontWeight:700, color:C.text }}>Email / Newsletter</span>
+                    </div>
+                    <button onClick={() => { navigator.clipboard?.writeText(`Subject: ${posts.email.subject}\n\n${posts.email.blurb}`); fire("Email blurb copied!"); }}
+                      style={{ fontSize:11.5, padding:"4px 12px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>Copy</button>
+                  </div>
+                  <div style={{ padding:"14px 16px" }}>
+                    <div style={{ marginBottom:8 }}>
+                      <div style={{ fontSize:10.5, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:4 }}>Subject line</div>
+                      <div style={{ fontSize:13.5, fontWeight:600, color:C.text }}>{posts.email.subject}</div>
+                    </div>
+                    {posts.email.preview_text && (
+                      <div style={{ marginBottom:10 }}>
+                        <div style={{ fontSize:10.5, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:4 }}>Preview text</div>
+                        <div style={{ fontSize:12.5, color:C.sec }}>{posts.email.preview_text}</div>
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize:10.5, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:4 }}>Newsletter blurb</div>
+                      <p style={{ fontSize:13, color:C.sec, lineHeight:1.7 }}>{posts.email.blurb}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
