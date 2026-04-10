@@ -6792,6 +6792,47 @@ function SettingsView({ supabase, profile, fire }) {
         </div>
       </div>
 
+      {/* ── NOTIFICATION PREFERENCES ── */}
+      {(() => {
+        const [notifPrefs, setNotifPrefs] = React.useState(() => {
+          try { return JSON.parse(localStorage.getItem("evara_notif_prefs")||"{}"); } catch { return {}; }
+        });
+        const savePrefs = (updated) => {
+          setNotifPrefs(updated);
+          localStorage.setItem("evara_notif_prefs", JSON.stringify(updated));
+          fire("Notification preferences saved");
+        };
+        const toggle = (key) => savePrefs({ ...notifPrefs, [key]: !notifPrefs[key] });
+        const PREFS = [
+          { key:"event_countdown", label:"Event countdown alerts", desc:"7-day and 3-day reminders before an event", default:true },
+          { key:"scheduled_email", label:"Scheduled email alerts", desc:"24h warning before a scheduled email goes out", default:true },
+          { key:"unsub_alerts", label:"Unsubscribe alerts", desc:"Notify when contacts unsubscribe", default:true },
+          { key:"open_rate_alerts", label:"Open rate milestones", desc:"Alert when open rate drops below 20% or exceeds 40%", default:false },
+          { key:"post_event_reminder", label:"Post-event prompts", desc:"Remind to send Thank You email after event day", default:true },
+        ];
+        return (
+          <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:20, marginBottom:14 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:16 }}>Notification Preferences</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {PREFS.map(p => {
+                const isOn = notifPrefs[p.key] !== undefined ? notifPrefs[p.key] : p.default;
+                return (
+                  <div key={p.key} style={{ display:"flex", alignItems:"center", gap:14 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:500, color:C.text }}>{p.label}</div>
+                      <div style={{ fontSize:11.5, color:C.muted, marginTop:2 }}>{p.desc}</div>
+                    </div>
+                    <button onClick={() => toggle(p.key)} style={{ width:40, height:22, borderRadius:11, border:"none", background:isOn?C.blue:C.border, position:"relative", cursor:"pointer", flexShrink:0, transition:"background .2s" }}>
+                      <div style={{ position:"absolute", top:3, left:isOn?20:3, width:16, height:16, borderRadius:"50%", background:"#fff", transition:"left .2s", boxShadow:"0 1px 3px rgba(0,0,0,.3)" }} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ── AI BRAND VOICE ── */}
       {bv !== null && (
         <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:20, marginBottom:14 }}>
