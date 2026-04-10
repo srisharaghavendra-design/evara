@@ -2605,35 +2605,80 @@ function DashView({ supabase, profile, activeEvent, fire }) {
       })()}
 
       {showHelp && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200 }}
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:200 }}
           onClick={() => setShowHelp(false)}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease", maxHeight: "85vh", overflowY: "auto" }}
+          <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, padding:28, width:560, animation:"fadeUp .2s ease", maxHeight:"88vh", overflowY:"auto" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: 0 }}>⌨️ Keyboard Shortcuts</h2>
-              <button onClick={() => setShowHelp(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>×</button>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:22 }}>
+              <div>
+                <h2 style={{ fontSize:17, fontWeight:700, color:C.text, margin:0, marginBottom:3 }}>⌨️ Shortcuts & Tips</h2>
+                <p style={{ fontSize:12, color:C.muted, margin:0 }}>Everything you can do faster with evara</p>
+              </div>
+              <button onClick={() => setShowHelp(false)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 20 }}>
-              {[["?", "Toggle this help"], ["Esc", "Close panels"], ["⌘K", "Search contacts"], ["Tab", "Navigate sections"]].map(([key, desc]) => (
-                <div key={key} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", background: C.raised, borderRadius: 7 }}>
-                  <kbd style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 4, padding: "2px 7px", fontSize: 11, fontFamily: "monospace", color: C.sec, flexShrink: 0 }}>{key}</kbd>
-                  <span style={{ fontSize: 12, color: C.muted }}>{desc}</span>
+
+            {/* Keyboard shortcuts */}
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>Keyboard Shortcuts</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6, marginBottom:22 }}>
+              {[
+                ["⌘K","Focus search / filter contacts"],
+                ["⌘N","Create new event"],
+                ["⌘,","Open settings"],
+                ["?","Toggle this help panel"],
+                ["Esc","Close modals & side panels"],
+                ["⌘S","Save draft in eDM Builder"],
+                ["⌘⇧D","Go to Dashboard"],
+                ["⌘⇧E","Go to eDM Builder"],
+                ["⌘⇧C","Go to Contacts"],
+                ["⌘1–9","Navigate modules by number"],
+              ].map(([key, desc]) => (
+                <div key={key} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 10px", background:C.raised, borderRadius:7 }}>
+                  <kbd style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, padding:"2px 8px", fontSize:11, fontFamily:"monospace", color:C.blue, flexShrink:0, fontWeight:600 }}>{key}</kbd>
+                  <span style={{ fontSize:12, color:C.sec }}>{desc}</span>
                 </div>
               ))}
             </div>
-            <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>Quick Tips</div>
-            {[
-              "✅ Click any contact row to open their profile side panel",
-              "☑️ Tick checkboxes to bulk mark or email selected contacts",
-              "🤖 Click 'Analyse event' for AI-powered recommendations",
-              "🎉 After event date, click 'Post-event Follow-ups' in Scheduling",
-              "📋 Click any email address in a contact panel to copy it",
-              "🎓 Certificates button generates print-ready PDFs for attendees",
-              "📷 Copy Kiosk URL in Check-in → let guests self-scan at venue",
-              "⚙️ Set your From Name in Settings so recipients see your brand",
-            ].map((tip, i) => (
-              <div key={i} style={{ fontSize: 12, color: C.sec, marginBottom: 7, lineHeight: 1.5, padding: "6px 10px", background: C.raised, borderRadius: 6 }}>{tip}</div>
-            ))}
+
+            {/* Power user tips */}
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>Power User Tips</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:22 }}>
+              {[
+                {icon:"🖱",tip:"Click any contact row to open their full profile side panel"},
+                {icon:"☑️",tip:"Tick checkboxes in Contacts to bulk-email, export, or delete"},
+                {icon:"🤖",tip:"eDM Builder: AI writes a full polished email in ~15 seconds"},
+                {icon:"📅",tip:"Calendar: click any date to see what emails and events are that day"},
+                {icon:"📊",tip:"Analytics: click 'Share' to get a read-only link for stakeholders"},
+                {icon:"🎪",tip:"Check-in: copy the Kiosk URL — guests scan QR at the venue door"},
+                {icon:"🎉",tip:"Post-event: use Scheduling → Post-event Follow-ups after event day"},
+                {icon:"⚙️",tip:"Settings → Brand Kit: set your logo, colour and sender name once"},
+              ].map(({icon,tip}) => (
+                <div key={tip} style={{ display:"flex", alignItems:"flex-start", gap:10, padding:"8px 10px", background:C.raised, borderRadius:7 }}>
+                  <span style={{ fontSize:15, flexShrink:0 }}>{icon}</span>
+                  <span style={{ fontSize:12, color:C.sec, lineHeight:1.5 }}>{tip}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Module reference */}
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>Module Reference</div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:6 }}>
+              {[
+                {n:"Dashboard",d:"RSVP statuses, contact actions"},
+                {n:"eDM Builder",d:"AI email generation"},
+                {n:"Scheduling",d:"Schedule & send campaigns"},
+                {n:"Analytics",d:"Opens, clicks, attendance"},
+                {n:"Contacts",d:"Guest list management"},
+                {n:"Landing Pages",d:"Event microsite builder"},
+                {n:"Forms",d:"RSVP & registration forms"},
+                {n:"Check-in",d:"Day-of attendance tracking"},
+                {n:"Calendar",d:"Timeline of events & emails"},
+              ].map(({n,d}) => (
+                <div key={n} style={{ padding:"8px 10px", background:C.raised, borderRadius:7 }}>
+                  <div style={{ fontSize:12, fontWeight:600, color:C.text, marginBottom:2 }}>{n}</div>
+                  <div style={{ fontSize:10.5, color:C.muted }}>{d}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
