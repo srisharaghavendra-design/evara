@@ -1690,9 +1690,47 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
     </div>
   );
   const daysToEvent = activeEvent.event_date ? Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+  const isPostEvent = daysToEvent !== null && daysToEvent < 0;
+  const daysSinceEvent = isPostEvent ? Math.abs(daysToEvent) : null;
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+      {/* Post-event mode banner */}
+      {isPostEvent && (
+        <div style={{ background:`linear-gradient(135deg, ${C.green}15, ${C.teal}10)`, border:`1px solid ${C.green}30`, borderRadius:11, padding:"12px 18px", marginBottom:16, display:"flex", alignItems:"center", gap:12 }}>
+          <span style={{ fontSize:24 }}>🎉</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:14, fontWeight:700, color:C.green }}>Event complete — {daysSinceEvent} day{daysSinceEvent!==1?"s":""} ago</div>
+            <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>
+              {contacts.filter(c=>c.status==="attended").length} attended · 
+              {!campaigns.some(c=>c.email_type==="thank_you"&&c.status==="sent") ? " Send a thank you email →" : " Thank you email sent ✓"}
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:8 }}>
+            {!campaigns.some(c=>c.email_type==="thank_you"&&c.status==="sent") && (
+              <button onClick={() => setView("schedule")} style={{ fontSize:12, padding:"6px 13px", background:C.green, border:"none", borderRadius:7, color:"#fff", cursor:"pointer", fontWeight:600 }}>
+                Send Thank You →
+              </button>
+            )}
+            <button onClick={() => setView("feedback")} style={{ fontSize:12, padding:"6px 13px", background:"transparent", border:`1px solid ${C.green}50`, borderRadius:7, color:C.green, cursor:"pointer" }}>
+              Feedback Form
+            </button>
+            <button onClick={async () => {
+              fire("🤖 Generating AI report…");
+              const { data: { session } } = await supabase.auth.getSession();
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
+                method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                body: JSON.stringify({ eventId: activeEvent.id, companyId: profile?.company_id })
+              });
+              const d = await res.json();
+              if (d.success && d.html) { const w = window.open("","_blank"); w.document.write(d.html); w.document.close(); fire("✅ Report ready!"); }
+              else fire("Report failed","err");
+            }} style={{ fontSize:12, padding:"6px 13px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer" }}>
+              ✨ AI Report
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: 22, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 10.5, fontWeight: 600, color: C.blue, textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>Active Event</div>
