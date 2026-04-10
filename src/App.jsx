@@ -3037,6 +3037,51 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [sendingTest, setSendingTest] = useState(false);
   const [previewWidth, setPreviewWidth] = useState("100%");
   const [previewTab, setPreviewTab] = useState("html"); // html | text
+  const [savedTemplates, setSavedTemplates] = useState([]);
+  const [showTemplateLib, setShowTemplateLib] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+
+  // Load saved templates
+  useEffect(() => {
+    if (!profile?.company_id) return;
+    supabase.from("email_campaigns")
+      .select("id,name,email_type,subject,html_content,created_at")
+      .eq("company_id", profile.company_id)
+      .eq("is_template", true)
+      .order("created_at", { ascending: false })
+      .then(({ data }) => setSavedTemplates(data || []));
+  }, [profile?.company_id]);
+
+  const saveAsTemplate = async () => {
+    if (!preview?.html || !profile?.company_id) return;
+    const name = window.prompt("Template name:", preview.subject || "My Template");
+    if (!name) return;
+    setSavingTemplate(true);
+    const { error } = await supabase.from("email_campaigns").insert({
+      company_id: profile.company_id,
+      name,
+      email_type: eType,
+      subject: preview.subject || "",
+      html_content: preview.html,
+      plain_text: preview.plain_text || "",
+      status: "draft",
+      segment: "all",
+      is_template: true,
+    });
+    if (!error) {
+      fire("✅ Saved as template!");
+      supabase.from("email_campaigns").select("id,name,email_type,subject,html_content,created_at").eq("company_id", profile.company_id).eq("is_template", true).order("created_at", { ascending: false })
+        .then(({ data }) => setSavedTemplates(data || []));
+    } else { fire("Failed to save template", "err"); }
+    setSavingTemplate(false);
+  };
+
+  const loadTemplate = (t) => {
+    setPreview({ subject: t.subject, html: t.html_content, plain_text: t.plain_text || "", campaign_id: null });
+    setEType(t.email_type || eType);
+    setShowTemplateLib(false);
+    fire(`Template "${t.name}" loaded!`);
+  };
 
   // Cmd+S shortcut saves draft
   useEffect(() => {
@@ -3595,8 +3640,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               {sendingTest ? "Sending…" : "📤 Send test"}
             </button>
-            <button onClick={() => {
-              const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
+            <button onClick={() => {\n              const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
               if (!templates.length) { fire("No saved templates yet — generate an email and save it first"); return; }
               const choice = window.prompt(templates.map((t, i) => `${i+1}. ${t.name}`).join("\n") + "\n\nEnter number:", "1");
               const idx = parseInt(choice) - 1;
@@ -3606,6 +3650,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               fire(`✅ Template "${t.name}" loaded`);
             }} style={{ padding: "9px 14px", background: "transparent", color: C.blue, border: `1px solid ${C.blue}40`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
               📂 Load template
+            </button>
+            <button onClick={saveAsTemplate} disabled={!preview?.html || savingTemplate}
+              style={{ padding:"9px 14px", background:"transparent", color:C.green, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:12, cursor:"pointer" }}>
+              {savingTemplate ? "Saving…" : "💾 Save as template"}
+            </button>
+            <button onClick={() => setShowTemplateLib(p => !p)}
+              style={{ padding:"9px 14px", background:showTemplateLib?`${C.blue}15`:"transparent", color:C.blue, border:`1px solid ${C.blue}40`, borderRadius:7, fontSize:12, cursor:"pointer" }}>
+              📂 Templates {savedTemplates.length > 0 && `(${savedTemplates.length})`}
             </button>
             <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied to clipboard"); }}
               style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
@@ -3694,6 +3746,49 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           )}
         </div>
       </div>
+
+      {/* Template Library slide-in */}
+      {showTemplateLib && (
+        <div style={{ position:"fixed", inset:0, zIndex:80, display:"flex" }} onClick={() => setShowTemplateLib(false)}>
+          <div style={{ flex:1 }} />
+          <div style={{ width:360, background:C.card, borderLeft:`1px solid ${C.border}`, height:"100%", display:"flex", flexDirection:"column", animation:"fadeUp .2s ease" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"18px 18px 12px", borderBottom:`1px solid ${C.border}`, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <div style={{ fontSize:15, fontWeight:700, color:C.text }}>📂 Template Library</div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>Saved email templates for your company</div>
+              </div>
+              <button onClick={() => setShowTemplateLib(false)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:20 }}>×</button>
+            </div>
+            <div style={{ flex:1, overflowY:"auto", padding:14 }}>
+              {savedTemplates.length === 0 ? (
+                <div style={{ padding:"32px 16px", textAlign:"center", color:C.muted }}>
+                  <div style={{ fontSize:32, marginBottom:10 }}>💾</div>
+                  <div style={{ fontSize:13, fontWeight:500, color:C.text, marginBottom:6 }}>No templates yet</div>
+                  <div style={{ fontSize:12 }}>Generate an email, then click "Save as template" to store it here for reuse.</div>
+                </div>
+              ) : savedTemplates.map(t => (
+                <div key={t.id} style={{ background:C.raised, borderRadius:9, border:`1px solid ${C.border}`, padding:"12px 14px", marginBottom:8 }}>
+                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:6 }}>
+                    <div>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{t.name}</div>
+                      <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{(t.email_type||"").replace(/_/g," ")} · {new Date(t.created_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}</div>
+                    </div>
+                    <button onClick={async () => {
+                      await supabase.from("email_campaigns").delete().eq("id", t.id);
+                      setSavedTemplates(p => p.filter(x => x.id !== t.id));
+                      fire("Template deleted");
+                    }} style={{ background:"transparent", border:"none", color:C.red, cursor:"pointer", fontSize:16, padding:"0 2px" }}>×</button>
+                  </div>
+                  {t.subject && <div style={{ fontSize:11, color:C.sec, marginBottom:8, fontStyle:"italic" }}>"{t.subject}"</div>}
+                  <button onClick={() => loadTemplate(t)} style={{ width:"100%", padding:"7px", background:C.blue, border:"none", borderRadius:6, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                    Load this template →
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
