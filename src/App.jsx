@@ -609,7 +609,15 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
 
         {/* Step 4 — Done */}
         {step === 4 && (
-          <div key="s4" style={{ animation:"fadeUp .3s ease", textAlign:"center" }}>
+          <div key="s4" style={{ animation:"fadeUp .3s ease", textAlign:"center", position:"relative", overflow:"hidden" }}>
+            {/* CSS confetti */}
+            <style>{`@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
+            .confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confettiFall 1.8s ease forwards;pointer-events:none;}`}</style>
+            {["#0A84FF","#30D158","#FF9F0A","#BF5AF2","#FF453A","#5AC8FA"].map((col,i) => (
+              Array.from({length:3}).map((_,j) => (
+                <div key={`${i}-${j}`} className="confetti-piece" style={{ background:col, left:`${10+i*15+j*5}%`, top:0, animationDelay:`${i*0.1+j*0.15}s`, animationDuration:`${1.5+i*0.1}s` }} />
+              ))
+            ))}
             <div style={{ width:72, height:72, borderRadius:20, background:`${C.green}20`, border:`2px solid ${C.green}40`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:32 }}>🎉</div>
             <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:10 }}>You're all set!</h1>
             <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.6 }}>
@@ -623,7 +631,9 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
                 { icon:"📋", title:"Create a form", desc:"RSVP form live in 60 seconds", view:"forms" },
                 { icon:"📊", title:"View analytics", desc:"Track opens, clicks & registrations", view:"analytics" },
               ].map(item => (
-                <div key={item.view} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:16 }}>
+                <div key={item.view} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:16, transition:"all .15s" }}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor=C.blue+"60"}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
                   <div style={{ fontSize:22, marginBottom:8 }}>{item.icon}</div>
                   <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>{item.title}</div>
                   <div style={{ fontSize:12, color:C.muted, lineHeight:1.4 }}>{item.desc}</div>
