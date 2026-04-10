@@ -680,25 +680,50 @@ function AuthScreen() {
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
   return (
-    <div style={{ height: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Outfit,sans-serif", color: C.text }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}`}</style>
-      <div style={{ width: 380, animation: "fadeUp .3s ease" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginBottom: 10 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center" }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
-            <span style={{ fontSize: 17, fontWeight: 700, letterSpacing: "-0.3px" }}>evara</span>
+    <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      {/* Left panel — product showcase */}
+      <div style={{ flex:1, background:"linear-gradient(135deg,#060608 0%,#0a0f1e 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+          <div style={{ width:28, height:28, borderRadius:7, background:C.blue, display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
+          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.4px" }}>evara</span>
+          <span style={{ fontSize:10, background:`${C.blue}20`, color:C.blue, padding:"2px 6px", borderRadius:4, fontWeight:700 }}>BETA</span>
+        </div>
+        <div>
+          <h2 style={{ fontSize:"clamp(24px,3vw,38px)", fontWeight:800, letterSpacing:"-1px", lineHeight:1.1, marginBottom:16, color:"#F5F5F7" }}>
+            Your all-in-one<br/>event marketing<br/><span style={{ color:C.blue }}>platform.</span>
+          </h2>
+          <p style={{ fontSize:15, color:"rgba(255,255,255,0.45)", lineHeight:1.65, marginBottom:28, maxWidth:380 }}>
+            Replace Mailchimp, Eventbrite, Typeform, Unbounce and Zapier with a single AI-native platform built for event marketing teams.
+          </p>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+            {[
+              { icon:"✉️", label:"AI eDM Builder", desc:"Full emails from a sentence in seconds" },
+              { icon:"👥", label:"Contact management", desc:"Deduplication, VIP tagging, lead scoring" },
+              { icon:"📊", label:"Event analytics", desc:"Opens, clicks, registrations, attendance" },
+              { icon:"🎪", label:"QR code check-in", desc:"Self-service kiosk + walk-in capture" },
+            ].map(f => (
+              <div key={f.label} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
+                <span style={{ fontSize:18, flexShrink:0, marginTop:1 }}>{f.icon}</span>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:"rgba(255,255,255,0.85)", marginBottom:2 }}>{f.label}</div>
+                  <div style={{ fontSize:12, color:"rgba(255,255,255,0.35)" }}>{f.desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", marginBottom: 5 }}>{mode === "login" ? "Welcome back" : "Create your account"}</h1>
-          <p style={{ fontSize: 13, color: C.muted }}>{mode === "login" ? "Sign in to your workspace" : "Replace Mailchimp + Eventbrite + Typeform in one tool"}</p>
-          {mode === "signup" && (
-            <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
-              {["eDM Builder", "Check-in", "Analytics", "AI Social"].map(f => (
-                <span key={f} style={{ fontSize: 11, color: C.muted, display: "flex", alignItems: "center", gap: 4 }}>
-                  <span style={{ color: C.green }}>✓</span> {f}
-                </span>
-              ))}
-            </div>
-          )}
+        </div>
+        <div style={{ fontSize:11, color:"rgba(255,255,255,0.2)" }}>
+          © 2026 Orbis · evarahq.com · All data encrypted · GDPR compliant
+        </div>
+      </div>
+
+      {/* Right panel — form */}
+      <div style={{ width:420, background:C.bg, padding:"48px 40px", display:"flex", flexDirection:"column", justifyContent:"center", borderLeft:`1px solid ${C.border}`, flexShrink:0 }}>
+      <div style={{ animation: "fadeUp .3s ease" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 6 }}>{mode === "login" ? "Welcome back" : "Get started free"}</h1>
+          <p style={{ fontSize: 13, color: C.muted }}>{mode === "login" ? "Sign in to your evara workspace" : "No credit card required · Setup in 2 minutes"}</p>
         </div>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 11 }}>
           {mode === "signup" && <><Inp label="Full name" value={name} set={setName} ph="John Doe" /><Inp label="Company" value={company} set={setCompany} ph="Acme Corp" /></>}
@@ -738,6 +763,7 @@ function AuthScreen() {
             {mode === "login" ? "Sign up free" : "Sign in"}
           </span>
         </p>
+      </div>
       </div>
     </div>
   );
