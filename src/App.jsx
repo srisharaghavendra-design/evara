@@ -7460,6 +7460,20 @@ function AgendaView({ supabase, profile, activeEvent, fire }) {
     { id: "dinner", label: "Dinner/Social", color: "#EC4899", emoji: "🍽" },
   ];
 
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOver, setDragOverIdx] = useState(null);
+
+  const handleDrop = (targetIdx) => {
+    if (dragIdx === null || dragIdx === targetIdx) return;
+    setSessions(p => {
+      const arr = [...p];
+      const [moved] = arr.splice(dragIdx, 1);
+      arr.splice(targetIdx, 0, moved);
+      return arr;
+    });
+    setDragIdx(null); setDragOverIdx(null);
+  };
+
   const buildAgenda = () => {
     const [h, m] = startTime.split(":").map(Number);
     let current = h * 60 + m;
@@ -7566,31 +7580,45 @@ Keep all sessions, just reorder if needed and add a "tip" explaining any change.
             </div>
             {sessions.map((s, i) => {
               const typeInfo = SESSION_TYPES.find(t => t.id === s.type) || SESSION_TYPES[0];
+              const isDragging = dragIdx === i;
+              const isOver = dragOver === i;
+              const maxDur = Math.max(...sessions.map(x => x.duration), 60);
               return (
-                <div key={s.id} style={{ padding: "12px 16px", borderBottom: i < sessions.length - 1 ? `1px solid ${C.border}` : undefined, display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>{typeInfo.emoji}</span>
-                  <div style={{ flex: 1, display: "flex", gap: 10, alignItems: "center" }}>
-                    <input value={s.title} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, title: e.target.value } : x))}
-                      style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 8px", fontSize: 13, outline: "none" }} />
-                    <select value={s.type} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, type: e.target.value } : x))}
-                      style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: typeInfo.color, padding: "6px 8px", fontSize: 12, outline: "none", cursor: "pointer" }}>
-                      {SESSION_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                    </select>
-                    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <input type="number" value={s.duration} min={5} max={480} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, duration: parseInt(e.target.value) || 30 } : x))}
-                        style={{ width: 60, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "6px 6px", fontSize: 12, outline: "none", textAlign: "center" }} />
-                      <span style={{ fontSize: 11, color: C.muted }}>min</span>
+                <div key={s.id}
+                  draggable
+                  onDragStart={() => setDragIdx(i)}
+                  onDragOver={e => { e.preventDefault(); setDragOverIdx(i); }}
+                  onDragLeave={() => setDragOverIdx(null)}
+                  onDrop={() => handleDrop(i)}
+                  onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+                  style={{ padding:"10px 16px", borderBottom: i < sessions.length - 1 ? `1px solid ${C.border}` : undefined, display:"flex", alignItems:"center", gap:10, opacity: isDragging ? 0.4 : 1, background: isOver ? `${C.blue}08` : "transparent", borderLeft: isOver ? `3px solid ${C.blue}` : "3px solid transparent", transition:"all .1s", cursor:"grab" }}>
+                  <span style={{ fontSize:14, color:C.muted, cursor:"grab", flexShrink:0 }}>⠿</span>
+                  <span style={{ fontSize:16, flexShrink:0 }}>{typeInfo.emoji}</span>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:4 }}>
+                      <input value={s.title} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, title: e.target.value } : x))}
+                        style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"5px 8px", fontSize:12.5, outline:"none" }} />
+                      <select value={s.type} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, type: e.target.value } : x))}
+                        style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:typeInfo.color, padding:"5px 8px", fontSize:11.5, outline:"none", cursor:"pointer", flexShrink:0 }}>
+                        {SESSION_TYPES.map(t => <option key={t.id} value={t.id}>{t.emoji} {t.label}</option>)}
+                      </select>
+                      <div style={{ display:"flex", alignItems:"center", gap:3, flexShrink:0 }}>
+                        <input type="number" value={s.duration} min={5} max={480} onChange={e => setSessions(p => p.map(x => x.id === s.id ? { ...x, duration: parseInt(e.target.value)||30 } : x))}
+                          style={{ width:52, background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"5px 5px", fontSize:12, outline:"none", textAlign:"center" }} />
+                        <span style={{ fontSize:10, color:C.muted }}>min</span>
+                      </div>
+                    </div>
+                    {/* Duration bar */}
+                    <div style={{ height:3, background:C.raised, borderRadius:2, overflow:"hidden" }}>
+                      <div style={{ height:"100%", width:`${(s.duration/maxDur)*100}%`, background:typeInfo.color, borderRadius:2, opacity:0.7 }} />
                     </div>
                   </div>
-                  <div style={{ display: "flex", gap: 3 }}>
-                    <button onClick={() => { if (i === 0) return; setSessions(p => { const a = [...p]; [a[i-1], a[i]] = [a[i], a[i-1]]; return a; }); }}
-                      style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 14, padding: "0 3px" }}>↑</button>
-                    <button onClick={() => { if (i === sessions.length - 1) return; setSessions(p => { const a = [...p]; [a[i], a[i+1]] = [a[i+1], a[i]]; return a; }); }}
-                      style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 14, padding: "0 3px" }}>↓</button>
-                    <button onClick={() => setSessions(p => p.filter(x => x.id !== s.id))}
-                      style={{ background: "transparent", border: "none", color: C.red, cursor: "pointer", fontSize: 16, padding: "0 3px" }}>×</button>
+                  <div style={{ display:"flex", gap:2, flexShrink:0 }}>
+                    <button onClick={() => { if(i===0) return; setSessions(p => { const a=[...p]; [a[i-1],a[i]]=[a[i],a[i-1]]; return a; }); }} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:13, padding:"1px 3px" }}>↑</button>
+                    <button onClick={() => { if(i===sessions.length-1) return; setSessions(p => { const a=[...p]; [a[i],a[i+1]]=[a[i+1],a[i]]; return a; }); }} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:13, padding:"1px 3px" }}>↓</button>
+                    <button onClick={() => setSessions(p => p.filter(x => x.id !== s.id))} style={{ background:"transparent", border:"none", color:C.red, cursor:"pointer", fontSize:15, padding:"1px 3px" }}>×</button>
                   </div>
-                  {s.tip && <div style={{ fontSize: 10, color: C.amber, background: C.amber + "10", padding: "2px 6px", borderRadius: 3, maxWidth: 120 }}>💡 {s.tip}</div>}
+                  {s.tip && <div style={{ fontSize:10, color:C.amber, background:C.amber+"10", padding:"2px 6px", borderRadius:3, maxWidth:110, flexShrink:0 }}>💡 {s.tip}</div>}
                 </div>
               );
             })}
