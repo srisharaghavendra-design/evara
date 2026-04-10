@@ -4993,13 +4993,21 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                 </div>
                 <div style={{ display:"flex", gap:6, marginBottom:10 }}>
                   {[
-                    { label:"CSV format", ex:`first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
-                    { label:"Email list", ex:`john@acme.com\njane@corp.com\nbob@startup.io` },
-                    { label:"Name + email", ex:`John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
+                    { label:"📋 CSV", ex:`first_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,+1234,Acme Corp` },
+                    { label:"📧 Emails", ex:`john@acme.com\njane@corp.com\nbob@startup.io` },
+                    { label:"👤 Name+Email", ex:`John Smith <john@acme.com>\nJane Lee <jane@corp.com>` },
+                    { label:"💼 LinkedIn", ex:`First Name,Last Name,Email Address,Company,Position,Connected On\nJohn,Smith,john@acme.com,Acme Corp,CEO,01 Jan 2024\nJane,Lee,jane@corp.com,Beta Inc,Director,15 Mar 2024` },
                   ].map(t => (
-                    <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex:1, fontSize:10, padding:"4px 6px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:5, color:C.muted, cursor:"pointer" }}>{t.label}</button>
+                    <button key={t.label} onClick={() => setImportText(t.ex)} style={{ flex:1, fontSize:10, padding:"5px 4px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:5, color:C.muted, cursor:"pointer" }}>{t.label}</button>
                   ))}
                 </div>
+                {importText.trim() && (() => {
+                  const fl = importText.split("\n")[0].toLowerCase();
+                  const isLI = fl.includes("connected on") || (fl.includes("first name") && fl.includes("position"));
+                  const isCSV = fl.includes(",") && (fl.includes("email") || fl.includes("first"));
+                  const fmt = isLI ? { label:"💼 LinkedIn Export", col:C.blue } : isCSV ? { label:"📋 CSV", col:C.green } : { label:"📧 Email list", col:C.teal };
+                  return <div style={{ marginBottom:6 }}><span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:`${fmt.col}15`, color:fmt.col, border:`1px solid ${fmt.col}30` }}>Detected: {fmt.label}</span></div>;
+                })()}
                 <textarea value={importText} onChange={e => setImportText(e.target.value)} autoFocus rows={9}
                   placeholder={"Paste CSV, emails, or names here…\n\nfirst_name,last_name,email,phone,company\nJohn,Smith,john@acme.com,,Acme Corp\n\n— or —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
                   style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12, outline:"none", resize:"vertical", fontFamily:"monospace", boxSizing:"border-box" }}
