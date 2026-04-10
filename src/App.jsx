@@ -5335,45 +5335,65 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
       {showDuplicates && duplicates.length > 0 && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}
           onClick={() => setShowDuplicates(false)}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 540, maxHeight: "80vh", overflowY: "auto", animation: "fadeUp .2s ease" }}
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 560, maxHeight: "85vh", overflowY: "auto", animation: "fadeUp .2s ease" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
               <div>
-                <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text, margin: 0 }}>⚠️ Duplicate Contacts</h2>
-                <p style={{ fontSize: 12, color: C.muted, margin: "4px 0 0" }}>Review and merge duplicate contacts. The selected record is kept, the other is removed.</p>
+                <h2 style={{ fontSize: 17, fontWeight: 700, color: C.text, margin: 0 }}>⚠️ {duplicates.length} Duplicate Contact{duplicates.length>1?"s":""}</h2>
+                <p style={{ fontSize: 12, color: C.muted, margin: "4px 0 0" }}>Click "Keep" on the record you want to keep — the other will be removed and all event history merged.</p>
               </div>
-              <button onClick={() => setShowDuplicates(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20 }}>×</button>
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={async () => {
+                  // Auto-merge: keep the newer record for each pair
+                  for (const dup of duplicates) {
+                    const [a, b] = dup.contacts;
+                    const keep = new Date(a.created_at) > new Date(b.created_at) ? a : b;
+                    const remove = keep.id === a.id ? b : a;
+                    await mergeDuplicate(keep, remove);
+                  }
+                  setShowDuplicates(false);
+                }} style={{ fontSize:11, padding:"5px 12px", background:`${C.green}15`, border:`1px solid ${C.green}40`, borderRadius:6, color:C.green, cursor:"pointer", fontWeight:600 }}>
+                  Auto-merge all
+                </button>
+                <button onClick={() => setShowDuplicates(false)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20, lineHeight:1 }}>×</button>
+              </div>
             </div>
-            {duplicates.slice(0, 10).map((dup, i) => {
+            {duplicates.slice(0, 8).map((dup, i) => {
               const [a, b] = dup.contacts;
               return (
                 <div key={i} style={{ background: C.raised, borderRadius: 10, border: `1px solid ${C.amber}25`, padding: "14px 16px", marginBottom: 10 }}>
-                  <div style={{ fontSize: 10.5, color: C.amber, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10 }}>
-                    {dup.type === "email" ? "Same email address" : "Same name & company"}
+                  <div style={{ fontSize: 10.5, color: C.amber, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 10, display:"flex", alignItems:"center", gap:6 }}>
+                    <span>{dup.type === "email" ? "🔗 Same email address" : "👤 Same name & company"}</span>
+                    <span style={{ marginLeft:"auto", color:C.muted, fontWeight:400, textTransform:"none" }}>Choose which to keep →</span>
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    {[a, b].map((c, ci) => (
-                      <div key={c.id} style={{ background: C.card, borderRadius: 8, padding: "10px 12px", border: `1px solid ${C.border}` }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 4 }}>
-                          {`${c.first_name||""} ${c.last_name||""}`.trim() || "—"}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: 8, alignItems:"center" }}>
+                    {[a, b].map((c, ci) => {
+                      const isNewer = new Date(c.created_at) > new Date(ci===0?b:a).created_at;
+                      return (
+                        <div key={c.id} style={{ background: C.card, borderRadius: 8, padding: "12px 14px", border: `1px solid ${C.border}` }}>
+                          {isNewer && <div style={{ fontSize:9, color:C.blue, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:4 }}>Newer record</div>}
+                          <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+                            {`${c.first_name||""} ${c.last_name||""}`.trim() || "—"}
+                          </div>
+                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 2 }}>{c.email || "—"}</div>
+                          <div style={{ fontSize: 11, color: C.muted, marginBottom: 2 }}>{c.company_name || "—"}</div>
+                          <div style={{ fontSize: 10, color: C.muted, marginBottom: 10 }}>Added {c.created_at ? new Date(c.created_at).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"}) : "—"}</div>
+                          <button
+                            onClick={() => mergeDuplicate(c, ci === 0 ? b : a)}
+                            disabled={mergingDup}
+                            style={{ width: "100%", fontSize: 12, padding: "7px 8px", borderRadius: 6, border: "none", background: mergingDup?C.raised:C.green, color: mergingDup?C.muted:"#fff", cursor: "pointer", fontWeight:600 }}>
+                            {mergingDup ? "Merging…" : "✅ Keep this one"}
+                          </button>
                         </div>
-                        <div style={{ fontSize: 11, color: C.muted, marginBottom: 2 }}>{c.email || "—"}</div>
-                        <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>{c.company_name || "—"}</div>
-                        <div style={{ fontSize: 10, color: C.muted, marginBottom: 8 }}>Added {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}</div>
-                        <button
-                          onClick={() => mergeDuplicate(c, ci === 0 ? b : a)}
-                          disabled={mergingDup}
-                          style={{ width: "100%", fontSize: 11, padding: "5px 8px", borderRadius: 5, border: `1px solid ${C.green}40`, background: "transparent", color: C.green, cursor: "pointer" }}>
-                          {mergingDup ? "Merging…" : "✅ Keep this one"}
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
+                    <div style={{ textAlign:"center", fontSize:18, color:C.muted }}>↔</div>
                   </div>
                 </div>
               );
             })}
-            {duplicates.length > 10 && (
-              <p style={{ textAlign: "center", fontSize: 12, color: C.muted }}>…and {duplicates.length - 10} more. Merge these first.</p>
+            {duplicates.length > 8 && (
+              <p style={{ textAlign: "center", fontSize: 12, color: C.muted, padding:"8px 0" }}>…and {duplicates.length - 8} more. Use "Auto-merge all" to resolve all at once.</p>
             )}
           </div>
         </div>
