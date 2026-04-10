@@ -3399,6 +3399,17 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   };
 
   // Cmd+S shortcut saves draft
+  const saveDraft = async () => {
+    if (!preview?.html || !activeEvent?.id || !profile?.company_id) return;
+    if (preview.campaign_id) {
+      await supabase.from("email_campaigns").update({ html_content: preview.html, plain_text: preview.plain_text, subject: preview.subject }).eq("id", preview.campaign_id);
+      fire("💾 Draft saved!");
+    } else {
+      const { data: saved } = await supabase.from("email_campaigns").insert({ event_id: activeEvent.id, company_id: profile.company_id, name: (preview.subject || eType.replace(/_/g," ")+" — email").slice(0,80), email_type: eType, subject: preview.subject, html_content: preview.html, plain_text: preview.plain_text, status: "draft", segment: "all" }).select("id").single();
+      if (saved?.id) { setPreview(p => ({ ...p, campaign_id: saved.id })); fire("💾 Draft saved!"); }
+    }
+  };
+
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
@@ -3408,7 +3419,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [preview?.html]);
+  }, [preview?.html, preview?.campaign_id]);
   const [subjectAlts, setSubjectAlts] = useState([]);
   const [loadingAlts, setLoadingAlts] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
