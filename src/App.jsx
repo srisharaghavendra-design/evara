@@ -4684,18 +4684,6 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} — merge
             </button>
           )}
-          {duplicates.length > 0 && (
-            <button onClick={() => setShowDuplicates(p => !p)}
-              style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer" }}>
-              ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} — merge
-            </button>
-          )}
-          {duplicates.length > 0 && (
-            <button onClick={() => setShowDuplicates(p => !p)}
-              style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.amber}40`, background: C.amber+"12", color: C.amber, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-              ⚠️ {duplicates.length} duplicate{duplicates.length > 1 ? "s" : ""} found
-            </button>
-          )}
         <button onClick={async () => {
           // Find duplicates by email
           const seen = {};
