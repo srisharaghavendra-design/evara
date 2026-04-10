@@ -4967,6 +4967,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
     if (contactSort === "name") return (`${a.first_name||""} ${a.last_name||""}`).localeCompare(`${b.first_name||""} ${b.last_name||""}`);
     if (contactSort === "company") return (a.company_name||"").localeCompare(b.company_name||"");
     if (contactSort === "email") return (a.email||"").localeCompare(b.email||"");
+    if (contactSort === "score") return (scores[b.id]?.score||0) - (scores[a.id]?.score||0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
   const importCSV = () => { setShowImport(true); };
@@ -5076,6 +5077,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           <select value={contactSort} onChange={e => setContactSort(e.target.value)}
             style={{ fontSize: 12, padding: "6px 10px", borderRadius: 7, border: `1px solid ${C.border}`, background: C.raised, color: C.muted, cursor: "pointer" }}>
             <option value="newest">Newest first</option>
+            <option value="score">🔥 Lead Score</option>
             <option value="name">Name A–Z</option>
             <option value="company">Company A–Z</option>
             <option value="email">Email A–Z</option>
@@ -6119,6 +6121,31 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
                       <span style={{ width: 16, textAlign: "center" }}>{f.icon}</span><span>{f.label}</span>
                     </button>
                   ))}
+                </div>
+                {/* Quick-add common event fields */}
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 6, fontWeight: 600 }}>Quick add common fields</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    {[
+                      { label: "Dietary requirements", type: "radio", options: ["No restrictions", "Vegetarian", "Vegan", "Gluten-free", "Halal", "Kosher", "Other"] },
+                      { label: "Accessibility needs", type: "textarea" },
+                      { label: "Job title", type: "text" },
+                      { label: "LinkedIn profile", type: "text" },
+                      { label: "How did you hear about us?", type: "radio", options: ["LinkedIn", "Email invitation", "Colleague referral", "Company website", "Other"] },
+                      { label: "Questions for speakers", type: "textarea" },
+                      { label: "T-shirt size", type: "radio", options: ["XS", "S", "M", "L", "XL", "XXL"] },
+                      { label: "Table preference", type: "radio", options: ["No preference", "Near front", "Near back", "Quiet area"] },
+                    ].map(f => (
+                      <button key={f.label} onClick={() => {
+                        setFields(p => [...p, { id: nextId, type: f.type, label: f.label, required: false, options: f.options || [] }]);
+                        setNextId(p => p + 1);
+                      }} style={{ fontSize: 11, padding: "3px 9px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", transition: "all .12s" }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = C.teal||C.blue; e.currentTarget.style.color = C.teal||C.blue; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = C.border; e.currentTarget.style.color = C.muted; }}>
+                        + {f.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </Sec>
               <Sec label={`Fields (${fields.length})`}>
