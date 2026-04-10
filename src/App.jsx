@@ -5065,17 +5065,20 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
           Copy Emails
         </button>
         <button onClick={() => {
-          const hdr = ["First Name","Last Name","Email","Company","Job Title","Phone","Tags","Source"];
+          const hdr = ["First Name","Last Name","Email","Company","Job Title","Phone","LinkedIn","Tags","Source","Unsubscribed","Notes","Added"];
           const rows = filtered.map(c => [
             c.first_name||"", c.last_name||"", c.email||"", c.company_name||"",
-            c.job_title||"", c.phone||"", (c.tags||[]).join(";"), c.source||""
+            c.job_title||"", c.phone||"", c.linkedin_url||"",
+            (c.tags||[]).join(";"), c.source||"",
+            c.unsubscribed?"Yes":"No", c.notes||"",
+            c.created_at?new Date(c.created_at).toLocaleDateString("en-AU"):""
           ].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(","));
           const csv = [hdr.join(","), ...rows].join("\n");
           const a = document.createElement("a");
-          a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"}));
-          a.download = `contacts-${new Date().toISOString().slice(0,10)}.csv`;
+          a.href = URL.createObjectURL(new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8"}));
+          a.download = `contacts-${activeEvent?.name?.replace(/\s+/g,"_")||"export"}-${new Date().toISOString().slice(0,10)}.csv`;
           a.click();
-          fire(`✅ Exported ${filtered.length} contact${filtered.length!==1?"s":""}`);
+          fire(`✅ Exported ${filtered.length} contact${filtered.length!==1?"s":""} (${hdr.length} fields)`);
         }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
           ⬇ Export CSV
         </button>
