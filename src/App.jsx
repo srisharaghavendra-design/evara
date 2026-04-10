@@ -9009,13 +9009,12 @@ function PublicCheckInPage({ eventId }) {
 // ─── EVENT CALENDAR VIEW ──────────────────────────────────────
 function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire, campaigns, activeEvent }) {
   const [month, setMonth] = useState(new Date());
-  const [hoveredEvent, setHoveredEvent] = useState(null);
+  const [selectedDay, setSelectedDay] = useState(null);
 
   const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
   const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-  const startDay = monthStart.getDay(); // 0=Sun
+  const startDay = monthStart.getDay();
 
-  // Build calendar grid
   const days = [];
   for (let i = 0; i < startDay; i++) days.push(null);
   for (let d = 1; d <= monthEnd.getDate(); d++) days.push(d);
@@ -9034,7 +9033,6 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
     eventsByDay[day].push(e);
   });
 
-  // Build campaign-by-day map for scheduled emails
   const campaignsByDay = {};
   (campaigns || []).filter(c => c.scheduled_at || c.send_at).forEach(c => {
     const d = new Date(c.scheduled_at || c.send_at);
@@ -9048,157 +9046,150 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
   const today = new Date();
   const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
   const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const upcomingEvents = (events || []).filter(e => e.event_date && new Date(e.event_date) >= today).sort((a,b) => new Date(a.event_date)-new Date(b.event_date)).slice(0,5);
 
-  const upcomingEvents = (events || [])
-    .filter(e => e.event_date && new Date(e.event_date) >= today)
-    .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
-    .slice(0, 5);
+  const selDayEvents = selectedDay ? (eventsByDay[selectedDay.day] || []) : [];
+  const selDayCampaigns = selectedDay ? (campaignsByDay[selectedDay.day] || []) : [];
+  const emailIcon = t => ({save_the_date:"📅",invitation:"✉️",reminder:"⏰",day_of_details:"📍",thank_you:"🙏",confirmation:"✅",byo:"🎒"}[t]||"📧");
 
   return (
-    <div style={{ animation: "fadeUp .2s ease" }}>
-      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:20, display:"flex", alignItems:"flex-end", justifyContent:"space-between" }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Calendar</h1>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>All your events across time — click to switch active event.</p>
+          <h1 style={{ fontSize:24, fontWeight:600, color:C.text, letterSpacing:"-0.6px" }}>Event Calendar</h1>
+          <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>Click any date to see emails and events scheduled that day.</p>
         </div>
       </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 260px", gap: 16 }}>
-        {/* Calendar */}
-        <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, overflow: "hidden" }}>
-          {/* Month header */}
-          <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}
-              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "4px 10px", fontSize: 16 }}>‹</button>
-            <span style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</span>
-            <button onClick={() => setMonth(new Date())} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>Today</button>
-            <button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}
-              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "4px 10px", fontSize: 16 }}>›</button>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:16 }}>
+        {/* Calendar grid */}
+        <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, overflow:"hidden" }}>
+          <div style={{ padding:"14px 20px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <button onClick={() => { setMonth(new Date(month.getFullYear(), month.getMonth()-1, 1)); setSelectedDay(null); }}
+              style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:6, color:C.muted, cursor:"pointer", padding:"4px 10px", fontSize:16 }}>‹</button>
+            <span style={{ fontSize:16, fontWeight:600, color:C.text }}>{MONTHS[month.getMonth()]} {month.getFullYear()}</span>
+            <button onClick={() => { setMonth(new Date()); setSelectedDay(null); }} style={{ fontSize:10, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>Today</button>
+            <button onClick={() => { setMonth(new Date(month.getFullYear(), month.getMonth()+1, 1)); setSelectedDay(null); }}
+              style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:6, color:C.muted, cursor:"pointer", padding:"4px 10px", fontSize:16 }}>›</button>
           </div>
-          {/* Day headers */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", borderBottom: `1px solid ${C.border}` }}>
-            {DAYS.map(d => <div key={d} style={{ padding: "8px 0", textAlign: "center", fontSize: 11, color: C.muted, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px" }}>{d}</div>)}
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", borderBottom:`1px solid ${C.border}` }}>
+            {DAYS.map(d => <div key={d} style={{ padding:"8px 0", textAlign:"center", fontSize:11, color:C.muted, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>{d}</div>)}
           </div>
-          {/* Calendar grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)" }}>
             {days.map((day, i) => {
-              const isToday = day && today.getDate() === day && today.getMonth() === month.getMonth() && today.getFullYear() === month.getFullYear();
-              const dayEvents = day ? (eventsByDay[day] || []) : [];
+              const isToday = day && today.getDate()===day && today.getMonth()===month.getMonth() && today.getFullYear()===month.getFullYear();
+              const isSel = selectedDay?.day === day;
+              const dayEvts = day ? (eventsByDay[day]||[]) : [];
+              const dayCams = day ? (campaignsByDay[day]||[]) : [];
               return (
-                <div key={i} style={{ minHeight: 72, borderRight: i % 7 !== 6 ? `1px solid ${C.border}` : undefined, borderBottom: i < days.length - 7 ? `1px solid ${C.border}` : undefined, padding: "6px 8px", background: !day ? `${C.bg}80` : "transparent" }}>
-                  {day && (
-                    <>
-                      <div style={{ width: 24, height: 24, borderRadius: "50%", background: isToday ? C.blue : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: isToday ? 700 : 400, color: isToday ? "#fff" : C.muted, marginBottom: 4 }}>{day}</div>
-                      {dayEvents.map(ev => (
-                        <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
-                          title={ev.name}
-                          style={{ fontSize: 10, fontWeight: 500, color: "#fff", background: C.blue, borderRadius: 3, padding: "2px 5px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", cursor: "pointer", opacity: 0.9 }}>
-                          {ev.name}
-                        </div>
-                      ))}
-                      {(campaignsByDay[day] || []).map(cam => (
-                        <div key={cam.id} title={`${cam.name} · ${cam.status}`}
-                          style={{ fontSize: 9, fontWeight: 500, color: "#fff", background: cam.status === "sent" ? C.green : C.amber, borderRadius: 3, padding: "2px 5px", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", opacity: 0.85 }}>
-                          ✉️ {cam.subject?.slice(0, 20) || cam.name?.slice(0, 20)}
-                        </div>
-                      ))}
-                    </>
-                  )}
+                <div key={i} onClick={() => {
+                  if (!day) return;
+                  setSelectedDay(isSel ? null : { day, date: new Date(month.getFullYear(), month.getMonth(), day) });
+                }} style={{ minHeight:78, borderRight:i%7!==6?`1px solid ${C.border}`:undefined, borderBottom:i<days.length-7?`1px solid ${C.border}`:undefined, padding:"6px 7px", background:!day?`${C.bg}80`:isSel?`${C.blue}12`:"transparent", cursor:day?"pointer":"default", transition:"background .1s" }}
+                  onMouseEnter={e => { if(day && !isSel) e.currentTarget.style.background=C.raised; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = !day?`${C.bg}80`:isSel?`${C.blue}12`:"transparent"; }}>
+                  {day && <>
+                    <div style={{ width:22, height:22, borderRadius:"50%", background:isToday?C.blue:isSel?`${C.blue}25`:"transparent", display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:isToday||isSel?700:400, color:isToday?"#fff":isSel?C.blue:C.muted, marginBottom:3 }}>{day}</div>
+                    {dayEvts.map(ev => (
+                      <div key={ev.id} onClick={e => { e.stopPropagation(); setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
+                        style={{ fontSize:9.5, fontWeight:600, color:"#fff", background:C.blue, borderRadius:3, padding:"2px 5px", marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", cursor:"pointer" }}>
+                        🎪 {ev.name}
+                      </div>
+                    ))}
+                    {dayCams.slice(0,2).map(cam => (
+                      <div key={cam.id} style={{ fontSize:9, color:"#fff", background:cam.status==="sent"?C.green:C.amber, borderRadius:3, padding:"2px 5px", marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {emailIcon(cam.email_type)} {cam.subject?.slice(0,16)||cam.name?.slice(0,16)}
+                      </div>
+                    ))}
+                    {dayCams.length > 2 && <div style={{ fontSize:9, color:C.muted }}>+{dayCams.length-2} more</div>}
+                  </>}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* Sidebar — upcoming events */}
-        <div>
-          <Sec label="Upcoming events">
-            {upcomingEvents.length === 0 ? (
-              <div style={{ fontSize: 13, color: C.muted, textAlign: "center", padding: 20 }}>No upcoming events</div>
-            ) : upcomingEvents.map(ev => {
-              const d = new Date(ev.event_date);
-              const daysUntil = Math.ceil((d - today) / (1000*60*60*24));
-              const color = daysUntil <= 3 ? C.red : daysUntil <= 14 ? C.amber : C.green;
-              return (
-                <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
-                  style={{ padding: "11px 12px", background: C.bg, borderRadius: 8, border: `1px solid ${C.border}`, marginBottom: 8, cursor: "pointer", transition: "border-color .12s" }}
-                  onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
-                  onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4 }}>{ev.name}</div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: 11, color: C.muted }}>{d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</span>
-                    <span style={{ fontSize: 10, fontWeight: 700, color, background: color + "15", padding: "2px 6px", borderRadius: 3 }}>
-                      {daysUntil === 0 ? "TODAY" : daysUntil === 1 ? "TOMORROW" : `${daysUntil}d`}
-                    </span>
-                  </div>
+        {/* Sidebar */}
+        <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          {selectedDay ? (
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.blue}40`, overflow:"hidden" }}>
+              <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ fontSize:13, fontWeight:600, color:C.blue }}>
+                  {selectedDay.date.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"})}
                 </div>
-              );
-            })}
-          </Sec>
-          <Sec label="Scheduled emails">
-            {(campaigns || []).filter(c => c.scheduled_at && new Date(c.scheduled_at) > new Date()).sort((a,b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)).slice(0,5).map(cam => {
-              const d = new Date(cam.scheduled_at);
-              const daysUntil = Math.ceil((d - new Date()) / (1000*60*60*24));
-              return (
-                <div key={cam.id} style={{ padding: "10px 0", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                  <div>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{cam.name?.replace(/ — .*/, "") || cam.email_type}</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}</div>
-                  </div>
-                  <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, background: C.amber + "20", color: C.amber, fontWeight: 500, flexShrink: 0 }}>
-                    {daysUntil <= 1 ? "Tomorrow" : `${daysUntil}d`}
-                  </span>
-                </div>
-              );
-            })}
-            {!(campaigns || []).some(c => c.scheduled_at && new Date(c.scheduled_at) > new Date()) && (
-              <div style={{ fontSize: 13, color: C.muted, textAlign: "center", padding: 20 }}>No scheduled emails</div>
-            )}
-          </Sec>
-          <Sec label="All events">
-            {(events || []).map(ev => (
-              <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); }}
-                style={{ padding: "8px 10px", background: C.bg, borderRadius: 6, border: `1px solid ${C.border}`, marginBottom: 6, cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                onMouseEnter={e => e.currentTarget.style.borderColor = C.blue}
-                onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: C.text }}>{ev.name}</div>
-                  <div style={{ fontSize: 10, color: C.muted }}>{ev.event_date ? new Date(ev.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "No date"}</div>
-                </div>
-                <span style={{ fontSize: 10, color: ev.status === "draft" ? C.muted : C.green, background: ev.status === "draft" ? C.raised : C.green + "15", padding: "2px 6px", borderRadius: 3, textTransform: "capitalize" }}>{ev.status}</span>
+                <button onClick={() => setSelectedDay(null)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:18, lineHeight:1 }}>×</button>
               </div>
-            ))}
-          </Sec>
-          
-          {/* AI Calendar Intelligence */}
-          {(() => {
-            const warnings = [];
-            const sorted = (events||[]).filter(e => e.event_date).sort((a,b) => new Date(a.event_date) - new Date(b.event_date));
-            for (let i = 0; i < sorted.length - 1; i++) {
-              const a = new Date(sorted[i].event_date);
-              const b = new Date(sorted[i+1].event_date);
-              const daysBetween = Math.ceil((b - a) / 86400000);
-              if (daysBetween <= 7) {
-                warnings.push({ type: "overlap", msg: `"${sorted[i].name}" and "${sorted[i+1].name}" are only ${daysBetween} day(s) apart — contacts may receive too many emails` });
-              }
-            }
-            if (!warnings.length) return null;
-            return (
-              <div style={{ background: C.card, borderRadius: 9, border: `1px solid ${C.amber}30`, padding: 14, marginTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: C.amber, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 10 }}>⚠️ Calendar Intelligence</div>
-                {warnings.map((w, i) => (
-                  <div key={i} style={{ fontSize: 12, color: C.sec, marginBottom: 6, lineHeight: 1.5 }}>• {w.msg}</div>
+              <div style={{ padding:"12px 16px", maxHeight:480, overflowY:"auto" }}>
+                {selDayEvents.length===0 && selDayCampaigns.length===0 && (
+                  <div style={{ fontSize:12, color:C.muted, textAlign:"center", padding:"24px 0" }}>Nothing scheduled this day</div>
+                )}
+                {selDayEvents.map(ev => (
+                  <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
+                    style={{ padding:"10px 12px", background:C.raised, borderRadius:8, border:`1px solid ${C.blue}30`, marginBottom:8, cursor:"pointer" }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.blue, marginBottom:3, textTransform:"uppercase", letterSpacing:"0.5px" }}>🎪 Event Day</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{ev.name}</div>
+                    {ev.location && <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>📍 {ev.location}</div>}
+                    {ev.event_time && <div style={{ fontSize:11, color:C.muted }}>🕐 {ev.event_time}</div>}
+                    <div style={{ fontSize:10, color:C.blue, marginTop:6 }}>Click to set as active →</div>
+                  </div>
+                ))}
+                {selDayCampaigns.map(cam => (
+                  <div key={cam.id} style={{ padding:"10px 12px", background:C.raised, borderRadius:8, border:`1px solid ${cam.status==="sent"?C.green:C.amber}30`, marginBottom:8 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:5 }}>
+                      <span style={{ fontSize:16 }}>{emailIcon(cam.email_type)}</span>
+                      <span style={{ fontSize:10, padding:"1px 6px", borderRadius:3, background:cam.status==="sent"?`${C.green}20`:`${C.amber}20`, color:cam.status==="sent"?C.green:C.amber, fontWeight:700, textTransform:"uppercase" }}>{cam.status}</span>
+                    </div>
+                    <div style={{ fontSize:12.5, fontWeight:500, color:C.text, marginBottom:2 }}>{cam.subject||cam.name}</div>
+                    <div style={{ fontSize:11, color:C.muted }}>{(cam.email_type||"").replace(/_/g," ")}</div>
+                    {cam.total_sent > 0 && (
+                      <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:8 }}>
+                        <div style={{ flex:1, height:3, background:C.border, borderRadius:2 }}>
+                          <div style={{ height:"100%", width:`${Math.min(Math.round((cam.total_opened||0)/cam.total_sent*100),100)}%`, background:Math.round((cam.total_opened||0)/cam.total_sent*100)>=25?C.green:C.amber, borderRadius:2 }} />
+                        </div>
+                        <span style={{ fontSize:10, color:C.muted }}>{Math.round((cam.total_opened||0)/cam.total_sent*100)}% opened</span>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
-            );
-          })()}
+            </div>
+          ) : (
+            <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"12px 16px" }}>
+              <div style={{ fontSize:10.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:12 }}>Upcoming Events</div>
+              {upcomingEvents.length===0 ? (
+                <div style={{ fontSize:13, color:C.muted, textAlign:"center", padding:16 }}>No upcoming events</div>
+              ) : upcomingEvents.map(ev => {
+                const d = new Date(ev.event_date);
+                const daysUntil = Math.ceil((d-today)/(1000*60*60*24));
+                const col = daysUntil<=3?C.red:daysUntil<=14?C.amber:C.green;
+                return (
+                  <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); fire(`Switched to ${ev.name}`); }}
+                    style={{ padding:"10px 0", borderBottom:`1px solid ${C.border}`, cursor:"pointer" }}
+                    onMouseEnter={e=>e.currentTarget.style.opacity="0.7"} onMouseLeave={e=>e.currentTarget.style.opacity="1"}>
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <div style={{ fontSize:13, fontWeight:500, color:C.text }}>{ev.name}</div>
+                      <span style={{ fontSize:10, fontWeight:700, color:col, background:col+"15", padding:"2px 6px", borderRadius:3, flexShrink:0, marginLeft:8 }}>
+                        {daysUntil===0?"TODAY":daysUntil===1?"TMR":`${daysUntil}d`}
+                      </span>
+                    </div>
+                    <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{d.toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:"10px 14px" }}>
+            <div style={{ fontSize:10.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>Legend</div>
+            {[{col:C.blue,lbl:"Event day"},{col:C.green,lbl:"Email sent"},{col:C.amber,lbl:"Email scheduled"}].map(({col,lbl})=>(
+              <div key={lbl} style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:C.sec, marginBottom:5 }}>
+                <div style={{ width:10, height:10, borderRadius:2, background:col, flexShrink:0 }} />{lbl}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 }
-
-// ─── EVENT CALENDAR VIEW ──────────────────────────────────────
 
 // ─── SEATING VIEW ────────────────────────────────────────────
 function SeatingView({ supabase, profile, activeEvent, fire }) {
