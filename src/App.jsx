@@ -6390,7 +6390,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
     { label:"Last in", val: lastIn?.attended_at ? new Date(lastIn.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—", color:C.muted },
   ];
 
-  if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event</div>;
+  if (!activeEvent) return <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"50vh", gap:10, color:C.muted }}><div style={{fontSize:36}}>📅</div><div style={{fontSize:15,fontWeight:500,color:C.text}}>No event selected</div><div style={{fontSize:13}}>Choose an event from the sidebar dropdown</div></div>;
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
@@ -6879,7 +6879,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns }) {
     setLoading(false);
   };
 
-  if (!activeEvent) return <div style={{ padding: 40, color: C.muted, textAlign: "center" }}>No active event selected</div>;
+  if (!activeEvent) return <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"50vh", gap:10, color:C.muted }}><div style={{fontSize:36}}>📅</div><div style={{fontSize:15,fontWeight:500,color:C.text}}>No event selected</div><div style={{fontSize:13}}>Choose an event from the sidebar dropdown</div></div>;
 
   const METRICS = [
     { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧" },
