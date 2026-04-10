@@ -9758,7 +9758,19 @@ function MultiEventView({ supabase, profile, events, setActiveEvent, setView, fi
                     color:ev.status==="published"?C.green:ev.status==="archived"?C.muted:C.amber }}>
                     {ev.status||"draft"}
                   </span>
-                  <span style={{ fontSize:11, color:C.blue, fontWeight:500 }}>Open dashboard →</span>
+                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                    <button onClick={async (e) => {
+                      e.stopPropagation();
+                      const newStatus = ev.status === "archived" ? "draft" : "archived";
+                      await supabase.from("events").update({ status: newStatus }).eq("id", ev.id);
+                      fire(newStatus === "archived" ? `📦 ${ev.name} archived` : `✅ ${ev.name} restored`);
+                      window.location.reload();
+                    }} style={{ fontSize:11, color:C.muted, background:"transparent", border:"none", cursor:"pointer", padding:"2px 6px" }}
+                      title={ev.status==="archived"?"Restore event":"Archive event"}>
+                      {ev.status==="archived" ? "↩ Restore" : "📦 Archive"}
+                    </button>
+                    <span style={{ fontSize:11, color:C.blue, fontWeight:500 }}>Open →</span>
+                  </div>
                 </div>
               </div>
             );
