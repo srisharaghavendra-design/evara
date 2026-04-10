@@ -1557,7 +1557,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           })
         });
         const data = await res.json();
-        if (data.success && data.sent > 0) fire(`${ST[status]?.label || status} ✅ — email sent to ${contact.email}`);
+        if (data.success && data.sent > 0) fire(`${ST[status]?.label || status} ✅ — confirmation sent to ${contact.email}. Check spam if not received.`);
         else fire(`Status updated. Email issue: ${data.errors?.[0]?.reason || data.error || "unknown"}`, "warn");
       }
       await supabase.from("contact_activity").insert({ contact_id: contactId, event_id: activeEvent.id, company_id: profile.company_id, activity_type: "status_changed", description: `Status changed to ${status}` });
@@ -4275,7 +4275,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       const data = await res.json();
       if (data.success) {
         setSendProgress({ sent: data.sent, total: sendModal?.recipients?.length || data.sent });
-        fire(`✅ Sent to ${data.sent} contacts! ${data.failed > 0 ? `(${data.failed} failed)` : ""}`);
+        fire(`✅ Sent to ${data.sent} contact${data.sent===1?"":"s"}! Check spam if not received within 5 mins.`);
         if (addNotif) addNotif(`📧 "${sendModal.subject}" sent to ${data.sent} contacts`, "📧");
         setCampaigns(p => p.map(c => c.id === sendModal.id ? { ...c, status: "sent", sent_at: new Date().toISOString(), total_sent: data.sent } : c));
       } else { fire(data.error || "Send failed", "err"); }
