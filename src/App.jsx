@@ -1031,30 +1031,30 @@ function MainApp({ session }) {
                 const { data } = await supabase.from("events").insert({
                   name: newName, event_date: activeEvent.event_date,
                   event_time: activeEvent.event_time, location: activeEvent.location,
-                  description: activeEvent.description,
+                  description: activeEvent.description, event_type: activeEvent.event_type,
+                  event_format: activeEvent.event_format, capacity: activeEvent.capacity,
                   company_id: profile.company_id, status: "draft",
                   created_by: profile.id, share_token: shareToken,
                 }).select().single();
                 if (data) {
-                    setEvents(p => [...p, data]);
-                    setActiveEvent(data);
-                    fire("✅ Event duplicated! Copying email drafts…");
-                    const { data: existingCams } = await supabase.from("email_campaigns")
-                      .select("*").eq("event_id", activeEvent.id).limit(20);
-                    if (existingCams?.length) {
-                      const dupCams = existingCams.map(c => ({
-                        event_id: data.id,
-                        company_id: profile.company_id,
-                        name: c.name, email_type: c.email_type,
-                        subject: c.subject, html_content: c.html_content,
-                        plain_text: c.plain_text, status: "draft", segment: c.segment || "all",
-                      }));
-                      await supabase.from("email_campaigns").insert(dupCams);
-                      fire(`✅ Duplicated with ${existingCams.length} email drafts!`);
-                    }
+                  setEvents(p => [...p, data]);
+                  setActiveEvent(data);
+                  fire("✅ Event duplicated! Copying email drafts…");
+                  const { data: existingCams } = await supabase.from("email_campaigns")
+                    .select("*").eq("event_id", activeEvent.id).limit(20);
+                  if (existingCams?.length) {
+                    const dupCams = existingCams.map(c => ({
+                      event_id: data.id, company_id: profile.company_id,
+                      name: c.name, email_type: c.email_type,
+                      subject: c.subject, html_content: c.html_content,
+                      plain_text: c.plain_text, status: "draft", segment: c.segment || "all",
+                    }));
+                    await supabase.from("email_campaigns").insert(dupCams);
+                    fire(`✅ Duplicated with ${existingCams.length} email drafts!`);
                   }
-                }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
-                + Duplicate event
+                }
+              }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, fontSize: 11, cursor: "pointer", textAlign: "center" }}>
+                ⧉ Duplicate event
               </button>
               {activeEvent.status !== "archived" ? (
                 <button onClick={async () => {
