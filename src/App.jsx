@@ -2603,7 +2603,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
         </div>
 
         {/* ✨ Natural Language Filter Bar */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, marginBottom: nlFiltered===null?4:8, alignItems: "center" }}>
           <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 7, background: C.bg, border: `1px solid ${nlFiltered !== null ? C.blue + "60" : C.border}`, borderRadius: 7, padding: "7px 11px", transition: "border-color .15s" }}>
             <Sparkles size={12} color={nlFiltered !== null ? C.blue : C.muted} strokeWidth={1.5} style={{ flexShrink: 0 }} />
             <input
@@ -2629,6 +2629,19 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
             <span style={{ fontSize: 11, color: C.blue, whiteSpace: "nowrap" }}>{rows.length} result{rows.length !== 1 ? "s" : ""}</span>
           )}
         </div>
+        {/* Example chips — only show when filter is empty */}
+        {nlFiltered === null && !nlQuery && (
+          <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:10 }}>
+            {["Hot leads not confirmed","VIPs","From Acme Corp","Pending no response","Declined contacts","New this week"].map(q => (
+              <button key={q} onClick={() => runNLFilter(q)}
+                style={{ fontSize:11, padding:"3px 10px", borderRadius:20, border:`1px solid ${C.border}`, background:C.raised, color:C.muted, cursor:"pointer", transition:"all .1s" }}
+                onMouseEnter={e=>{ e.currentTarget.style.borderColor=C.blue; e.currentTarget.style.color=C.blue; }}
+                onMouseLeave={e=>{ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.color=C.muted; }}>
+                {q}
+              </button>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div style={{ padding: "40px", textAlign: "center", color: C.muted, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}><Spin />Loading contacts…</div>
