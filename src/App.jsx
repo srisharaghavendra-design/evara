@@ -849,6 +849,7 @@ function MainApp({ session }) {
   const [notifCount, setNotifCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
   const [metrics, setMetrics] = useState(null); // header quick-stats
+  const [campaigns, setCampaigns] = useState([]); // shared across views
 
   // Smart notifications — check events on load
   useEffect(() => {
@@ -956,9 +957,11 @@ function MainApp({ session }) {
 
   // Load metrics for header strip whenever active event changes
   useEffect(() => {
-    if (!activeEvent?.id) { setMetrics(null); return; }
+    if (!activeEvent?.id) { setMetrics(null); setCampaigns([]); return; }
     supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => setMetrics(data));
+    supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
+      .then(({ data }) => setCampaigns(data || []));
   }, [activeEvent?.id]);
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
