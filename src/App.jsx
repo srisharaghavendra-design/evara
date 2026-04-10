@@ -294,7 +294,7 @@ function buildEmailHtml({
 // ─── IMAGE UPLOAD ZONE ───────────────────────────────────────
 function ImageUploadZone({ label, sublabel, url, onUpload, onClear, uploading }) {
   const ref = useRef();
-  const [dragging, setDragging] = React.useState(false);
+  const [dragging, setDragging] = useState(false);
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 5, fontWeight: 500 }}>{label}</div>
