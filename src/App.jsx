@@ -1220,11 +1220,19 @@ function MainApp({ session }) {
       )}
 
       {toast && (
-        <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#1C1C1F", border: `1px solid ${toast.type === "ok" ? C.green + "40" : C.red + "40"}`, borderLeft: `3px solid ${toast.type === "ok" ? C.green : C.red}`, borderRadius: 10, padding: "12px 20px", display: "flex", alignItems: "center", gap: 10, animation: "fadeUp .2s ease", zIndex: 9999, whiteSpace: "nowrap", boxShadow: "0 8px 32px rgba(0,0,0,.6)", backdropFilter: "blur(8px)" }}>
-          <div style={{ width: 6, height: 6, borderRadius: "50%", background: toast.type === "ok" ? C.green : C.red, flexShrink: 0 }} />
-          <span style={{ fontSize: 13, color: C.text }}>{toast.msg}</span>
+        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#1C1C1F", border:`1px solid ${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}30`, borderRadius:12, padding:"0", display:"flex", flexDirection:"column", animation:"fadeUp .25s ease", zIndex:9999, whiteSpace:"nowrap", boxShadow:"0 12px 40px rgba(0,0,0,.7)", backdropFilter:"blur(12px)", overflow:"hidden", minWidth:280, maxWidth:480 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px" }}>
+            <span style={{ fontSize:16, flexShrink:0 }}>{toast.type==="ok"?"✅":toast.type==="err"?"❌":toast.type==="warn"?"⚠️":"ℹ️"}</span>
+            <span style={{ fontSize:13, color:C.text, flex:1, whiteSpace:"normal", lineHeight:1.4 }}>{toast.msg}</span>
+            <button onClick={() => setToast(null)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:16, padding:"0 2px", lineHeight:1, flexShrink:0 }}>×</button>
+          </div>
+          {/* Auto-dismiss progress bar */}
+          <div style={{ height:2, background:`${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}40` }}>
+            <div style={{ height:"100%", background:toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue, animation:"toastProgress 4.5s linear forwards", borderRadius:1 }} />
+          </div>
         </div>
       )}
+      <style>{`@keyframes toastProgress{from{width:100%}to{width:0%}}`}</style>
     </div>
   );
 }
