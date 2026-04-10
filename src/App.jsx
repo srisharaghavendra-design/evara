@@ -1618,6 +1618,9 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
     if (scoreFilter === "warm") return s >= 8 && s < 15;
     if (scoreFilter === "cool") return s >= 3 && s < 8;
     if (scoreFilter === "cold") return s < 3;
+    if (scoreFilter === "pending_status") return ec.status === "pending";
+    if (scoreFilter === "declined_status") return ec.status === "declined";
+    if (scoreFilter === "vip") return (ec.contacts?.tags || []).includes("vip");
     return true;
   });
   const noContactsYet = contacts.length === 0 && !loading;
@@ -2278,6 +2281,26 @@ function DashView({ supabase, profile, activeEvent, fire, setView }) {
             {contacts.length} contact{contacts.length !== 1 ? "s" : ""}
             {contacts.filter(c=>c.status==="pending").length > 0 && <span style={{ color:C.amber }}> · {contacts.filter(c=>c.status==="pending").length} pending</span>}
           </span>
+          {/* Quick filter pills */}
+          <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginLeft:4 }}>
+            {[
+              { label:`🔥 Hot (${contacts.filter(c=>scores[c.contacts?.id||c.id]?.temp==="hot").length})`, filter:"hot", color:C.red },
+              { label:`⏳ Pending (${contacts.filter(c=>c.status==="pending").length})`, filter:"pending_status", color:C.amber },
+              { label:`⭐ VIP (${contacts.filter(c=>(c.contacts?.tags||c.tags||[]).includes("vip")).length})`, filter:"vip", color:C.amber },
+              { label:`❌ Declined (${contacts.filter(c=>c.status==="declined").length})`, filter:"declined_status", color:C.red },
+            ].filter(f => {
+              if (f.filter==="hot") return contacts.some(c=>scores[c.contacts?.id||c.id]?.temp==="hot");
+              if (f.filter==="pending_status") return contacts.some(c=>c.status==="pending");
+              if (f.filter==="vip") return contacts.some(c=>(c.contacts?.tags||c.tags||[]).includes("vip"));
+              if (f.filter==="declined_status") return contacts.some(c=>c.status==="declined");
+              return true;
+            }).map(({label,filter,color}) => (
+              <button key={filter} onClick={() => setScoreFilter(f => f===filter?"":filter)}
+                style={{ fontSize:11, padding:"2px 9px", borderRadius:4, border:`1px solid ${scoreFilter===filter?color:C.border}`, background:scoreFilter===filter?`${color}15`:"transparent", color:scoreFilter===filter?color:C.muted, cursor:"pointer", fontWeight:scoreFilter===filter?600:400 }}>
+                {label}
+              </button>
+            ))}
+          </div>
           {contacts.length > 0 && (
             <div style={{ display: "flex", gap: 3, fontSize: 10 }}>
               {[["confirmed", C.green], ["attended", C.blue], ["pending", C.amber], ["declined", C.red]].map(([s, col]) => {
