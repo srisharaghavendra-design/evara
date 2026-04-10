@@ -10148,7 +10148,25 @@ function PublicFormPage({ token }) {
           </div>
         )}
         <h2 style={{ fontSize: 17, fontWeight: 600, color: "#111", marginBottom: 4, letterSpacing: "-0.3px" }}>{form.name}</h2>
-        <p style={{ fontSize: 13, color: "#666", marginBottom: 24 }}>Fill in your details to register your place.</p>
+        <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Fill in your details to register your place.</p>
+
+        {/* Progress bar */}
+        {form.fields?.length > 0 && (() => {
+          const filled = (form.fields||[]).filter(f => answers[f.id]?.toString().trim()).length;
+          const total = (form.fields||[]).length;
+          const pct = Math.round(filled/total*100);
+          return (
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:5, fontSize:12, color:"#888" }}>
+                <span>{filled} of {total} fields</span>
+                <span style={{ color: pct===100?"#30D158":"#0A84FF", fontWeight:600 }}>{pct===100?"Ready to submit ✓":`${pct}% complete`}</span>
+              </div>
+              <div style={{ height:4, background:"#E5E5E7", borderRadius:2, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${pct}%`, background:pct===100?"#30D158":"#0A84FF", borderRadius:2, transition:"width .3s" }} />
+              </div>
+            </div>
+          );
+        })()}
 
         {form.fields?.map(field => (
           <div key={field.id} style={{ marginBottom: 20 }}>
