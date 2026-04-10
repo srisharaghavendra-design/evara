@@ -8908,6 +8908,84 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
   );
 }
 
+// ─── ADD CUSTOM QUESTION ──────────────────────────────────────
+function AddCustomQuestion({ feedbackForm, setFeedbackForm, supabase, fire }) {
+  const [show, setShow] = useState(false);
+  const [qLabel, setQLabel] = useState("");
+  const [qType, setQType] = useState("text");
+  const [qOptions, setQOptions] = useState("Option 1\nOption 2\nOption 3");
+  const [qRequired, setQRequired] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!qLabel.trim()) return;
+    setSaving(true);
+    const newField = {
+      id: Date.now(),
+      type: qType,
+      label: qLabel.trim(),
+      required: qRequired,
+      options: (qType === "radio" || qType === "select") ? qOptions.split("\n").map(o => o.trim()).filter(Boolean) : [],
+    };
+    const newFields = [...(feedbackForm.fields || []), newField];
+    await supabase.from("forms").update({ fields: newFields }).eq("id", feedbackForm.id);
+    setFeedbackForm(p => ({ ...p, fields: newFields }));
+    fire("✅ Question added");
+    setQLabel(""); setQType("text"); setQOptions("Option 1\nOption 2\nOption 3"); setQRequired(false); setShow(false);
+    setSaving(false);
+  };
+
+  if (!show) return (
+    <button onClick={() => setShow(true)} style={{ width: "100%", marginTop: 10, padding: "7px", borderRadius: 6, border: `1px dashed ${C.blue}40`, background: `${C.blue}06`, color: C.blue, fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+      + Add custom question
+    </button>
+  );
+
+  return (
+    <div style={{ marginTop: 10, background: C.bg, borderRadius: 8, border: `1px solid ${C.blue}30`, padding: "12px 14px" }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 10 }}>New question</div>
+      <div style={{ marginBottom: 8 }}>
+        <label style={{ display: "block", fontSize: 11, color: C.muted, marginBottom: 4 }}>Question text *</label>
+        <input value={qLabel} onChange={e => setQLabel(e.target.value)} autoFocus placeholder="e.g. How did you hear about us?"
+          style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 10px", fontSize: 12, outline: "none", boxSizing: "border-box" }} />
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+        <div>
+          <label style={{ display: "block", fontSize: 11, color: C.muted, marginBottom: 4 }}>Type</label>
+          <select value={qType} onChange={e => setQType(e.target.value)}
+            style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 8px", fontSize: 12, outline: "none" }}>
+            <option value="text">Short text</option>
+            <option value="textarea">Long text</option>
+            <option value="radio">Multiple choice</option>
+            <option value="select">Dropdown</option>
+            <option value="email">Email</option>
+          </select>
+        </div>
+        <div style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.muted, cursor: "pointer" }}>
+            <input type="checkbox" checked={qRequired} onChange={e => setQRequired(e.target.checked)} style={{ accentColor: C.blue, cursor: "pointer" }} />
+            Required
+          </label>
+        </div>
+      </div>
+      {(qType === "radio" || qType === "select") && (
+        <div style={{ marginBottom: 8 }}>
+          <label style={{ display: "block", fontSize: 11, color: C.muted, marginBottom: 4 }}>Options (one per line)</label>
+          <textarea value={qOptions} onChange={e => setQOptions(e.target.value)} rows={4}
+            style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 10px", fontSize: 12, outline: "none", resize: "vertical", boxSizing: "border-box", fontFamily: "inherit" }} />
+        </div>
+      )}
+      <div style={{ display: "flex", gap: 7 }}>
+        <button onClick={() => { setShow(false); setQLabel(""); }} style={{ flex: 1, padding: "7px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 12, cursor: "pointer" }}>Cancel</button>
+        <button onClick={save} disabled={!qLabel.trim() || saving}
+          style={{ flex: 2, padding: "7px", borderRadius: 6, border: "none", background: qLabel.trim() ? C.blue : C.border, color: "#fff", fontSize: 12, fontWeight: 600, cursor: qLabel.trim() ? "pointer" : "default" }}>
+          {saving ? "Saving…" : "Add Question"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── FEEDBACK VIEW ────────────────────────────────────────────
 // AI-powered post-event feedback collection and analysis
 function FeedbackView({ supabase, profile, activeEvent, fire }) {
@@ -9122,10 +9200,37 @@ Generated by evara
                     <button onClick={() => { navigator.clipboard?.writeText(shareLink); fire("Link copied!"); }}
                       style={{ padding: "8px 14px", background: C.blue, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Copy</button>
                   </div>
-                  <div style={{ marginTop: 12, fontSize: 12, color: C.muted }}>
+                  <button onClick={() => window.open(shareLink, "_blank")} style={{ marginTop: 8, width: "100%", padding: "7px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, fontSize: 11, cursor: "pointer" }}>
+                    👁 Preview form →
+                  </button>
+                  <div style={{ marginTop: 10, fontSize: 12, color: C.muted }}>
                     💡 Display this link on screens at the end of the event, and include it in your Thank You email.
                   </div>
                 </div>
+
+                {/* Custom question builder */}
+                <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: C.text, marginBottom: 10 }}>Questions ({feedbackForm.fields?.length})</div>
+                  {(feedbackForm.fields || []).map((field, idx) => (
+                    <div key={field.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "7px 0", borderBottom: idx < feedbackForm.fields.length - 1 ? `1px solid ${C.border}` : "none" }}>
+                      <span style={{ fontSize: 10, color: C.muted, marginTop: 2, flexShrink: 0, width: 16, textAlign: "center" }}>{idx + 1}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12, color: C.text }}>{field.label}</div>
+                        <div style={{ fontSize: 10, color: C.muted, marginTop: 1, textTransform: "capitalize" }}>{field.type}{field.required ? " · required" : ""}</div>
+                      </div>
+                      <button onClick={async () => {
+                        const newFields = feedbackForm.fields.filter((_, i) => i !== idx);
+                        await supabase.from("forms").update({ fields: newFields }).eq("id", feedbackForm.id);
+                        setFeedbackForm(p => ({ ...p, fields: newFields }));
+                        fire("Question removed");
+                      }} style={{ fontSize: 11, padding: "2px 7px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.red, cursor: "pointer", flexShrink: 0 }}>✕</button>
+                    </div>
+                  ))}
+
+                  {/* Add custom question */}
+                  <AddCustomQuestion feedbackForm={feedbackForm} setFeedbackForm={setFeedbackForm} supabase={supabase} fire={fire} />
+                </div>
+
                 <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 18 }}>
                   <div style={{ fontSize: 28, fontWeight: 700, color: C.blue, marginBottom: 4 }}>{submissions.length}</div>
                   <div style={{ fontSize: 12, color: C.muted }}>Responses received</div>
@@ -10008,15 +10113,19 @@ function PublicFormPage({ token }) {
     load();
   }, [token]);
 
+  const isFeedback = form?.form_type === "feedback";
+
   const submit = async () => {
     if (!form) return;
     
-    // Validate business email
-    const emailFieldCheck = form.fields?.find(f => f.type === "email");
-    const emailValueCheck = answers[emailFieldCheck?.id] || "";
-    if (emailValueCheck && !isBusinessEmail(emailValueCheck)) {
-      setSubmitError("Please use a business email address. Personal emails (Gmail, Yahoo, Hotmail, Rediffmail, etc.) are not accepted for event registration.");
-      return;
+    // Only validate business email for registration forms, not feedback
+    if (!isFeedback) {
+      const emailFieldCheck = form.fields?.find(f => f.type === "email");
+      const emailValueCheck = answers[emailFieldCheck?.id] || "";
+      if (emailValueCheck && !isBusinessEmail(emailValueCheck)) {
+        setSubmitError("Please use a business email address. Personal emails (Gmail, Yahoo, Hotmail, Rediffmail, etc.) are not accepted for event registration.");
+        return;
+      }
     }
     
     setSubmitting(true);
@@ -10028,7 +10137,7 @@ function PublicFormPage({ token }) {
       const firstName = answers[firstField?.id] || "";
       const lastName = answers[lastField?.id] || "";
 
-      // Upsert contact
+      // Upsert contact (skip for feedback-only forms with no email field)
       let contactId = null;
       if (email) {
         const { data: c } = await supabase.from("contacts").upsert({
@@ -10036,12 +10145,12 @@ function PublicFormPage({ token }) {
           first_name: firstName,
           last_name: lastName,
           company_id: form.company_id,
-          source: "form",
+          source: isFeedback ? "feedback" : "form",
         }, { onConflict: "company_id,email" }).select("id").single();
         contactId = c?.id;
 
-        // Add to event contacts
-        if (contactId && form.event_id) {
+        // Add to event contacts as confirmed (registration only, not feedback)
+        if (contactId && form.event_id && !isFeedback) {
           await supabase.from("event_contacts").upsert({
             contact_id: contactId,
             event_id: form.event_id,
@@ -10062,8 +10171,8 @@ function PublicFormPage({ token }) {
         submitted_at: new Date().toISOString(),
       });
 
-      // Send confirmation email automatically
-      if (email && contactId) {
+      // Send confirmation email only for registration forms (not feedback)
+      if (email && contactId && !isFeedback) {
         try {
           await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
             method: "POST",
@@ -10104,47 +10213,43 @@ function PublicFormPage({ token }) {
     </div>
   );
 
-  if (submitted) return (
+  if (submitted) {
+    const isFeedbackSubmit = form?.form_type === "feedback";
+    return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #0A1628 0%, #1a2a4a 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", padding: 24 }}>
       <div style={{ textAlign: "center", maxWidth: 460, width: "100%", padding: "48px 40px", background: "#fff", borderRadius: 20, boxShadow: "0 24px 64px rgba(0,0,0,.25)" }}>
-        <div style={{ width: 72, height: 72, background: "#E8F5E9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 20px" }}>✅</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 10 }}>You're confirmed!</div>
-        <div style={{ fontSize: 15, color: "#666", lineHeight: 1.6, marginBottom: 16 }}>
-          Thanks for registering for <strong>{event?.name}</strong>. A confirmation email is on its way to you.
+        <div style={{ width: 72, height: 72, background: isFeedbackSubmit ? "#E8F5E9" : "#E8F5E9", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 36, margin: "0 auto 20px" }}>
+          {isFeedbackSubmit ? "🙏" : "✅"}
         </div>
-        {(event?.event_date || event?.location) && (
+        <div style={{ fontSize: 22, fontWeight: 700, color: "#111", marginBottom: 10 }}>
+          {isFeedbackSubmit ? "Thank you for your feedback!" : "You're confirmed!"}
+        </div>
+        <div style={{ fontSize: 15, color: "#666", lineHeight: 1.6, marginBottom: 16 }}>
+          {isFeedbackSubmit
+            ? `Your response has been recorded. We really appreciate you taking the time to share your thoughts on ${event?.name}.`
+            : `Thanks for registering for ${event?.name}. A confirmation email is on its way to you.`}
+        </div>
+        {!isFeedbackSubmit && (event?.event_date || event?.location) && (
           <div style={{ background: "#F8F9FA", borderRadius: 10, padding: "14px 18px", marginBottom: 16, textAlign: "left" }}>
             {event?.event_date && <div style={{ fontSize: 14, color: "#333", marginBottom: 6 }}>📅 {new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>}
             {event?.event_time && <div style={{ fontSize: 14, color: "#333", marginBottom: 6 }}>🕐 {event.event_time}</div>}
             {event?.location && <div style={{ fontSize: 14, color: "#333" }}>📍 {event.location}</div>}
           </div>
         )}
-        {event?.location && <div style={{ fontSize: 14, color: "#666", marginTop: 4 }}>📍 {event.location}</div>}
-        {event && event.event_date && (
-          <button onClick={() => {
-            const ics = generateICS(event);
-            if (!ics) return;
-            const blob = new Blob([ics], { type: "text/calendar" });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement("a"); a.href = url; a.download = `${event.name}.ics`; a.click();
-          }} style={{ marginTop: 20, padding: "10px 24px", borderRadius: 8, border: "1px solid #0A84FF", background: "transparent", color: "#0A84FF", fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
-            📅 Add to Calendar
-          </button>
-        )}
-        <div style={{ marginTop: 16, fontSize: 12, color: "#aaa" }}>A confirmation email will be sent to you shortly.</div>
-        <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
-          {event?.event_date && (
+        {!isFeedbackSubmit && event && event.event_date && (
+          <div style={{ marginTop: 20, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
             <a href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(event?.name||"Event")}&dates=${(event.event_date||"").replace(/-/g,"")}&details=${encodeURIComponent((event?.description||"")+" "+window.location.href)}&location=${encodeURIComponent(event?.location||"")}`}
               target="_blank" rel="noopener"
               style={{ fontSize: 13, padding: "8px 20px", background: "#0A84FF", color: "#fff", borderRadius: 20, textDecoration: "none", fontWeight: 500 }}>
               📅 Add to Calendar
             </a>
-          )}
-        </div>
-        <div style={{ marginTop: 16, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
+          </div>
+        )}
+        <div style={{ marginTop: 20, fontSize: 11, color: "#ccc" }}>🔒 Powered by evara</div>
       </div>
     </div>
   );
+  }
 
   const requiredIds = form.fields?.filter(f => f.required).map(f => f.id) || [];
   const allFilled = requiredIds.every(id => answers[id]?.toString().trim());
@@ -10167,7 +10272,7 @@ function PublicFormPage({ token }) {
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 20px 60px" }}>
         {event && (
           <div style={{ marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid #E5E5E5" }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#0A84FF", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>Registration</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#0A84FF", textTransform: "uppercase", letterSpacing: "1px", marginBottom: 6 }}>{isFeedback ? "Feedback Form" : "Registration"}</div>
             <h1 style={{ fontSize: 24, fontWeight: 700, color: "#111", marginBottom: 8, letterSpacing: "-0.5px" }}>{event.name}</h1>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {event.event_date && <div style={{ fontSize: 13, color: "#555" }}>📅 {new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</div>}
@@ -10177,7 +10282,7 @@ function PublicFormPage({ token }) {
           </div>
         )}
         <h2 style={{ fontSize: 17, fontWeight: 600, color: "#111", marginBottom: 4, letterSpacing: "-0.3px" }}>{form.name}</h2>
-        <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>Fill in your details to register your place.</p>
+        <p style={{ fontSize: 13, color: "#666", marginBottom: 16 }}>{isFeedback ? "Share your thoughts — it only takes a minute." : "Fill in your details to register your place."}</p>
 
         {/* Progress bar */}
         {form.fields?.length > 0 && (() => {
@@ -10294,7 +10399,7 @@ function PublicFormPage({ token }) {
 
         <button onClick={submit} disabled={submitting || !allFilled}
           style={{ width: "100%", padding: "14px", borderRadius: 12, border: "none", background: submitting || !allFilled ? "#C7C7CC" : "#0A84FF", color: "#fff", fontSize: 16, fontWeight: 600, cursor: submitting || !allFilled ? "not-allowed" : "pointer", marginTop: 8, transition: "background .15s" }}>
-          {submitting ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: 6 }}>⟳</span>Submitting…</> : allFilled ? "Register Now →" : "Complete all required fields"}
+          {submitting ? <><span style={{ display: "inline-block", animation: "spin 1s linear infinite", marginRight: 6 }}>⟳</span>Submitting…</> : allFilled ? (isFeedback ? "Submit Feedback →" : "Register Now →") : "Complete all required fields"}
         </button>
 
         {submitError && (
