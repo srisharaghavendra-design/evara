@@ -848,6 +848,7 @@ function MainApp({ session }) {
   const [notifs, setNotifs] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [metrics, setMetrics] = useState(null); // header quick-stats
 
   // Smart notifications — check events on load
   useEffect(() => {
@@ -947,6 +948,13 @@ function MainApp({ session }) {
   const [showArchived, setShowArchived] = useState(false);
   const [newEventName, setNewEventName] = useState("");
   const [newEventDate, setNewEventDate] = useState("");
+
+  // Load metrics for header strip whenever active event changes
+  useEffect(() => {
+    if (!activeEvent?.id) { setMetrics(null); return; }
+    supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
+      .then(({ data }) => setMetrics(data));
+  }, [activeEvent?.id]);
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
 
