@@ -1004,19 +1004,53 @@ function MainApp({ session }) {
           {activeEvent ? (
             <div>
               <div style={{ position: "relative", marginBottom: 6 }}>
-                <select value={activeEvent.id} onChange={e => {
-                  const ev = events.find(x => x.id === e.target.value);
-                  if (ev) { setActiveEvent(ev); }
-                }} style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 8, color: C.text, padding: "7px 28px 7px 10px", fontSize: 12, fontWeight: 500, outline: "none", cursor: "pointer", appearance: "none", WebkitAppearance: "none" }}>
-                  {events.filter(ev => showArchived || ev.status !== "archived").map(ev => {
-                    const daysLeft = ev.event_date ? Math.ceil((new Date(ev.event_date) - new Date()) / (1000*60*60*24)) : null;
-                    const suffix = daysLeft === null ? "" : daysLeft === 0 ? " (TODAY)" : daysLeft > 0 ? ` (${daysLeft}d)` : " (past)";
-                    return <option key={ev.id} value={ev.id}>{ev.name}{suffix}</option>;
-                  })}
-                </select>
-                <div style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }}>
-                  <ChevronDown size={11} color={C.muted} />
-                </div>
+                {(() => {
+                  const [open, setOpen] = React.useState(false);
+                  const [q, setQ] = React.useState("");
+                  const filtered = events.filter(ev =>
+                    (showArchived || ev.status !== "archived") &&
+                    (!q || ev.name?.toLowerCase().includes(q.toLowerCase()))
+                  );
+                  return (
+                    <div>
+                      <button onClick={() => setOpen(p => !p)} style={{ width:"100%", background:C.card, border:`1px solid ${open?C.blue:C.border}`, borderRadius:8, color:C.text, padding:"7px 28px 7px 10px", fontSize:12, fontWeight:500, outline:"none", cursor:"pointer", textAlign:"left", position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                        <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", flex:1 }}>{activeEvent.name}</span>
+                        <ChevronDown size={11} color={C.muted} style={{ flexShrink:0 }} />
+                      </button>
+                      {open && (
+                        <div style={{ position:"absolute", left:0, right:0, top:"100%", marginTop:3, background:C.card, border:`1px solid ${C.border}`, borderRadius:9, boxShadow:"0 8px 32px rgba(0,0,0,.5)", zIndex:300, overflow:"hidden" }}>
+                          <div style={{ padding:"6px 8px", borderBottom:`1px solid ${C.border}` }}>
+                            <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Search events…"
+                              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"4px 8px", fontSize:11.5, outline:"none" }} />
+                          </div>
+                          <div style={{ maxHeight:180, overflowY:"auto" }}>
+                            {filtered.length===0 && <div style={{ padding:"10px 10px", fontSize:12, color:C.muted }}>No events found</div>}
+                            {filtered.map(ev => {
+                              const days = ev.event_date ? Math.ceil((new Date(ev.event_date)-new Date())/(1000*60*60*24)) : null;
+                              const col = days===0?C.green:days>0&&days<=7?C.red:days>0?C.amber:C.muted;
+                              const isActive = ev.id === activeEvent.id;
+                              return (
+                                <div key={ev.id} onClick={() => { setActiveEvent(ev); setOpen(false); setQ(""); }}
+                                  style={{ padding:"8px 10px", cursor:"pointer", background:isActive?`${C.blue}10`:"transparent", borderLeft:`2px solid ${isActive?C.blue:"transparent"}` }}
+                                  onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background=C.raised; }}
+                                  onMouseLeave={e=>{ e.currentTarget.style.background=isActive?`${C.blue}10`:"transparent"; }}>
+                                  <div style={{ fontSize:12, fontWeight:isActive?600:400, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ev.name}</div>
+                                  <div style={{ display:"flex", gap:6, marginTop:2 }}>
+                                    {ev.event_date && <span style={{ fontSize:9.5, color:col, fontWeight:600 }}>{days===0?"TODAY":days>0?`${days}d`:"past"}</span>}
+                                    <span style={{ fontSize:9.5, color:C.muted, textTransform:"uppercase" }}>{ev.status||"draft"}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          <div style={{ padding:"6px 8px", borderTop:`1px solid ${C.border}` }}>
+                            <div onClick={() => { setOpen(false); setView("overview"); }} style={{ fontSize:11, color:C.blue, cursor:"pointer", textAlign:"center" }}>View all events →</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               {events.filter(e => e.status === "archived").length > 0 && (
                 <button onClick={() => setShowArchived(p => !p)}
