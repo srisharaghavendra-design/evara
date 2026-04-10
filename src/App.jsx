@@ -843,7 +843,7 @@ function EventSwitcher({ events, activeEvent, setActiveEvent, setView, showArchi
 
 function MainApp({ session }) {
   const [view, setView] = useState("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== "undefined" ? window.innerWidth > 768 : true);
   const [globalSearch, setGlobalSearch] = useState("");
   const [notifs, setNotifs] = useState([]);
   const [notifCount, setNotifCount] = useState(0);
@@ -1063,10 +1063,10 @@ function MainApp({ session }) {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, fontFamily: "Outfit,sans-serif", overflow: "hidden" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2A2A2E;border-radius:3px}button{cursor:pointer;font-family:Outfit,sans-serif}input,textarea,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}.nb:hover{background:${C.raised}!important;color:${C.text}!important}.mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}.rh:hover{background:${C.raised}!important}@media(max-width:768px){.evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease}.evara-sidebar.open{transform:translateX(0)}.evara-overlay{display:block!important}.evara-main{margin-left:0!important}}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2A2A2E;border-radius:3px}button{cursor:pointer;font-family:Outfit,sans-serif}input,textarea,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}.nb:hover{background:${C.raised}!important;color:${C.text}!important}.mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}.rh:hover{background:${C.raised}!important}.mobile-hamburger{display:none!important}@media(max-width:768px){.evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:216px!important}.evara-sidebar.open{transform:translateX(0)}.evara-overlay{display:block!important}.evara-main{margin-left:0!important}.mobile-hamburger{display:flex!important}.desktop-breadcrumb{display:none!important}.main-padding{padding:16px!important}}`}</style>
 
-      {/* Mobile overlay */}
-      {!sidebarOpen && <div className="evara-overlay" onClick={() => setSidebarOpen(false)} style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:199 }} />}
+      {/* Mobile overlay — closes sidebar when tapping outside */}
+      {sidebarOpen && <div className="evara-overlay" onClick={() => setSidebarOpen(false)} style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:199 }} />}
 
       {/* SIDEBAR */}
       <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"width .2s ease", overflow:"hidden" }}>
@@ -1180,7 +1180,7 @@ function MainApp({ session }) {
               {!sidebarOpen && <div style={{ height:8 }} />}
               {group.items.map(({ id, label, icon: Icon, badge }) => {
                 const on = view === id;
-                return (<button key={id} data-view={id} className="nb" onClick={() => setView(id)} title={!sidebarOpen ? label : undefined} style={{ display: "flex", alignItems: "center", gap: sidebarOpen?8:0, padding: sidebarOpen?"7px 10px":"8px", justifyContent: sidebarOpen?"flex-start":"center", borderRadius: 7, border: "none", background: on ? `${C.blue}18` : "transparent", color: on ? C.blue : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: sidebarOpen?`2px solid ${on ? C.blue : "transparent"}`:"2px solid transparent", transition: "all .1s", marginBottom: 1 }}>
+                return (<button key={id} data-view={id} className="nb" onClick={() => { setView(id); if (window.innerWidth <= 768) setSidebarOpen(false); }} title={!sidebarOpen ? label : undefined} style={{ display: "flex", alignItems: "center", gap: sidebarOpen?8:0, padding: sidebarOpen?"7px 10px":"8px", justifyContent: sidebarOpen?"flex-start":"center", borderRadius: 7, border: "none", background: on ? `${C.blue}18` : "transparent", color: on ? C.blue : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: sidebarOpen?`2px solid ${on ? C.blue : "transparent"}`:"2px solid transparent", transition: "all .1s", marginBottom: 1 }}>
                   <Icon size={14} strokeWidth={on ? 2.5 : 1.5} color={on ? C.blue : C.muted} />
                   {sidebarOpen && <><span style={{ flex: 1 }}>{label}</span>
                   {badge && <span style={{ fontSize: 9, fontWeight: 700, background: on ? C.blue : C.raised, color: on ? "#fff" : C.muted, padding: "1px 5px", borderRadius: 3 }}>{badge}</span>}</>}
@@ -1194,7 +1194,7 @@ function MainApp({ session }) {
           <span>⌘N new · ⌘K search · ⌘, settings · ESC close</span>
           <span>v2.2</span>
         </div>
-        <button className="nb" onClick={() => setView("settings")} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
+        <button className="nb" onClick={() => { setView("settings"); if (window.innerWidth <= 768) setSidebarOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 9, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 10px", marginTop: 6, cursor: "pointer" }}
@@ -1210,9 +1210,14 @@ function MainApp({ session }) {
       </aside>
 
       {/* MAIN */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <div className="evara-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <header style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 22px", gap: 12, flexShrink: 0, background: C.sidebar }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 4 }}>
+          {/* Mobile hamburger */}
+          <button className="mobile-hamburger" onClick={() => setSidebarOpen(p=>!p)}
+            style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer", fontSize:16, padding:"5px 10px", lineHeight:1, alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            ☰
+          </button>
+          <div className="desktop-breadcrumb" style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 4 }}>
             <span style={{ fontSize: 12, color: C.muted }}>evara</span>
             {activeEvent && <><span style={{ fontSize: 12, color: C.muted }}>/</span>
             <span style={{ fontSize: 12, color: C.muted, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeEvent.name}</span></>}
@@ -1339,7 +1344,7 @@ function MainApp({ session }) {
           </div>
         </header>
 
-        <main style={{ flex: 1, overflow: "auto", padding: "26px" }}>
+        <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "26px" }}>
           {view === "dashboard" && <DashView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
           {view === "edm" && profile && <EdmView key="edm" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
@@ -6572,7 +6577,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
   const [showWalkin, setShowWalkin] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selCheckin, setSelCheckin] = useState(new Set());
-  const [bulkMarking, setBulkMarking] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   const bulkMarkAttended = async () => {
     if (!selCheckin.size) return;
@@ -6697,16 +6702,6 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>{activeEvent.name} — live check-in dashboard · <span style={{ color: C.text, fontFamily: "monospace" }}>{clock.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span></p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          {activeEvent?.id && (
-            <div style={{ textAlign: "center" }}>
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&bgcolor=1C1C1E&color=FFFFFF&data=${encodeURIComponent(window.location.origin + "/checkin/" + activeEvent.id)}`}
-                alt="Check-in QR"
-                style={{ width: 48, height: 48, borderRadius: 6, border: `1px solid ${C.border}` }}
-              />
-              <div style={{ fontSize: 9, color: C.muted, marginTop: 2 }}>Scan to check in</div>
-            </div>
-          )}
           {["host", "kiosk"].map(m => (
             <button key={m} onClick={() => setMode(m)}
               style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${mode === m ? C.blue + "80" : C.border}`, background: mode === m ? C.blue + "14" : "transparent", color: mode === m ? C.blue : C.muted, cursor: "pointer", textTransform: "capitalize" }}>
@@ -6720,11 +6715,7 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
             📋 Copy Kiosk URL
           </button>
-          <button onClick={() => {
-            const url = `${window.location.origin}/checkin/${activeEvent?.id}`;
-            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}`;
-            window.open(qrUrl, "_blank");
-          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+          <button onClick={() => setShowQR(true)} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue+"10", color: C.blue, cursor: "pointer", display:"flex", alignItems:"center", gap:5 }}>
             📱 QR Code
           </button>
           <button onClick={() => {
@@ -6906,6 +6897,65 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
           </table>
         )}
       </div>
+
+      {/* QR Code Modal */}
+      {showQR && activeEvent && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99 }}
+          onClick={() => setShowQR(false)}>
+          <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, padding:32, width:360, animation:"fadeUp .2s ease", textAlign:"center" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+              <div style={{ textAlign:"left" }}>
+                <div style={{ fontSize:16, fontWeight:700, color:C.text }}>Event Check-in QR</div>
+                <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>Point guests to scan at the door</div>
+              </div>
+              <button onClick={() => setShowQR(false)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:22, lineHeight:1 }}>×</button>
+            </div>
+
+            {/* Large QR */}
+            <div style={{ background:"#fff", borderRadius:12, padding:16, display:"inline-block", marginBottom:18 }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=0&data=${encodeURIComponent(window.location.origin + "/checkin/" + activeEvent.id)}`}
+                alt="Check-in QR Code"
+                style={{ width:220, height:220, display:"block" }}
+              />
+            </div>
+
+            {/* Event name & URL */}
+            <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:4 }}>{activeEvent.name}</div>
+            <div style={{ fontSize:11, color:C.muted, fontFamily:"monospace", marginBottom:20, wordBreak:"break-all" }}>
+              {window.location.origin}/checkin/{activeEvent.id}
+            </div>
+
+            {/* Instructions */}
+            <div style={{ background:C.raised, borderRadius:8, padding:"10px 14px", marginBottom:18, textAlign:"left" }}>
+              <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:6 }}>Setup for event day</div>
+              {["Print and post at the entrance", "Or open on a tablet — guests tap to self check-in", "All check-ins sync to your dashboard live"].map((tip, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:7, marginBottom:4 }}>
+                  <span style={{ color:C.green, fontSize:12, marginTop:1, flexShrink:0 }}>✓</span>
+                  <span style={{ fontSize:12, color:C.sec, lineHeight:1.4 }}>{tip}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:"flex", gap:8 }}>
+              <button onClick={() => {
+                navigator.clipboard?.writeText(`${window.location.origin}/checkin/${activeEvent.id}`);
+                fire("📋 Check-in URL copied!");
+              }} style={{ flex:1, padding:"9px 0", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>
+                📋 Copy URL
+              </button>
+              <button onClick={() => {
+                const url = `https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=20&data=${encodeURIComponent(window.location.origin + "/checkin/" + activeEvent.id)}`;
+                const a = document.createElement("a"); a.href = url; a.download = `${activeEvent.name}-checkin-qr.png`; a.target="_blank"; a.click();
+                fire("⬇ QR image downloading…");
+              }} style={{ flex:1, padding:"9px 0", background:C.blue, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                ⬇ Download QR
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Walk-in Modal */}
       {showWalkin && (
