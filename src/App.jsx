@@ -2035,6 +2035,27 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
 
 
+      {/* ─── METRICS CARDS GRID ─── */}
+      {activeEvent && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+          {[
+            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule") },
+            { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts") },
+            { label: "Pending", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "need a nudge?" : "all responded", color: C.amber, icon: "⏳", action: () => setView("contacts") },
+            { label: "Attended", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% show rate` : "event day", color: C.teal, icon: "🎟", action: () => setView("checkin") },
+          ].map(m => (
+            <div key={m.label} onClick={m.action} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 11, padding: "14px 16px", cursor: "pointer", transition: "border-color .15s", position: "relative", overflow: "hidden" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = m.color + "60"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
+              <div style={{ position: "absolute", top: 10, right: 12, fontSize: 18, opacity: 0.18 }}>{m.icon}</div>
+              <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.9px", marginBottom: 6 }}>{m.label}</div>
+              <div style={{ fontSize: 30, fontWeight: 700, color: m.color, letterSpacing: "-1px", lineHeight: 1 }}>{m.val}</div>
+              {m.sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>{m.sub}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ─── CONTACT PROFILE SIDE PANEL ─── */}
       {selectedContact && (() => {
         const c = selectedContact.contacts || {};
@@ -2688,6 +2709,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.blue+"12", color:C.blue, border:`1px solid ${C.blue}20` }}>✨ Claude claude-sonnet-4</span>
         <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>AI generates copy · your template renders it · world-class result every time.</p>
       </div>
+      {!activeEvent && (
+        <div style={{ padding:"11px 14px", background:C.amber+"12", borderRadius:8, border:`1px solid ${C.amber}40`, marginBottom:12, display:"flex", alignItems:"center", gap:10 }}>
+          <span style={{ fontSize:16 }}>⚠️</span>
+          <span style={{ fontSize:13, color:C.amber, fontWeight:500 }}>No event selected — select an event from the sidebar to save generated emails to your campaign.</span>
+        </div>
+      )}
       {activeEvent && (
         <div style={{ padding:"7px 12px", background:C.blue+"08", borderRadius:7, border:`1px solid ${C.blue}18`, marginBottom:10, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
           <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>✉️ {activeEvent.name}</span>
@@ -3339,6 +3366,30 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
     const { data } = await supabase.from("email_campaigns").insert({ event_id: activeEvent.id, company_id: profile.company_id, name: `${newCam.email_type.replace(/_/g, " ")} — ${activeEvent.name}`, email_type: newCam.email_type, send_at: newCam.send_at || null, segment: newCam.segment, status: newCam.send_at ? "scheduled" : "draft" }).select().single();
     if (data) { setCampaigns(p => [...p, data]); setShowNew(false); fire("Campaign scheduled!"); }
   };
+
+  if (!activeEvent) return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Email Scheduling</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Schedule and send campaigns for your event.</p>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 60, gap: 14, textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 4 }}>📅</div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>No event selected</div>
+        <p style={{ fontSize: 13, color: C.muted, maxWidth: 340, lineHeight: 1.6 }}>
+          Select an event from the sidebar to view and schedule your email campaigns.
+        </p>
+        <div style={{ display: "flex", gap: 20, marginTop: 8 }}>
+          {[{ icon: "✉️", label: "Save the Date" }, { icon: "📨", label: "Invitation" }, { icon: "⏰", label: "Reminder" }, { icon: "🙏", label: "Thank You" }].map(e => (
+            <div key={e.label} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "12px 16px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, minWidth: 80 }}>
+              <span style={{ fontSize: 22 }}>{e.icon}</span>
+              <span style={{ fontSize: 10.5, color: C.muted, fontWeight: 500 }}>{e.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
@@ -6355,7 +6406,19 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
     { label:"Last in", val: lastIn?.attended_at ? new Date(lastIn.attended_at).toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"}) : "—", color:C.muted },
   ];
 
-  if (!activeEvent) return <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"50vh", gap:10, color:C.muted }}><div style={{fontSize:36}}>📅</div><div style={{fontSize:15,fontWeight:500,color:C.text}}>No event selected</div><div style={{fontSize:13}}>Choose an event from the sidebar dropdown</div></div>;
+  if (!activeEvent) return (
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:24 }}>
+        <h1 style={{ fontSize:24, fontWeight:600, letterSpacing:"-0.6px", color:C.text }}>Check-in</h1>
+        <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>Live event day check-in and attendance tracking.</p>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:50, gap:14, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:4 }}>🎪</div>
+        <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
+        <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to start checking in attendees on the day.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
@@ -6861,7 +6924,30 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
     setLoading(false);
   };
 
-  if (!activeEvent) return <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"50vh", gap:10, color:C.muted }}><div style={{fontSize:36}}>📅</div><div style={{fontSize:15,fontWeight:500,color:C.text}}>No event selected</div><div style={{fontSize:13}}>Choose an event from the sidebar dropdown</div></div>;
+  if (!activeEvent) return (
+    <div style={{ animation: "fadeUp .2s ease" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Analytics</h1>
+        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Track opens, clicks, registrations and attendance.</p>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 50, gap: 14, textAlign: "center" }}>
+        <div style={{ fontSize: 48, marginBottom: 4 }}>📊</div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: C.text }}>No event selected</div>
+        <p style={{ fontSize: 13, color: C.muted, maxWidth: 360, lineHeight: 1.6 }}>
+          Select an event from the sidebar to see open rates, click rates, registrations, and attendance.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginTop: 16, maxWidth: 480 }}>
+          {[{ icon: "📧", label: "Emails Sent" }, { icon: "👁", label: "Open Rate" }, { icon: "✅", label: "Confirmed" }, { icon: "🎟", label: "Attended" }].map(m => (
+            <div key={m.label} style={{ padding: "12px 8px", background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 20 }}>{m.icon}</span>
+              <div style={{ fontSize: 18, fontWeight: 700, color: C.muted }}>—</div>
+              <div style={{ fontSize: 9.5, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   const METRICS = [
     { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧" },
