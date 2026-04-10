@@ -5172,12 +5172,10 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
         <Search size={13} color={C.muted} strokeWidth={1.5} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search contacts…" style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 13, width: "100%" }} />
       </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap:"wrap" }}>
         {[
           { id: "all", label: `All (${contacts.length})` },
           { id: "vip", label: `⭐ VIP (${contacts.filter(c => c.tags?.includes("vip")).length})` },
-          { id: "unsubscribed", label: `🚫 Unsubscribed (${contacts.filter(c => c.unsubscribed).length})` },
-          { id: "active", label: `✓ Active (${contacts.filter(c => !c.unsubscribed).length})` },
           { id: "active", label: `✓ Active (${contacts.filter(c => !c.unsubscribed).length})` },
           { id: "unsubscribed", label: `🚫 Unsub (${contacts.filter(c => c.unsubscribed).length})` },
         ].map(f => (
