@@ -6752,10 +6752,11 @@ function SettingsView({ supabase, profile, fire }) {
   const [fromName, setFromName] = useState(profile?.companies?.from_name || "");
   const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
   const [testSending, setTestSending] = useState(false);
+  const [testEmailTo, setTestEmailTo] = useState(profile?.email || "");
 
   const sendTestEmail = async () => {
-    const to = window.prompt("Send test email to:", profile?.email || "");
-    if (!to?.includes("@")) return;
+    const to = testEmailTo?.trim();
+    if (!to?.includes("@")) { return; }
     setTestSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -7067,10 +7068,24 @@ function SettingsView({ supabase, profile, fire }) {
         <button onClick={save} disabled={saving} style={{ padding: "11px 28px", background: saving ? C.raised : C.blue, border: "none", borderRadius: 8, color: saving ? C.muted : "#fff", fontSize: 14, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
           {saving ? <><Spin />Saving…</> : "Save changes"}
         </button>
-        <button onClick={sendTestEmail} disabled={testSending}
-          style={{ padding: "11px 20px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>
-          {testSending ? "⏳ Sending…" : "📧 Send test email"}
-        </button>
+      </div>
+      {/* Inline test email */}
+      <div style={{ display:"flex", gap:8, alignItems:"center", marginBottom:20, padding:"12px 16px", background:C.raised, borderRadius:9, border:`1px solid ${C.border}` }}>
+        <span style={{ fontSize:13 }}>📧</span>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:11.5, fontWeight:500, color:C.text, marginBottom:5 }}>Send a test email</div>
+          <div style={{ display:"flex", gap:7 }}>
+            <input value={testEmailTo} onChange={e=>setTestEmailTo(e.target.value)}
+              placeholder="you@company.com" type="email"
+              style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 10px", fontSize:12.5, outline:"none" }}
+              onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border}
+              onKeyDown={e=>e.key==="Enter"&&sendTestEmail()} />
+            <button onClick={sendTestEmail} disabled={testSending||!testEmailTo?.includes("@")}
+              style={{ padding:"7px 14px", background:testSending||!testEmailTo?.includes("@")?C.raised:C.green, border:"none", borderRadius:6, color:testSending||!testEmailTo?.includes("@")?C.muted:"#fff", fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}>
+              {testSending?"Sending…":"Send test ↗"}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
