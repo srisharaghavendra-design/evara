@@ -8010,6 +8010,48 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
             </div>
           )}
 
+          {/* Day-of-week performance heatmap */}
+          {campaigns && campaigns.filter(c=>c.status==="sent"&&c.sent_at&&c.total_sent>0).length > 1 && (() => {
+            const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+            const byDay = Array(7).fill(null).map(() => ({ sent:0, opened:0, count:0 }));
+            campaigns.filter(c=>c.status==="sent"&&c.sent_at&&c.total_sent>0).forEach(c => {
+              const d = new Date(c.sent_at).getDay();
+              byDay[d].sent += c.total_sent||0;
+              byDay[d].opened += c.total_opened||0;
+              byDay[d].count++;
+            });
+            const maxRate = Math.max(...byDay.map(d => d.sent>0?Math.round(d.opened/d.sent*100):0), 1);
+            return (
+              <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"16px 18px", marginBottom:12 }}>
+                <div style={{ fontSize:13, fontWeight:500, color:C.text, marginBottom:14 }}>📊 Open Rate by Day Sent</div>
+                <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
+                  {byDay.map((d, i) => {
+                    const rate = d.sent>0?Math.round(d.opened/d.sent*100):0;
+                    const h = Math.max(4, Math.round((rate/maxRate)*60));
+                    const col = rate>=30?C.green:rate>=20?C.blue:rate>0?C.amber:C.border;
+                    return (
+                      <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}
+                        title={d.count>0?`${DAYS[i]}: ${rate}% open rate (${d.count} send${d.count>1?"s":""})`:`${DAYS[i]}: no sends`}>
+                        {d.count>0 && <div style={{ fontSize:9, color:col, fontWeight:700 }}>{rate}%</div>}
+                        <div style={{ width:"100%", height:60, display:"flex", alignItems:"flex-end" }}>
+                          <div style={{ width:"100%", height: d.count>0?h:2, background: d.count>0?col:C.border, borderRadius:"3px 3px 0 0", transition:"height .4s", opacity:d.count>0?1:0.3 }} />
+                        </div>
+                        <div style={{ fontSize:10, color: i===0||i===6?C.red:C.muted, fontWeight:i>=2&&i<=4?600:400 }}>{DAYS[i]}</div>
+                        {d.count>0 && <div style={{ fontSize:8.5, color:C.muted }}>{d.count}x</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop:8, display:"flex", gap:12, fontSize:10, color:C.muted }}>
+                  <span style={{ color:C.green }}>■ 30%+ open rate</span>
+                  <span style={{ color:C.blue }}>■ 20–30%</span>
+                  <span style={{ color:C.amber }}>■ &lt;20%</span>
+                  <span style={{ marginLeft:"auto" }}>Tue–Thu typically perform best for B2B</span>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Upcoming scheduled */}
           {campaigns && campaigns.filter(c => c.status==="scheduled" && c.scheduled_at && new Date(c.scheduled_at) > new Date()).length > 0 && (
             <div style={{ background:C.card, borderRadius:11, border:`1px solid ${C.border}`, padding:"16px 18px", marginBottom:12 }}>
