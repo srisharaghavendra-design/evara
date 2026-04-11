@@ -1114,7 +1114,49 @@ function MainApp({ session }) {
 
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, fontFamily: "Outfit,sans-serif", overflow: "hidden" }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#2A2A2E;border-radius:3px}button{cursor:pointer;font-family:Outfit,sans-serif}input,textarea,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}.nb:hover{background:${C.raised}!important;color:${C.text}!important}.mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}.rh:hover{background:${C.raised}!important}.mobile-hamburger{display:none!important}@media(max-width:768px){.evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:216px!important}.evara-sidebar.open{transform:translateX(0)}.evara-overlay{display:block!important}.evara-main{margin-left:0!important}.mobile-hamburger{display:flex!important}.desktop-breadcrumb{display:none!important}.main-padding{padding:16px!important}}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:#2C2C30;border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:#3C3C42}
+        ::selection{background:#0A84FF28;color:#F5F5F7}
+        button{cursor:pointer;font-family:Outfit,sans-serif}
+        input,textarea,select{font-family:Outfit,sans-serif}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        @keyframes shimmer{0%{opacity:.5}50%{opacity:1}100%{opacity:.5}}
+        @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes toastProgress{from{width:100%}to{width:0%}}
+        @keyframes slideRight{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+        .nb{outline:none!important}
+        .nb:focus-visible{box-shadow:0 0 0 2px #0A84FF50!important}
+        .nb:hover{background:rgba(255,255,255,.05)!important;color:${C.text}!important}
+        .mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}
+        .rh{cursor:pointer;transition:background .1s}
+        .rh:hover td{background:${C.raised}!important}
+        .rh:hover{background:${C.raised}!important}
+        .metric-card{transition:transform .18s ease,box-shadow .18s ease;cursor:pointer}
+        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.5)!important}
+        .nav-btn{transition:all .12s ease!important}
+        .nav-btn:hover{color:${C.text}!important;background:rgba(255,255,255,.06)!important}
+        .evara-sidebar{scrollbar-width:none}
+        .evara-sidebar::-webkit-scrollbar{display:none}
+        .mobile-hamburger{display:none!important}
+        input:focus,textarea:focus,select:focus{outline:none;border-color:${C.blue}!important;box-shadow:0 0 0 3px ${C.blue}18}
+        @media(max-width:768px){
+          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:216px!important}
+          .evara-sidebar.open{transform:translateX(0)}
+          .evara-overlay{display:block!important}
+          .evara-main{margin-left:0!important}
+          .mobile-hamburger{display:flex!important}
+          .desktop-breadcrumb{display:none!important}
+          .main-padding{padding:16px!important}
+        }
+      `}</style>
 
       {/* Mobile overlay — closes sidebar when tapping outside */}
       {sidebarOpen && <div className="evara-overlay" onClick={() => setSidebarOpen(false)} style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:199 }} />}
@@ -1872,50 +1914,47 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   ];
 
   if (!activeEvent) return (
-    <div style={{ animation: "fadeUp .2s ease" }}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 48, gap: 14, marginBottom: 40 }}>
-        <div style={{ fontSize: 52, marginBottom: 4 }}>🚀</div>
-        <div style={{ fontSize: 22, fontWeight: 700, color: C.text, letterSpacing: "-0.5px" }}>Welcome to evara</div>
-        <div style={{ display:"flex", gap:8, flexWrap:"wrap", justifyContent:"center", marginTop:8 }}>
-          {["📧 AI emails","📋 RSVP forms","📊 Analytics","📍 Check-in","🎤 Live Q&A"].map(f => (
-            <span key={f} style={{ fontSize:11, padding:"3px 10px", borderRadius:999, background:C.raised, color:C.muted, border:`1px solid ${C.border}` }}>{f}</span>
-          ))}
-        </div>
-        <p style={{ fontSize: 14, color: C.muted, textAlign: "center", maxWidth: 400, lineHeight: 1.65 }}>
-          Your all-in-one event marketing platform. Create your first event to get started — AI will generate your emails, forms and landing page.
-        </p>
-        <button onClick={() => setShowNewEvent(true)} style={{ padding: "12px 32px", background: C.blue, border: "none", borderRadius: 10, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", boxShadow: `0 4px 20px ${C.blue}40` }}>
-          ✨ Create First Event
+    <div style={{ animation: "fadeUp .25s ease", maxWidth: 640, margin: "0 auto", padding: "40px 0 0" }}>
+      {/* Hero */}
+      <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <div style={{ width: 72, height: 72, borderRadius: 20, background: `linear-gradient(135deg,${C.blue},${C.teal})`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 20px", boxShadow: `0 8px 32px ${C.blue}40`, fontSize: 28 }}>⚡</div>
+        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: "-0.8px", color: C.text, marginBottom: 10, lineHeight: 1.15 }}>Welcome to evara</h1>
+        <p style={{ fontSize: 14, color: C.muted, maxWidth: 380, margin: "0 auto 24px", lineHeight: 1.7 }}>Your AI-powered event marketing platform. Create an event and AI instantly generates your emails, forms, and campaign schedule.</p>
+        <button onClick={() => setShowNewEvent(true)} style={{ padding: "13px 36px", background: C.blue, border: "none", borderRadius: 12, color: "#fff", fontSize: 15, fontWeight: 700, cursor: "pointer", boxShadow: `0 6px 24px ${C.blue}50`, letterSpacing: "-0.2px" }}>
+          ✨ Create Your First Event →
         </button>
-        <div style={{ display: "flex", gap: 24, marginTop: 16, flexWrap: "wrap", justifyContent: "center" }}>
-          {[
-            { icon: "🤖", label: "AI generates your emails" },
-            { icon: "📋", label: "Auto-builds registration forms" },
-            { icon: "📊", label: "Tracks every contact's journey" },
-          ].map(f => (
-            <div key={f.label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: C.muted }}>
-              <span>{f.icon}</span><span>{f.label}</span>
-            </div>
-          ))}
-        </div>
       </div>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px", marginBottom: 14 }}>Getting started checklist</div>
+
+      {/* Feature pills */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginBottom: 40 }}>
+        {[["📧","AI eDM Builder"],["📋","RSVP Forms"],["📊","Analytics"],["📍","Check-in"],["🎤","Live Q&A"],["🤖","Campaign AI"]].map(([icon, label]) => (
+          <span key={label} style={{ fontSize: 11.5, padding: "5px 12px", borderRadius: 999, background: C.card, color: C.sec, border: `1px solid ${C.border}`, fontWeight: 500 }}>{icon} {label}</span>
+        ))}
+      </div>
+
+      {/* Getting started steps */}
+      <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+        <div style={{ padding: "14px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.blue, boxShadow: `0 0 6px ${C.blue}` }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px" }}>Getting started</span>
+        </div>
         {[
-          { num: 1, title: "Create your first event", desc: "Add event name, date, location" },
-          { num: 2, title: "Import your contact list", desc: "Add attendees — paste emails or import CSV" },
-          { num: 3, title: "Generate your invite email", desc: "AI writes a polished invite in 10 seconds" },
-          { num: 4, title: "Set up registration form", desc: "Share the link — contacts self-register" },
-          { num: 5, title: "Send your campaign", desc: "Schedule or send immediately to all contacts" },
-        ].map((item) => (
-          <div key={item.num} style={{ display: "flex", alignItems: "center", gap: 14, padding: "13px 16px", background: C.card, borderRadius: 9, border: `1px solid ${C.border}`, marginBottom: 8 }}>
-            <div style={{ width: 24, height: 24, borderRadius: "50%", border: `2px solid ${C.border}`, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 11, color: C.muted, fontWeight: 600 }}>{item.num}</span>
-            </div>
+          { num: "1", title: "Create your first event", desc: "Add name, date, and location — takes 30 seconds", icon: "🎪" },
+          { num: "2", title: "AI drafts your email campaign", desc: "5 polished emails generated automatically — just review and send", icon: "🤖" },
+          { num: "3", title: "Import your contact list", desc: "Paste emails or upload CSV — no formatting required", icon: "👥" },
+          { num: "4", title: "Set up registration form", desc: "Share the link — contacts self-register, data flows in", icon: "📋" },
+          { num: "5", title: "Schedule and send", desc: "AI suggests optimal send times — one click to launch", icon: "🚀" },
+        ].map((item, i, arr) => (
+          <div key={item.num} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 20px", borderBottom: i < arr.length-1 ? `1px solid ${C.border}` : "none", cursor: i === 0 ? "pointer" : "default" }}
+            onClick={i === 0 ? () => setShowNewEvent(true) : undefined}
+            onMouseEnter={i === 0 ? e => e.currentTarget.style.background = C.raised : undefined}
+            onMouseLeave={i === 0 ? e => e.currentTarget.style.background = "transparent" : undefined}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, background: i === 0 ? `${C.blue}18` : C.raised, border: `1px solid ${i === 0 ? C.blue+"30" : C.border}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>{item.icon}</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.text }}>{item.title}</div>
-              <div style={{ fontSize: 12, color: C.muted }}>{item.desc}</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: i === 0 ? C.text : C.sec, marginBottom: 2 }}>{item.title}</div>
+              <div style={{ fontSize: 11.5, color: C.muted, lineHeight: 1.4 }}>{item.desc}</div>
             </div>
+            {i === 0 && <span style={{ fontSize: 14, color: C.blue, opacity: 0.7 }}>→</span>}
           </div>
         ))}
       </div>
@@ -2371,21 +2410,22 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         const tempColor = scoreData.temp === "hot" ? C.red : scoreData.temp === "warm" ? C.amber : scoreData.temp === "cool" ? C.blue : C.muted;
         return (
           <div style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex" }} onClick={() => setSelectedContact(null)}>
-            <div style={{ flex: 1, background: "rgba(0,0,0,.4)" }} />
-            <div style={{ width: 340, background: C.card, borderLeft: `1px solid ${C.border}`, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column" }} onClick={e => e.stopPropagation()}>
-              <div style={{ padding: "18px 18px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 15, fontWeight: 600, color: C.text }}>Contact Profile</span>
-                <button onClick={() => setSelectedContact(null)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer", fontSize: 20, lineHeight: 1 }}>×</button>
+            <div style={{ flex: 1, background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)" }} />
+            <div style={{ width: 360, background: C.card, borderLeft: `1px solid ${C.border}`, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column", animation: "slideRight .2s ease" }} onClick={e => e.stopPropagation()}>
+              <div style={{ padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px" }}>Contact Profile</span>
+                <button onClick={() => setSelectedContact(null)} style={{ background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", fontSize: 16, lineHeight: 1, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
               </div>
-              <div style={{ padding: "18px", textAlign: "center", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ width: 52, height: 52, borderRadius: "50%", background: C.blue + "20", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, margin: "0 auto 10px", fontWeight: 700, color: C.blue }}>
+              <div style={{ padding: "24px 20px 18px", textAlign: "center", borderBottom: `1px solid ${C.border}`, background: `linear-gradient(180deg,${C.raised},${C.card})` }}>
+                <div style={{ width: 60, height: 60, borderRadius: 16, background: `linear-gradient(135deg,${C.blue}50,${C.teal}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, margin: "0 auto 12px", fontWeight: 800, color: C.blue, border: `2px solid ${C.blue}25`, boxShadow: `0 4px 16px ${C.blue}20` }}>
                   {(c.first_name?.[0] || c.email?.[0] || "?").toUpperCase()}
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 600, color: C.text }}>{c.first_name} {c.last_name}</div>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 2, cursor: "pointer" }}
+                <div style={{ fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: "-0.3px" }}>{c.first_name} {c.last_name}</div>
+                <div style={{ fontSize: 12, color: C.muted, marginTop: 4, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}
                   onClick={() => { navigator.clipboard?.writeText(c.email || ""); fire("📋 Email copied"); }}
                   title="Click to copy">
-                  {c.email} 📋
+                  {c.email} <span style={{ opacity: 0.5, fontSize: 10 }}>📋</span>
+
                 </div>
                 {(c.job_title || c.company_name) && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{[c.job_title, c.company_name].filter(Boolean).join(" · ")}</div>}
                 <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 10, flexWrap: "wrap" }}>
@@ -4106,8 +4146,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 const order = {"save_the_date":0,"invitation":1,"reminder":2,"day_of_details":3,"confirmation":4,"byo":5,"thank_you":6};
                 return (order[a.email_type] ?? 9) - (order[b.email_type] ?? 9);
               }).map(cam => (
-            <div key={cam.id} style={{ background: C.card, borderRadius: 10, border: `1px solid ${cam.status === "sent" ? C.green + "30" : cam.status === "scheduled" ? C.blue + "40" : cam.status === "paused" ? C.amber + "30" : C.border}`, padding: "16px", display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{ width: 36, height: 36, borderRadius: "50%", background: `${cam.status === "sent" ? C.green : C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0 }}>
+            <div key={cam.id} className="metric-card" style={{ background: C.card, borderRadius: 10, border: `1px solid ${cam.status === "sent" ? C.green + "28" : cam.status === "scheduled" ? C.blue + "35" : cam.status === "paused" ? C.amber + "28" : C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, position: "relative", overflow: "hidden" }}>
+              {/* Left accent */}
+              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : cam.status === "paused" ? C.amber : C.border, borderRadius: "3px 0 0 3px" }} />
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : C.raised}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>
               {cam.email_type === "save_the_date" ? "📅" : cam.email_type === "invitation" ? "✉️" : cam.email_type === "reminder" ? "⏰" : cam.email_type === "day_of_details" ? "📍" : cam.email_type === "thank_you" ? "🙏" : cam.email_type === "confirmation" ? "✅" : "📧"}
               </div>
               <div style={{ flex: 1 }}>
@@ -5044,10 +5086,13 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                         <input type="checkbox" checked={selContacts.has(c.id)}
                           onChange={() => toggleSel(c.id)} onClick={e => e.stopPropagation()}
                           style={{ accentColor: C.blue, cursor:"pointer", flexShrink:0 }} />
-                        <div style={{ width: 28, height: 28, borderRadius: "50%", background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 600, color: C.blue, flexShrink: 0 }}>{ini(`${c.first_name || ""} ${c.last_name || ""}`)}</div>
-                        <span style={{ fontSize: 13, color: C.text }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</span>
-                        {c.tags?.includes("vip") && <span onClick={e=>{e.stopPropagation();setTagFilter(f=>f==="vip"?"":"vip");}} style={{ fontSize:10, color:"#FFB800", marginLeft:4, cursor:"pointer" }} title="Filter by VIP">⭐ VIP</span>}
-                        {c.unsubscribed && <span style={{ fontSize: 9, padding:"1px 5px", borderRadius:3, background:C.red+"15", color:C.red }}>unsub</span>}
+                        <div style={{ width: 30, height: 30, borderRadius: 8, background: `linear-gradient(135deg,${C.blue}40,${C.teal}30)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10.5, fontWeight: 700, color: C.blue, flexShrink: 0, border: `1px solid ${C.blue}20` }}>{ini(`${c.first_name || ""} ${c.last_name || ""}`)}</div>
+                        <div>
+                          <div style={{ fontSize: 13, color: C.text, fontWeight: 500 }}>{`${c.first_name || ""} ${c.last_name || ""}`.trim() || "—"}</div>
+                          {c.job_title && <div style={{ fontSize: 10, color: C.muted, marginTop: 1 }}>{c.job_title}</div>}
+                        </div>
+                        {c.tags?.includes("vip") && <span onClick={e=>{e.stopPropagation();setTagFilter(f=>f==="vip"?"":"vip");}} style={{ fontSize:9.5, color:"#FFD60A", background:"#FFD60A15", border:"1px solid #FFD60A30", padding:"1px 6px", borderRadius:99, cursor:"pointer", fontWeight:600 }} title="Filter by VIP">VIP ⭐</span>}
+                        {c.unsubscribed && <span style={{ fontSize: 9, padding:"1px 5px", borderRadius:99, background:C.red+"15", color:C.red, fontWeight:600 }}>unsub</span>}
                       </div>
                     </td>
                     <td style={{ padding: "11px 14px", fontSize: 12.5 }}>
