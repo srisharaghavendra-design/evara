@@ -58,7 +58,7 @@ serve(async (req) => {
           { type: "text/html", value: personalHtml },
         ],
         tracking_settings: { click_tracking: { enable: true }, open_tracking: { enable: true } },
-        ...(campaignId ? { custom_args: { campaign_id: String(campaignId) } } : {}),
+        ...(campaignId ? { custom_args: { campaign_id: String(campaignId), contact_id: String(contact.id || "") } } : {}),
       };
 
       const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
