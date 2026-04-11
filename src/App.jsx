@@ -2150,40 +2150,32 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           </div>
         </div>
       )}
-      {/* ─── EVENT HERO HEADER ─── */}
-      <div style={{ marginBottom: 20, background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "18px 20px", position: "relative", overflow: "hidden" }}>
-        {/* Subtle gradient accent */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${C.blue},${C.teal},${C.blue}00)` }} />
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: C.blue, textTransform: "uppercase", letterSpacing: "1.8px", marginBottom: 6 }}>Active Event</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
-              <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.6px", color: C.text, margin: 0, lineHeight: 1.2 }}>{{"Conference":"🎤 ","Workshop":"🛠 ","Webinar":"🖥 ","Product Launch":"🚀 ","Awards":"🏆 ","Team Event":"🤝 "}[activeEvent.event_type]||""}{activeEvent.name}</h1>
-              <span onClick={async () => {
-                const statuses = ["draft", "published", "completed"];
-                const curr = activeEvent.status || "draft";
-                const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
-                await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
-                fire(`Event status → ${next}`);
-              }} style={{ fontSize: 10, fontWeight: 700, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "18", padding: "3px 9px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.6px", flexShrink: 0, cursor: "pointer", border: `1px solid ${(activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue)}30` }} title="Click to change status">
-                {activeEvent.status === "published" ? "🟢 " : activeEvent.status === "completed" ? "✅ " : "⚪ "}
-                {(activeEvent.status || "draft").charAt(0).toUpperCase() + (activeEvent.status || "draft").slice(1)}
-              </span>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              {activeEvent.event_type && <span style={{ background: `${C.blue}14`, color: C.blue, fontSize: 10.5, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{activeEvent.event_type}</span>}
-              {activeEvent.event_format && activeEvent.event_format !== "In-person" && <span style={{ background: `${C.teal}14`, color: C.teal, fontSize: 10.5, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span>}
-              {activeEvent.event_date && <span style={{ fontSize: 12, color: C.sec }}>📅 {new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}{activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}</span>}
-              {activeEvent.location && <span style={{ fontSize: 12, color: C.muted }}>📍 {activeEvent.location}</span>}
-              {activeEvent.expected_attendees && <span style={{ fontSize: 12, color: C.muted }}>👥 {activeEvent.expected_attendees} expected</span>}
-            </div>
+      {/* ─── MISSION BRIEFING PANEL ─── */}
+      <div style={{ marginBottom: 16, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, position: "relative", overflow: "hidden" }}>
+        {/* Top telemetry line */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,${C.blue},${C.teal}80,transparent)` }} />
+        {/* Mission header bar */}
+        <div style={{ padding: "10px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: `${C.blue}06` }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="live-dot" />
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2.5px", color: C.blue }}>MISSION BRIEFING</span>
+            <span style={{ fontSize: 9, color: C.muted, letterSpacing: "1px" }}>·</span>
+            <span onClick={async () => {
+              const statuses = ["draft", "published", "completed"];
+              const curr = activeEvent.status || "draft";
+              const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
+              await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
+              fire(`Status → ${next.toUpperCase()}`);
+            }} style={{ fontSize: 9, fontWeight: 700, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.amber, letterSpacing: "1.5px", cursor: "pointer", textTransform: "uppercase" }}>
+              {activeEvent.status === "published" ? "● ACTIVE" : activeEvent.status === "completed" ? "✓ COMPLETE" : "○ DRAFT"}
+            </span>
           </div>
-          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "6px 12px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, cursor: "pointer", fontWeight: 500 }}>
-              Edit
+          <div style={{ display: "flex", gap: 6 }}>
+            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 9, padding: "4px 10px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 2, color: C.muted, cursor: "pointer", letterSpacing: "1px", fontWeight: 600 }}>
+              EDIT
             </button>
             <button onClick={async () => {
-              fire("🤖 Generating AI report…");
+              fire("🤖 Generating mission report…");
               const { data: { session } } = await supabase.auth.getSession();
               const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
                 method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
@@ -2192,11 +2184,70 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               const d = await res.json();
               if (d.success && d.html) { const w = window.open("","_blank"); w.document.write(d.html); w.document.close(); fire("✅ Report ready!"); }
               else fire("Report failed","err");
-            }} style={{ fontSize: 11, padding: "6px 12px", background: `${C.blue}14`, border: `1px solid ${C.blue}30`, borderRadius: 7, color: C.blue, cursor: "pointer", fontWeight: 600 }}>
-              ✨ AI Report
+            }} style={{ fontSize: 9, padding: "4px 10px", background: `${C.blue}15`, border: `1px solid ${C.blue}40`, borderRadius: 2, color: C.blue, cursor: "pointer", letterSpacing: "1px", fontWeight: 700 }}>
+              AI REPORT
             </button>
           </div>
         </div>
+        {/* Mission data */}
+        <div style={{ padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 24 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 20, fontWeight: 800, color: C.text, margin: "0 0 10px", lineHeight: 1.1, letterSpacing: "-0.5px", fontFamily: "Syne,sans-serif" }}>
+              {activeEvent.name}
+            </h1>
+            {/* Mission parameters */}
+            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+              {activeEvent.event_date && (
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>LAUNCH DATE</div>
+                  <div style={{ fontSize: 12, color: C.sec, fontFamily: "'JetBrains Mono',monospace" }}>
+                    {new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}
+                    {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
+                  </div>
+                </div>
+              )}
+              {activeEvent.location && (
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>LOCATION</div>
+                  <div style={{ fontSize: 12, color: C.sec }}>{activeEvent.location}</div>
+                </div>
+              )}
+              {activeEvent.event_type && (
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>TYPE</div>
+                  <div style={{ fontSize: 12, color: C.sec, textTransform: "uppercase", letterSpacing: "0.5px" }}>{activeEvent.event_type}</div>
+                </div>
+              )}
+              {activeEvent.expected_attendees && (
+                <div>
+                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>CAPACITY</div>
+                  <div style={{ fontSize: 12, color: C.sec, fontFamily: "'JetBrains Mono',monospace" }}>{activeEvent.expected_attendees}</div>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* T-MINUS countdown */}
+          {daysToEvent !== null && !isPostEvent && (
+            <div style={{ textAlign: "center", flexShrink: 0, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 4, padding: "12px 20px", minWidth: 110 }}>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.amber, marginBottom: 6 }}>T-MINUS</div>
+              <div style={{ fontSize: 36, fontWeight: 700, color: daysToEvent <= 7 ? C.red : daysToEvent <= 14 ? C.amber : C.blue, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1, letterSpacing: "-2px" }}>{daysToEvent}</div>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1.5px", color: C.muted, marginTop: 4 }}>DAYS</div>
+            </div>
+          )}
+          {isPostEvent && (
+            <div style={{ textAlign: "center", flexShrink: 0, background: `${C.green}08`, border: `1px solid ${C.green}30`, borderRadius: 4, padding: "12px 20px", minWidth: 110 }}>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.green, marginBottom: 6 }}>MISSION</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: C.green, fontFamily: "Syne,sans-serif", letterSpacing: "1px" }}>COMPLETE</div>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1.5px", color: C.muted, marginTop: 4 }}>T+{daysSinceEvent}D</div>
+            </div>
+          )}
+        </div>
+        {/* Description strip */}
+        {activeEvent.description && (
+          <div style={{ padding: "8px 18px 12px", borderTop: `1px solid ${C.border}` }}>
+            <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.5, margin: 0 }}>{activeEvent.description}</p>
+          </div>
+        )}
       </div>
       {/* Description / notes row */}
       {(activeEvent.description || activeEvent.capacity || activeEvent.internal_notes) && (
@@ -2406,22 +2457,27 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         </div>
       )}
       {activeEvent && !loading && contacts.length > 0 && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:11, overflow:"hidden", marginBottom:16 }}>
-          {/* Header + filter tabs */}
-          <div style={{ padding:"11px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-            <span style={{ fontSize:13, fontWeight:600, color:C.text, marginRight:4 }}>Guest List</span>
+        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:4, overflow:"hidden", marginBottom:16 }}>
+          {/* CREW MANIFEST header */}
+          <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", background:`${C.blue}05` }}>
+            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"2.5px", color:C.blue }}>CREW MANIFEST</span>
+            <span style={{ fontSize:9, color:C.muted }}>·</span>
+            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1px", color:C.muted, fontFamily:"'JetBrains Mono',monospace" }}>{contacts.length} PERSONNEL</span>
+            <div style={{ display:"flex", gap:5, marginLeft:8 }}>
             {["all","pending","confirmed","attended","declined"].map(f => {
               const count = f === "all" ? contacts.length : contacts.filter(c => c.status === f).length;
+              const col = f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue;
               return (
                 <button key={f} onClick={() => setFilt(f)}
-                  style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${filt===f?(f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue):C.border}`, background:filt===f?`${f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue}15`:"transparent", color:filt===f?(f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue):C.muted, cursor:"pointer", fontWeight:filt===f?600:400 }}>
-                  {f === "all" ? "All" : f.charAt(0).toUpperCase()+f.slice(1)} ({count})
+                  style={{ fontSize:9, padding:"2px 8px", borderRadius:2, border:`1px solid ${filt===f?col:C.border}`, background:filt===f?`${col}15`:"transparent", color:filt===f?col:C.muted, cursor:"pointer", fontWeight:700, letterSpacing:"0.8px", textTransform:"uppercase" }}>
+                  {f === "all" ? "ALL" : f.toUpperCase()} {count}
                 </button>
               );
             })}
-            <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
-              <button onClick={() => setView("contacts")} style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                Manage all →
+            </div>
+            <div style={{ marginLeft:"auto" }}>
+              <button onClick={() => setView("contacts")} style={{ fontSize:9, padding:"2px 8px", borderRadius:2, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", letterSpacing:"1px", fontWeight:600 }}>
+                FULL ROSTER →
               </button>
             </div>
           </div>
