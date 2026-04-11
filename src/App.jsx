@@ -865,6 +865,7 @@ function MainApp({ session }) {
   const [campaigns, setCampaigns] = useState([]); // shared across views
   const [campaignsVersion, setCampaignsVersion] = useState(0); // bump to force reload
   const [contactsVersion, setContactsVersion] = useState(0); // bump to force guest list reload
+  const [formShareLink, setRootFormShareLink] = useState(""); // active event's registration form link
 
   // Smart notifications — check events on load
   useEffect(() => {
@@ -976,11 +977,13 @@ function MainApp({ session }) {
 
   // Load metrics for header strip whenever active event changes
   useEffect(() => {
-    if (!activeEvent?.id) { setMetrics(null); setCampaigns([]); return; }
+    if (!activeEvent?.id) { setMetrics(null); setCampaigns([]); setRootFormShareLink(""); return; }
     supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => setMetrics(data));
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
       .then(({ data }) => setCampaigns(data || []));
+    supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
+      .then(({ data }) => setRootFormShareLink(data?.share_token ? `${window.location.origin}/form/${data.share_token}` : ""));
   }, [activeEvent?.id]);
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
@@ -1340,12 +1343,16 @@ function MainApp({ session }) {
           {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
-          {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} onFormSaved={() => {
+            if (!activeEvent?.id) return;
+            supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
+              .then(({ data }) => setRootFormShareLink(data?.share_token ? `${window.location.origin}/form/${data.share_token}` : ""));
+          }} />}
           {view === "contacts" && profile && <ContactView key="contacts" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} onContactsChanged={() => setContactsVersion(v => v + 1)} />}
           {view === "schedule" && profile && <ScheduleView key={`schedule-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
           {view === "checkin"   && profile && <CheckInView key={`checkin-${contactsVersion}`}  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "social"    && profile && <SocialView key="social"   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} campaigns={campaigns} />}
+          {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} campaigns={campaigns} events={events} />}
           {view === "campaign"  && profile && <CampaignView key="campaign"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "calendar"  && <CalendarView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} campaigns={campaigns} activeEvent={activeEvent} />}
           {view === "overview"  && <MultiEventView supabase={supabase} profile={profile} events={events} setActiveEvent={setActiveEvent} setView={setView} fire={fire} />}
@@ -5420,6 +5427,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                     }
                     const skipped = rows.length - newOnes.length;
                     fire(`✅ ${newOnes.length} imported${skipped?` · ${skipped} already existed`:""}${addToEvent&&activeEvent?` · added to ${activeEvent.name}`:""}!`);
+                    if (addToEvent && newOnes.length) onContactsChanged?.();
                     resetImport();
                     setImporting(false);
                   }} disabled={importing || !importPreview.filter(r=>!r._personal).length}
@@ -5930,7 +5938,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
 }
 
 // ─── FORMS VIEW ───────────────────────────────────────────────
-function FormsView({ supabase, profile, activeEvent, fire }) {
+function FormsView({ supabase, profile, activeEvent, fire, onFormSaved }) {
   const [forms, setForms] = useState([]);
   const [activeForm, setActiveForm] = useState(null);
   const [submissions, setSubmissions] = useState([]);
@@ -5965,7 +5973,7 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
     if (!activeEvent || !profile) return; setSaving(true);
     const payload = { event_id: activeEvent.id, company_id: profile.company_id, name: formName, fields, form_type: "registration", is_active: true };
     const { data, error } = activeForm ? await supabase.from("forms").update(payload).eq("id", activeForm.id).select().single() : await supabase.from("forms").insert(payload).select().single();
-    if (error) { fire(error.message, "err"); } else { setActiveForm(data); if (!activeForm) setForms(p => [data, ...p]); fire("Form saved!"); }
+    if (error) { fire(error.message, "err"); } else { setActiveForm(data); if (!activeForm) setForms(p => [data, ...p]); fire("Form saved!"); onFormSaved?.(); }
     setSaving(false);
   };
   const addField = type => { setFields(p => [...p, { id: nextId, type, label: FIELD_TYPES.find(f => f.type === type)?.label || "Field", required: false, options: type === "radio" ? ["Option 1", "Option 2"] : [] }]); setNextId(p => p + 1); };
