@@ -99,6 +99,30 @@ const TEMPLATES: Record<string, (p: Record<string, string>) => { subject: string
     }),
     plain: `Hi ${p.firstName || "there"},\n\nThank you for attending ${p.eventName}! We hope you enjoyed it.\n\nWe'd love your feedback: ${p.feedbackUrl || ""}\n\n${p.orgName}`,
   }),
+  welcome: (p) => ({
+    subject: `Welcome to evara — your event marketing platform ✨`,
+    html: buildHtml({
+      headline: `You're all set, ${p.firstName || "there"}! 🚀`,
+      subheadline: `Welcome to evara — let's run your first event`,
+      body: `<p style="font-family:Arial,sans-serif;font-size:16px;color:#333;margin:0 0 16px;line-height:1.6;">We're thrilled to have you on board. evara replaces the whole stack — Mailchimp, Eventbrite, Typeform, Zapier — with one AI-powered platform built for event marketers.</p>
+             <p style="font-family:Arial,sans-serif;font-size:15px;color:#333;margin:0 0 8px;font-weight:600;">Here's how to get started in 3 steps:</p>
+             <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 20px;">
+               <tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:14px;color:#333;">
+                 <span style="font-weight:700;color:#0A84FF;">1.</span>&nbsp; Import your contact list — CSV, LinkedIn export, or paste emails
+               </td></tr>
+               <tr><td style="padding:8px 0;border-bottom:1px solid #f0f0f0;font-family:Arial,sans-serif;font-size:14px;color:#333;">
+                 <span style="font-weight:700;color:#0A84FF;">2.</span>&nbsp; Go to eDM Builder — describe your event and AI writes all 7 emails in 60 seconds
+               </td></tr>
+               <tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#333;">
+                 <span style="font-weight:700;color:#0A84FF;">3.</span>&nbsp; Schedule or send — your live dashboard tracks opens, RSVPs and attendance automatically
+               </td></tr>
+             </table>
+             <p style="font-family:Arial,sans-serif;font-size:14px;color:#666;margin:0;line-height:1.6;">Questions? Just reply to this email — we're a small team and we read everything.</p>`,
+      cta: "Open evara", ctaUrl: "https://evara-tau.vercel.app",
+      orgName: "evara", email: p.email,
+    }),
+    plain: `Welcome to evara, ${p.firstName || "there"}!\n\nGet started in 3 steps:\n1. Import your contacts\n2. Build emails with AI in the eDM Builder\n3. Send and track everything from your dashboard\n\nhttps://evara-tau.vercel.app`,
+  }),
 };
 
 serve(async (req) => {

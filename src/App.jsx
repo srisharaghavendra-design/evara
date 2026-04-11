@@ -449,6 +449,19 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
     } else if (step === 4) {
       setSaving(true);
       await supabase.from("companies").update({ onboarding_completed: true }).eq("id", profile.company_id);
+      // Send welcome email to new user
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0] || "there", unsubscribed: false }],
+            triggerType: "welcome",
+            eventName: "evara",
+            orgName: companyName || "evara",
+          })
+        });
+      } catch(e) { console.log("Welcome email failed:", e.message); }
       setSaving(false);
       onComplete();
     }
