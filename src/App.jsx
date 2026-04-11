@@ -3639,6 +3639,30 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </Sec>
 
           <BrandVoiceBadge supabase={supabase} profile={profile} setView={setView} />
+
+          {/* ── BLANK CANVAS FEAR SOLVER ── */}
+          {!info.extra && !activeEvent?.description && (
+            <div style={{ background:C.raised, borderRadius:8, padding:"10px 12px", marginBottom:4 }}>
+              <div style={{ fontSize:10, fontWeight:600, color:C.muted, letterSpacing:"1px", marginBottom:8 }}>💡 QUICK STARTERS — click to use</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                {[
+                  { label:"Formal corporate dinner", extra:"Black tie optional. Partners welcome. Emphasise exclusivity and limited seats." },
+                  { label:"High-energy product launch", extra:"Energetic, bold tone. Focus on innovation and being first to experience the product." },
+                  { label:"Intimate networking breakfast", extra:"Casual, warm tone. Small group, senior professionals. Coffee and conversation." },
+                  { label:"Leadership summit — keynotes + roundtables", extra:"Thought leadership focus. Senior executives. Strategic conversations, not sales." },
+                  { label:"Client appreciation — relationship building", extra:"Warm, personal tone. Celebrating the partnership. No hard sell — pure gratitude." },
+                ].map(ex => (
+                  <button key={ex.label} onClick={() => setInfo(p => ({ ...p, extra: ex.extra }))}
+                    style={{ textAlign:"left", fontSize:12, padding:"6px 10px", borderRadius:6, border:`1px solid ${C.border}`, background:C.card, color:C.sec, cursor:"pointer", transition:"all .1s", lineHeight:1.4 }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor=C.blue; e.currentTarget.style.color=C.blue; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor=C.border; e.currentTarget.style.color=C.sec; }}>
+                    → {ex.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <button onClick={generate} disabled={gen} style={{ padding: "11px", borderRadius: 8, border: "none", background: gen ? C.raised : C.blue, color: gen ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s", boxShadow: gen ? "none" : `0 4px 20px ${C.blue}35`, cursor: "pointer" }}>
             {gen ? <><Spin />Claude is writing… (~15s)</> : <><Sparkles size={14} strokeWidth={1.5} />Generate with AI</>}
           </button>
@@ -5584,8 +5608,11 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:18 }}>
               <div>
                 <h2 style={{ fontSize:17, fontWeight:700, color:C.text, margin:0 }}>
-                  {importStep === "input" ? "Import Contacts" : importStep === "map" ? "Map Columns" : "Preview & Import"}
+                  {importStep === "input" ? "Add your guest list" : importStep === "map" ? "Map Columns" : "Preview & Import"}
                 </h2>
+                <p style={{ fontSize:12, color:C.muted, marginTop:4 }}>
+                  {importStep === "input" ? "Paste anything — emails, CSV, a forwarded email, LinkedIn export. We'll figure it out." : ""}
+                </p>
                 <div style={{ display:"flex", gap:6, marginTop:8 }}>
                   {["input","map","preview"].map((s,i) => (
                     <div key={s} style={{ display:"flex", alignItems:"center", gap:5 }}>
@@ -5593,7 +5620,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                         {i < ["input","map","preview"].indexOf(importStep) ? "✓" : i+1}
                       </div>
                       <span style={{ fontSize:10.5, color: importStep===s ? C.text : C.muted, fontWeight: importStep===s ? 600 : 400 }}>
-                        {{input:"Upload",map:"Map",preview:"Preview"}[s]}
+                        {{input:"Paste or Upload",map:"Map",preview:"Preview"}[s]}
                       </span>
                       {i < 2 && <span style={{ color:C.border, fontSize:12 }}>›</span>}
                     </div>
@@ -5651,9 +5678,9 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                   return <div style={{ marginBottom:6 }}><span style={{ fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:4, background:`${fmt.col}15`, color:fmt.col, border:`1px solid ${fmt.col}30` }}>{fmt.label}</span></div>;
                 })()}
 
-                <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={7}
-                  placeholder={"first_name,last_name,email,company_name,job_title\nJohn,Smith,john@acme.com,Acme Corp,CEO\n\n— or just paste emails —\n\njohn@company.com\nJane Lee <jane@corp.com>"}
-                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12, outline:"none", resize:"vertical", fontFamily:"monospace", boxSizing:"border-box", marginBottom:6 }}
+                <textarea value={importText} onChange={e => setImportText(e.target.value)} rows={8}
+                  placeholder={"Paste anything — any of these work:\n\n✓  john@acme.com\n✓  John Smith <john@acme.com>\n✓  first_name,last_name,email,company,title\n    John,Smith,john@acme.com,Acme Corp,CEO\n✓  LinkedIn export · Salesforce export · HubSpot export · Excel copy-paste\n✓  A forwarded email thread with email addresses\n\nevara figures out the format automatically."}
+                  style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12, outline:"none", resize:"vertical", fontFamily:"monospace", boxSizing:"border-box", marginBottom:6, lineHeight:1.6 }}
                   onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
 
                 <div style={{ fontSize:11, color:C.muted, marginBottom:14 }}>
