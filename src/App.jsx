@@ -1249,7 +1249,7 @@ function MainApp({ session }) {
       {sidebarOpen && <div className="evara-overlay" onClick={() => setSidebarOpen(false)} style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:199 }} />}
 
       {/* SIDEBAR */}
-      <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: typeof window !== "undefined" && window.innerWidth <= 768 ? 260 : sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"all .25s ease", overflow:"hidden" }}>
+      <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"all .25s ease", overflow:"hidden" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: sidebarOpen ? 14 : 8 }}>
             <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px ${C.blue}20`, flexShrink:0 }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
