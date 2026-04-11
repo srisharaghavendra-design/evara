@@ -1030,6 +1030,10 @@ function MainApp({ session }) {
   const [events, setEvents] = useState([]);
   const [activeEvent, setActiveEvent] = useState(null);
   const [toast, setToast] = useState(null);
+  const [showMorningBrief, setShowMorningBrief] = useState(() => {
+    const key = `evara_brief_${new Date().toDateString()}`;
+    return !localStorage.getItem(key);
+  });
   const [showNewEvent, setShowNewEvent] = useState(false);
   const [briefMode, setBriefMode] = useState(true);
   const [briefText, setBriefText] = useState("");
@@ -2064,6 +2068,47 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
 
+      {/* ── MORNING BRIEFING CARD ── */}
+      {activeEvent && showMorningBrief && (() => {
+        const hour = new Date().getHours();
+        const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+        const firstName = profile?.full_name?.split(" ")[0] || "there";
+        const daysLeft = daysToEvent;
+        const sentCount = campaigns.filter(c => c.status === "sent").length;
+        const pendingCount = metrics?.total_pending || 0;
+        const openRate = metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) : 0;
+
+        // Smart insight
+        let insight = null;
+        if (sentCount === 0 && campaigns.length > 0) insight = { msg: `You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready to send.`, cta: "Go to Scheduling →", action: () => setView("schedule"), color: C.blue };
+        else if (pendingCount > 5 && daysLeft !== null && daysLeft < 14) insight = { msg: `${pendingCount} contacts haven't responded yet — ${daysLeft} days to go.`, cta: "Send a nudge →", action: () => setView("schedule"), color: C.amber };
+        else if (openRate > 0 && openRate < 30) insight = { msg: `${openRate}% open rate is below average. Consider a new subject line.`, cta: "Edit email →", action: () => setView("edm"), color: C.red };
+        else if (openRate >= 60) insight = { msg: `${openRate}% open rate — that's exceptional. Your subject line is working.`, cta: null, color: C.green };
+        else if (daysLeft !== null && daysLeft <= 7 && daysLeft > 0) insight = { msg: `${daysLeft} day${daysLeft===1?"":"s"} to go. Make sure your day-of details email is ready.`, cta: "Check schedule →", action: () => setView("schedule"), color: C.amber };
+        else if (contacts.length === 0) insight = { msg: "No contacts imported yet. Add your guest list to get started.", cta: "Import contacts →", action: () => setView("contacts"), color: C.blue };
+
+        return (
+          <div style={{ background:`linear-gradient(135deg,${C.blue}12,${C.teal}06)`, border:`1px solid ${C.blue}25`, borderRadius:12, padding:"14px 18px", marginBottom:14, display:"flex", alignItems:"center", justifyContent:"space-between", gap:16, animation:"fadeUp .4s ease" }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:4 }}>
+                {greeting}, {firstName}. <span style={{ color:C.blue }}>{activeEvent.name}</span>{daysLeft !== null && !isPostEvent ? ` is in ${daysLeft} day${daysLeft===1?"":"s"}.` : isPostEvent ? " is complete." : "."}
+              </div>
+              {insight && (
+                <div style={{ fontSize:12, color:C.muted, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                  <span style={{ color:insight.color }}>●</span>
+                  <span>{insight.msg}</span>
+                  {insight.cta && insight.action && (
+                    <button onClick={insight.action} style={{ fontSize:11, fontWeight:600, color:insight.color, background:"transparent", border:`1px solid ${insight.color}40`, borderRadius:5, padding:"2px 8px", cursor:"pointer" }}>{insight.cta}</button>
+                  )}
+                </div>
+              )}
+            </div>
+            <button onClick={() => { localStorage.setItem(`evara_brief_${new Date().toDateString()}`,"1"); setShowMorningBrief(false); }}
+              style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:16, lineHeight:1, flexShrink:0, padding:"4px 6px" }} title="Dismiss for today">×</button>
+          </div>
+        );
+      })()}
+
       {/* ── JOURNEY PROGRESS STRIP ── */}
       {journeyDone < journeySteps.length && (
         <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
@@ -2275,7 +2320,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
       {/* Quick actions strip */}
       {activeEvent && (
-        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
           {[
             { label:"✉️ Build email", action:() => setView("edm"), color:C.blue },
             { label:"📅 Schedule", action:() => setView("schedule"), color:C.blue },
@@ -2301,6 +2346,43 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               {label}
             </button>
           ))}
+
+          {/* ── WHAT SHOULD I DO NEXT? ── */}
+          {(() => {
+            const [whatNextLoading, setWhatNextLoading] = useState(false);
+            const [whatNextResult, setWhatNextResult] = useState(null);
+            return (
+              <div style={{ marginLeft:"auto", position:"relative" }}>
+                <button onClick={async () => {
+                  if (whatNextLoading) return;
+                  if (whatNextResult) { setWhatNextResult(null); return; }
+                  setWhatNextLoading(true);
+                  try {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    const context = `Event: ${activeEvent.name}\nDays to event: ${daysToEvent ?? "unknown"}\nEmails sent: ${campaigns.filter(c=>c.status==="sent").length}/${campaigns.length}\nOpen rate: ${metrics?.total_sent>0?Math.round((metrics.total_opened/metrics.total_sent)*100):0}%\nConfirmed: ${metrics?.total_confirmed||0}\nPending: ${metrics?.total_pending||0}\nContacts: ${contacts.length}\nLanding page: ${formShareLink?"yes":"no"}`;
+                    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+                      method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200,
+                        messages:[{ role:"user", content:`You are an event marketing expert. Based on this campaign status, tell me the ONE most important thing to do right now. Be direct, specific, 1-2 sentences max. No fluff.\n\n${context}` }]
+                      })
+                    });
+                    const d = await res.json();
+                    setWhatNextResult(d.content?.[0]?.text || "Keep going — you're on track!");
+                  } catch { setWhatNextResult("Check your campaign status and make sure all emails are scheduled."); }
+                  finally { setWhatNextLoading(false); }
+                }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.blue}50`, background:`${C.blue}12`, color:C.blue, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
+                  {whatNextLoading ? <><Spin />Thinking…</> : "🧠 What should I do next?"}
+                </button>
+                {whatNextResult && (
+                  <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, width:320, background:C.card, border:`1px solid ${C.blue}40`, borderRadius:10, padding:"14px 16px", zIndex:50, boxShadow:"0 8px 32px rgba(0,0,0,.5)", animation:"fadeUp .2s ease" }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1px", marginBottom:8 }}>🧠 AI RECOMMENDS</div>
+                    <div style={{ fontSize:13, color:C.text, lineHeight:1.6 }}>{whatNextResult}</div>
+                    <button onClick={() => setWhatNextResult(null)} style={{ marginTop:10, fontSize:11, color:C.muted, background:"transparent", border:"none", cursor:"pointer", padding:0 }}>Dismiss ×</button>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
 
