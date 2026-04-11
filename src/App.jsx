@@ -11034,6 +11034,14 @@ function SeatingView({ supabase, profile, activeEvent, fire }) {
   const [layout, setLayout] = useState({ tables: 8, seatsPerTable: 10 });
   const [assignments, setAssignments] = useState({});
   const [dragOver, setDragOver] = useState(null);
+  const [editingSeat, setEditingSeat] = useState(null); // { ecId, value }
+
+  if (!activeEvent) return (
+    <div style={{ padding: 40, textAlign: "center", color: C.muted }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>💺</div>
+      <div style={{ fontSize: 15, fontWeight: 500 }}>Select an event to manage seating</div>
+    </div>
+  );
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
@@ -11210,14 +11218,37 @@ function SeatingView({ supabase, profile, activeEvent, fire }) {
                           </div>
                           {c.company_name && <div style={{ fontSize: 10, color: C.muted }}>{c.company_name}</div>}
                         </div>
-                        <button onClick={async () => {
-                          const newSeat = (window.prompt||((msg,def)=>def))(`Reassign seat for ${c.first_name || c.email}:`, seat);
-                          if (newSeat && newSeat !== seat) {
-                            await supabase.from("event_contacts").update({ seat_number: newSeat }).eq("id", ec.id);
-                            setAssignments(p => ({ ...p, [ec.id]: newSeat }));
-                            fire("Seat updated");
-                          }
-                        }} style={{ fontSize: 10, padding: "2px 7px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>Edit</button>
+                        {editingSeat?.ecId === ec.id ? (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <input autoFocus value={editingSeat.value}
+                              onChange={e => setEditingSeat(p => ({ ...p, value: e.target.value }))}
+                              onKeyDown={async e => {
+                                if (e.key === "Enter") {
+                                  const newSeat = editingSeat.value.trim();
+                                  if (newSeat && newSeat !== seat) {
+                                    await supabase.from("event_contacts").update({ seat_number: newSeat }).eq("id", ec.id);
+                                    setAssignments(p => ({ ...p, [ec.id]: newSeat }));
+                                    fire("Seat updated");
+                                  }
+                                  setEditingSeat(null);
+                                }
+                                if (e.key === "Escape") setEditingSeat(null);
+                              }}
+                              style={{ width: 50, fontSize: 10, padding: "2px 5px", background: C.bg, border: `1px solid ${C.blue}`, borderRadius: 4, color: C.text, outline: "none" }} />
+                            <button onClick={async () => {
+                                const newSeat = editingSeat.value.trim();
+                                if (newSeat && newSeat !== seat) {
+                                  await supabase.from("event_contacts").update({ seat_number: newSeat }).eq("id", ec.id);
+                                  setAssignments(p => ({ ...p, [ec.id]: newSeat }));
+                                  fire("Seat updated");
+                                }
+                                setEditingSeat(null);
+                              }} style={{ fontSize: 10, padding: "2px 6px", background: C.blue, border: "none", borderRadius: 4, color: "#fff", cursor: "pointer" }}>✓</button>
+                          </div>
+                        ) : (
+                        <button onClick={() => setEditingSeat({ ecId: ec.id, value: seat })}
+                          style={{ fontSize: 10, padding: "2px 7px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>Edit</button>
+                        )}
                       </div>
                     );
                   })}
