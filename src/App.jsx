@@ -3717,6 +3717,23 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             {gen ? <><Spin />Claude is writing… (~15s)</> : <><Sparkles size={14} strokeWidth={1.5} />Generate with AI</>}
           </button>
 
+          {/* ── SEND TO MY INBOX — always visible ── */}
+          {preview && profile?.email && (
+            <button onClick={async () => {
+              const { data: { session } } = await supabase.auth.getSession();
+              setSendingTest(true);
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                body: JSON.stringify({ contacts:[{ email:profile.email, first_name:profile.full_name?.split(" ")[0]||"Test" }], subject:`[PREVIEW] ${preview.subject}`, htmlContent:preview.html.replace(/{{REGISTRATION_URL}}/g,"#").replace(/{{UNSUBSCRIBE_URL}}/g,"#"), ...getSender(profile) })
+              });
+              setSendingTest(false);
+              const d = await res.json();
+              fire(d.sent > 0 ? `✅ Sent to ${profile.email}` : "Send failed", d.sent > 0 ? "ok" : "err");
+            }} style={{ padding:"9px", borderRadius:7, border:`1px solid ${C.green}40`, background:`${C.green}08`, color:C.green, fontSize:12.5, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", gap:6, cursor:"pointer", transition:"all .1s" }}>
+              {sendingTest ? "Sending…" : `⚡ Send to my inbox (${profile.email})`}
+            </button>
+          )}
+
           {campaigns.length > 0 && (
             <Sec label={`Saved drafts (${campaigns.length}) · ${campaigns.filter(c=>c.status==="scheduled").length} scheduled`}>
               {campaigns.map(cam => (

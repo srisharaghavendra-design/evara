@@ -1,90 +1,71 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
-// SendGrid Event Webhook — tracks opens, clicks, bounces, unsubscribes
-// URL: https://sqddpjsgtwblmkgxqyxe.supabase.co/functions/v1/email-webhook
-serve(async (req) => {
-  if (req.method !== "POST") return new Response("ok", { status: 200 });
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "content-type",
+};
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
 
   try {
     const events = await req.json();
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    if (!Array.isArray(events)) throw new Error("Expected array of events");
 
-    for (const ev of events) {
-      const campaignId = ev.campaign_id;   // from custom_args
-      const contactId  = ev.contact_id;   // from custom_args
-      const email      = ev.email;         // always present in SendGrid events
-      const eventType  = ev.event;
-      const ts         = new Date().toISOString();
+    for (const event of events) {
+      const { event: eventType, campaign_id, contact_id, email_send_id, email, timestamp } = event;
+      const ts = new Date((timestamp || Date.now() / 1000) * 1000).toISOString();
 
-      if (!campaignId || !email) continue;
+      const matchSend = async (updates: Record<string, unknown>, extraFilter?: string) => {
+        if (email_send_id) {
+          return supabase.from("email_sends").update(updates).eq("id", email_send_id);
+        } else if (campaign_id && contact_id) {
+          let q = supabase.from("email_sends").update(updates).eq("campaign_id", campaign_id).eq("contact_id", contact_id);
+          return extraFilter === "no_open" ? q.is("opened_at", null) : extraFilter === "no_click" ? q.is("clicked_at", null) : q;
+        } else if (campaign_id && email) {
+          let q = supabase.from("email_sends").update(updates).eq("campaign_id", campaign_id).eq("email", email);
+          return extraFilter === "no_open" ? q.is("opened_at", null) : extraFilter === "no_click" ? q.is("clicked_at", null) : q;
+        }
+        return null;
+      };
 
       if (eventType === "open") {
-        await supabase.from("email_sends")
-          .update({ opened_at: ts, status: "opened" })
-          .eq("campaign_id", campaignId)
-          .eq("email", email)
-          .is("opened_at", null); // only record first open
-
-        await supabase.rpc("increment_campaign_opens", { campaign_id: campaignId });
-
-        if (contactId) {
-          await supabase.from("contact_activity").insert({
-            contact_id: contactId,
-            company_id: ev.company_id || null,
-            activity_type: "email_opened",
-            description: "Opened email",
-            metadata: { campaign_id: campaignId, email, timestamp: ts },
-          }).single();
-        }
+        await matchSend({ status: "opened", opened_at: ts }, "no_open");
+        if (campaign_id) await supabase.rpc("increment_campaign_opens", { campaign_id });
+        console.log(`Open: campaign=${campaign_id} contact=${contact_id} email=${email}`);
       }
 
       if (eventType === "click") {
-        await supabase.from("email_sends")
-          .update({ clicked_at: ts, click_count: supabase.raw("COALESCE(click_count,0)+1") as any })
-          .eq("campaign_id", campaignId)
-          .eq("email", email);
-
-        await supabase.rpc("increment_campaign_clicks", { campaign_id: campaignId });
-
-        if (contactId) {
-          await supabase.from("contact_activity").insert({
-            contact_id: contactId,
-            company_id: ev.company_id || null,
-            activity_type: "email_clicked",
-            description: `Clicked link in email`,
-            metadata: { campaign_id: campaignId, url: ev.url, email, timestamp: ts },
-          }).single();
-        }
-      }
-
-      if (eventType === "bounce" || eventType === "dropped") {
-        await supabase.from("email_sends")
-          .update({ bounced_at: ts, status: "bounced", send_error: ev.reason || eventType })
-          .eq("campaign_id", campaignId)
-          .eq("email", email);
+        await matchSend({ status: "clicked", clicked_at: ts }, "no_click");
+        if (campaign_id) await supabase.rpc("increment_campaign_clicks", { campaign_id });
+        console.log(`Click: campaign=${campaign_id} url=${event.url}`);
       }
 
       if (eventType === "unsubscribe" || eventType === "spamreport") {
-        await supabase.from("contacts")
-          .update({ unsubscribed: true, unsubscribed_at: ts })
-          .eq("email", email);
+        if (email) await supabase.from("contacts").update({ unsubscribed: true, unsubscribed_at: ts }).eq("email", email);
+        if (campaign_id && email) await supabase.from("email_sends").update({ status: "unsubscribed" }).eq("campaign_id", campaign_id).eq("email", email);
+        console.log(`Unsub: ${email}`);
+      }
 
-        await supabase.from("email_sends")
-          .update({ unsubscribed_at: ts, status: "unsubscribed" })
-          .eq("campaign_id", campaignId)
-          .eq("email", email);
+      if (eventType === "bounce" || eventType === "dropped") {
+        await matchSend({ status: "bounced" });
+        console.log(`Bounce: ${email}`);
       }
     }
 
     return new Response(JSON.stringify({ received: events.length }), {
-      headers: { "Content-Type": "application/json" }
+      headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
     });
   } catch (err) {
     console.error("Webhook error:", err.message);
-    return new Response("ok", { status: 200 }); // Always 200 to SendGrid
+    return new Response(JSON.stringify({ error: err.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400,
+    });
   }
 });
