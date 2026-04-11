@@ -1426,28 +1426,116 @@ function MainApp({ session }) {
           </div>
         </header>
 
-        {/* ── BUILD NAV STRIP — ordered by event flow ── */}
-        {activeEvent && (
-          <div style={{ borderBottom:`1px solid ${C.border}`, background:C.card, padding:"0 18px", display:"flex", alignItems:"center", gap:2, flexShrink:0, overflowX:"auto" }}>
-            {/* Flow label */}
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1.5px", color:C.muted, textTransform:"uppercase", marginRight:8, whiteSpace:"nowrap", flexShrink:0 }}>BUILD</span>
-            {/* Arrow flow indicator */}
-            {BUILD_NAV.map((item, i) => {
-              const on = view === item.id;
-              return (
-                <div key={item.id} style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
-                  <button onClick={() => setView(item.id)}
-                    style={{ display:"flex", alignItems:"center", gap:5, padding:"9px 12px", background:"transparent", border:"none", borderBottom:`2px solid ${on?C.blue:"transparent"}`, color:on?C.blue:C.muted, cursor:"pointer", fontSize:12.5, fontWeight:on?600:400, whiteSpace:"nowrap", transition:"all .1s", position:"relative" }}>
-                    <span style={{ fontSize:13 }}>{item.icon}</span>
-                    {item.label}
-                    {item.badge && <span style={{ fontSize:8.5, fontWeight:700, background:on?C.blue:`${C.blue}20`, color:on?"#fff":C.blue, padding:"1px 4px", borderRadius:3, letterSpacing:"0.3px" }}>{item.badge}</span>}
-                  </button>
-                  {i < BUILD_NAV.length - 1 && <span style={{ fontSize:10, color:C.border, userSelect:"none", marginLeft:2 }}>→</span>}
+        {/* ── BUILD NAV STRIP — ordered by event flow with X-Ray hover preview ── */}
+        {activeEvent && (() => {
+          const [hoveredNav, setHoveredNav] = useState(null);
+          const sentCampaigns = campaigns.filter(c => c.status === "sent");
+          const draftCampaigns = campaigns.filter(c => c.status === "draft");
+          const scheduledCampaigns = campaigns.filter(c => c.status === "scheduled");
+
+          const PREVIEWS = {
+            edm: (
+              <div style={{ padding:"14px 16px", minWidth:260 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>EMAIL DRAFTS</div>
+                {campaigns.length === 0 ? (
+                  <div style={{ fontSize:12, color:C.muted }}>No emails drafted yet — click to generate with AI</div>
+                ) : campaigns.slice(0,5).map(c => (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:7 }}>
+                    <div style={{ width:6, height:6, borderRadius:"50%", background:c.status==="sent"?C.green:c.status==="scheduled"?C.blue:C.muted, flexShrink:0 }} />
+                    <div style={{ flex:1, fontSize:11.5, color:C.sec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.name || c.email_type}</div>
+                    <span style={{ fontSize:9.5, color:c.status==="sent"?C.green:c.status==="scheduled"?C.blue:C.muted, fontWeight:600, textTransform:"uppercase" }}>{c.status}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop:10, fontSize:11, color:C.muted, borderTop:`1px solid ${C.border}`, paddingTop:8 }}>
+                  {sentCampaigns.length} sent · {scheduledCampaigns.length} scheduled · {draftCampaigns.length} draft
                 </div>
-              );
-            })}
-          </div>
-        )}
+              </div>
+            ),
+            schedule: (
+              <div style={{ padding:"14px 16px", minWidth:240 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>CAMPAIGN TIMELINE</div>
+                {campaigns.length === 0 ? (
+                  <div style={{ fontSize:12, color:C.muted }}>No campaigns scheduled yet</div>
+                ) : campaigns.slice(0,5).map(c => (
+                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                    <div style={{ width:5, height:5, borderRadius:"50%", background:c.status==="sent"?C.green:c.status==="scheduled"?C.blue:C.muted, flexShrink:0 }} />
+                    <div style={{ flex:1, fontSize:11, color:C.sec }}>{c.email_type?.replace(/_/g," ")}</div>
+                    <span style={{ fontSize:10, color:C.muted }}>{c.send_at ? new Date(c.send_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"}) : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            ),
+            landing: (
+              <div style={{ padding:"14px 16px", minWidth:220 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>LANDING PAGE</div>
+                <div style={{ fontSize:12, color:formShareLink ? C.green : C.muted, marginBottom:6, fontWeight:formShareLink?600:400 }}>
+                  {formShareLink ? "✓ Live — registration open" : "○ Not published yet"}
+                </div>
+                {formShareLink && <div style={{ fontSize:10, color:C.muted, wordBreak:"break-all", lineHeight:1.4 }}>{formShareLink.slice(0,40)}…</div>}
+                <div style={{ fontSize:11, color:C.muted, marginTop:8 }}>Click to edit your landing page design</div>
+              </div>
+            ),
+            forms: (
+              <div style={{ padding:"14px 16px", minWidth:220 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>REGISTRATION FORM</div>
+                <div style={{ fontSize:12, color:C.muted, lineHeight:1.6 }}>
+                  Drag-and-drop form builder.<br/>Share the link — contacts self-register.
+                </div>
+                <div style={{ marginTop:8, fontSize:11, color:formShareLink?C.green:C.muted }}>
+                  {formShareLink ? "✓ Form is live" : "○ Form not created yet"}
+                </div>
+              </div>
+            ),
+            campaign: (
+              <div style={{ padding:"14px 16px", minWidth:240 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>AI CAMPAIGN BUILDER</div>
+                <div style={{ fontSize:12, color:C.muted, lineHeight:1.6 }}>Generate all 7 emails, landing page, form fields, hashtags and a LinkedIn post — from one event brief.</div>
+                <div style={{ marginTop:8, fontSize:11, color:C.blue, fontWeight:600 }}>One click → full campaign ✨</div>
+              </div>
+            ),
+            social: (
+              <div style={{ padding:"14px 16px", minWidth:220 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>AI SOCIAL CONTENT</div>
+                <div style={{ fontSize:12, color:C.muted, lineHeight:1.6 }}>Generate LinkedIn posts, tweets, and event hashtags from your event brief.</div>
+                <div style={{ marginTop:8, fontSize:11, color:C.blue, fontWeight:600 }}>AI writes, you post ✨</div>
+              </div>
+            ),
+          };
+
+          return (
+            <div style={{ borderBottom:`1px solid ${C.border}`, background:C.card, padding:"0 18px", display:"flex", alignItems:"center", gap:2, flexShrink:0, overflowX:"auto", position:"relative" }}>
+              <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1.5px", color:C.muted, textTransform:"uppercase", marginRight:8, whiteSpace:"nowrap", flexShrink:0 }}>BUILD</span>
+              {BUILD_NAV.map((item, i) => {
+                const on = view === item.id;
+                const hovered = hoveredNav === item.id;
+                return (
+                  <div key={item.id} style={{ display:"flex", alignItems:"center", flexShrink:0, position:"relative" }}>
+                    <button
+                      onClick={() => setView(item.id)}
+                      onMouseEnter={() => setHoveredNav(item.id)}
+                      onMouseLeave={() => setHoveredNav(null)}
+                      style={{ display:"flex", alignItems:"center", gap:5, padding:"9px 12px", background:"transparent", border:"none", borderBottom:`2px solid ${on?C.blue:"transparent"}`, color:on?C.blue:hovered?C.text:C.muted, cursor:"pointer", fontSize:12.5, fontWeight:on?600:400, whiteSpace:"nowrap", transition:"all .1s" }}>
+                      <span style={{ fontSize:13 }}>{item.icon}</span>
+                      {item.label}
+                      {item.badge && <span style={{ fontSize:8.5, fontWeight:700, background:on?C.blue:`${C.blue}20`, color:on?"#fff":C.blue, padding:"1px 4px", borderRadius:3 }}>{item.badge}</span>}
+                    </button>
+                    {/* X-Ray hover preview */}
+                    {hovered && PREVIEWS[item.id] && (
+                      <div
+                        onMouseEnter={() => setHoveredNav(item.id)}
+                        onMouseLeave={() => setHoveredNav(null)}
+                        style={{ position:"absolute", top:"100%", left:0, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, boxShadow:"0 12px 40px rgba(0,0,0,.6)", zIndex:200, animation:"fadeUp .15s ease", minWidth:220 }}>
+                        <div style={{ position:"absolute", top:-1, left:0, right:0, height:2, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:"10px 10px 0 0" }} />
+                        {PREVIEWS[item.id]}
+                      </div>
+                    )}
+                    {i < BUILD_NAV.length - 1 && <span style={{ fontSize:10, color:C.border, userSelect:"none", marginLeft:2 }}>→</span>}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
 
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
           {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} />}
