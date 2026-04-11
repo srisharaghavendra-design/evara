@@ -70,14 +70,16 @@ serve(async (req) => {
 
     if (eventErr || !event) throw new Error("Event not found");
 
-    // Fetch company/org name
+    // Fetch company/org name + brand assets
     const { data: company } = await supabase
       .from("companies")
-      .select("name")
+      .select("name, logo_url, brand_color")
       .eq("id", companyId)
       .single();
 
     const orgName = company?.name || "Our Organisation";
+    const logoUrl = company?.logo_url || "";
+    const brandColor = company?.brand_color || "";
     const eventDate = event.event_date
       ? new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
       : "TBC";
@@ -145,7 +147,7 @@ Respond ONLY with a JSON object (no markdown, no explanation):
         }
 
         // Build clean HTML email body (simplified table-based)
-        const htmlBody = buildHtml(content, event, orgName);
+        const htmlBody = buildHtml(content, event, orgName, logoUrl, brandColor);
         const plainText = [
           content.greeting,
           ...(content.body_paragraphs || []),
@@ -206,7 +208,9 @@ Respond ONLY with a JSON object (no markdown, no explanation):
   }
 });
 
-function buildHtml(content: any, event: any, orgName: string): string {
+function buildHtml(content: any, event: any, orgName: string, logoUrl = "", brandColor = ""): string {
+  const headerBg = brandColor || "#1a1a2e";
+  const accentColor = brandColor || "#0A84FF";
   const paragraphs = (content.body_paragraphs || [])
     .map((p: string) => `<tr><td style="padding:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#333333;">${p}</td></tr>`)
     .join("");
@@ -218,13 +222,16 @@ function buildHtml(content: any, event: any, orgName: string): string {
 <tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
   <!-- Header -->
-  <tr><td bgcolor="#1a1a2e" style="padding:32px;text-align:center;border-radius:12px 12px 0 0;">
-    <p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:12px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;">${orgName}</p>
+  <tr><td bgcolor="${headerBg}" style="padding:32px;text-align:center;border-radius:12px 12px 0 0;">
+    ${logoUrl
+      ? `<img src="${logoUrl}" alt="${orgName}" style="display:block;max-height:48px;max-width:160px;object-fit:contain;margin:0 auto 16px;">`
+      : `<p style="margin:0 0 8px 0;font-family:Arial,sans-serif;font-size:12px;color:#8888aa;letter-spacing:2px;text-transform:uppercase;">${orgName}</p>`
+    }
     <h1 style="margin:0;font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#ffffff;line-height:1.3;">${content.headline || event.name}</h1>
-    ${content.subheadline ? `<p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:16px;color:#aaaacc;">${content.subheadline}</p>` : ""}
+    ${content.subheadline ? `<p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:16px;color:rgba(255,255,255,0.75);">${content.subheadline}</p>` : ""}
   </td></tr>
   <!-- Event Details Bar -->
-  <tr><td bgcolor="#0A84FF" style="padding:14px 32px;">
+  <tr><td bgcolor="${accentColor}" style="padding:14px 32px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
     <tr>
       <td style="font-family:Arial,sans-serif;font-size:13px;color:#ffffff;">
@@ -243,7 +250,7 @@ function buildHtml(content: any, event: any, orgName: string): string {
       <!-- CTA -->
       <tr><td style="padding:24px 0;" align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-        <tr><td bgcolor="#0A84FF" style="border-radius:8px;">
+        <tr><td bgcolor="${accentColor}" style="border-radius:8px;">
           <a href="{{REGISTRATION_URL}}" style="display:inline-block;padding:14px 40px;font-family:Arial,sans-serif;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;">${content.cta_text || "Register Now"} →</a>
         </td></tr>
         </table>

@@ -20,16 +20,23 @@ serve(async (req) => {
     const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_KEY) throw new Error("ANTHROPIC_API_KEY not set");
 
-    // Fetch brand voice to improve email quality
+    // Fetch brand voice and company logo to improve email quality
     let brandVoice: any = null;
+    let companyLogoUrl: string = "";
+    let companyBrandColor: string = "";
     if (companyId) {
       const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
-      const { data: bv } = await supabase.from("brand_voice").select("*").eq("company_id", companyId).maybeSingle();
-      brandVoice = bv;
+      const [bvRes, compRes] = await Promise.all([
+        supabase.from("brand_voice").select("*").eq("company_id", companyId).maybeSingle(),
+        supabase.from("companies").select("logo_url,brand_color").eq("id", companyId).single(),
+      ]);
+      brandVoice = bvRes.data;
+      companyLogoUrl = compRes.data?.logo_url || "";
+      companyBrandColor = compRes.data?.brand_color || "";
     }
 
     const EMAIL_TYPE_PROMPTS: Record<string, string> = {
@@ -138,7 +145,8 @@ Return ONLY valid JSON (no markdown):
     <table width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 20px rgba(0,0,0,0.08);">
       
       <!-- HEADER -->
-      <tr><td bgcolor="${colors.headerBg}" style="padding:40px 40px 32px;">
+      <tr><td bgcolor="${companyBrandColor || colors.headerBg}" style="padding:40px 40px 32px;">
+        ${companyLogoUrl ? `<img src="${companyLogoUrl}" alt="${orgName}" style="display:block;max-height:48px;max-width:180px;object-fit:contain;margin-bottom:20px;">` : `<p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.6);">${orgName}</p>`}
         ${headerImageUrl ? `<img src="${headerImageUrl}" width="520" alt="Event banner" style="display:block;width:100%;max-width:520px;border-radius:8px;margin-bottom:20px;">` : ""}
         <h1 style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:${colors.accent};line-height:1.2;">${content.headline}</h1>
         ${content.subheadline ? `<p style="margin:0;font-family:Arial,sans-serif;font-size:16px;color:${colors.accent === "#fff" ? "rgba(255,255,255,0.75)" : "#666"};line-height:1.5;">${content.subheadline}</p>` : ""}
@@ -155,7 +163,7 @@ Return ONLY valid JSON (no markdown):
         <!-- CTA BUTTON -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0;">
           <tr><td align="center">
-            <a href="${content.cta_url || "#"}" style="display:inline-block;padding:14px 36px;background:${colors.primary};color:${colors.primary === "#111" ? "#fff" : colors.accent};font-family:Arial,sans-serif;font-size:16px;font-weight:700;text-decoration:none;border-radius:8px;">${content.cta_text || "Learn More"}</a>
+            <a href="${content.cta_url || "#"}" style="display:inline-block;padding:14px 36px;background:${companyBrandColor || colors.primary};color:#fff;font-family:Arial,sans-serif;font-size:16px;font-weight:700;text-decoration:none;border-radius:8px;">${content.cta_text || "Learn More"}</a>
           </td></tr>
         </table>
 
@@ -214,6 +222,7 @@ Return ONLY valid JSON (no markdown):
       content,
       campaign_id: campaignId,
       brand_voice_applied: !!brandVoice,
+      logo_applied: !!companyLogoUrl,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err) {

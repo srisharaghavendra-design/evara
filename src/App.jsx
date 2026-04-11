@@ -3112,7 +3112,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         }
       }
       setPreview({ subject: finalSubject, html: finalHtml, plain_text: finalPlain, campaign_id: finalCampaignId });
-      fire(`Email generated & saved as draft!${data.brand_voice_applied ? " ✨ Brand voice applied." : ""}`);
+      fire(`Email generated & saved as draft!${data.brand_voice_applied ? " ✨ Brand voice applied." : ""}${data.logo_applied ? " 🖼 Logo included." : ""}`);
       const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
       setCampaigns(cams || []);
     } catch (err) {
@@ -3127,10 +3127,31 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>eDM Builder</h1>
-        <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.blue+"12", color:C.blue, border:`1px solid ${C.blue}20` }}>✨ Claude claude-sonnet-4</span>
-        <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>AI generates copy · your template renders it · world-class result every time.</p>
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>eDM Builder</h1>
+            <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.blue+"12", color:C.blue, border:`1px solid ${C.blue}20` }}>✨ Claude Sonnet 4</span>
+          </div>
+          <p style={{ color: C.muted, fontSize: 13 }}>AI generates copy · your template renders it · world-class result every time.</p>
+        </div>
+        {/* Brand assets status */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {profile?.companies?.logo_url
+            ? <span style={{ fontSize:10.5, padding:"3px 9px", borderRadius:999, background:C.green+"15", color:C.green, border:`1px solid ${C.green}30`, fontWeight:600 }}>🖼 Logo ready</span>
+            : <span style={{ fontSize:10.5, padding:"3px 9px", borderRadius:999, background:C.amber+"12", color:C.amber, border:`1px solid ${C.amber}30`, fontWeight:500, cursor:"pointer" }}
+                onClick={() => setView("settings")}>⚠️ No logo — add in Settings</span>
+          }
+          {profile?.companies?.brand_color
+            ? <span style={{ fontSize:10.5, padding:"3px 9px", borderRadius:999, background:C.green+"15", color:C.green, border:`1px solid ${C.green}30`, fontWeight:600 }}>🎨 Brand colour set</span>
+            : null
+          }
+          {profile?.companies?.from_name
+            ? <span style={{ fontSize:10.5, padding:"3px 9px", borderRadius:999, background:C.green+"15", color:C.green, border:`1px solid ${C.green}30`, fontWeight:600 }}>✉️ Sender: {profile.companies.from_name}</span>
+            : <span style={{ fontSize:10.5, padding:"3px 9px", borderRadius:999, background:C.amber+"12", color:C.amber, border:`1px solid ${C.amber}30`, fontWeight:500, cursor:"pointer" }}
+                onClick={() => setView("settings")}>⚠️ Set sender name</span>
+          }
+        </div>
       </div>
       {!activeEvent && (
         <div style={{ padding:"11px 14px", background:C.amber+"12", borderRadius:8, border:`1px solid ${C.amber}40`, marginBottom:12, display:"flex", alignItems:"center", gap:10 }}>
