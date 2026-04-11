@@ -1086,6 +1086,11 @@ function MainApp({ session }) {
       setNewEventName("");
       setNewEventDate("");
       setNewEventExtra({ event_date: "", event_time: "", location: "" });
+
+      // Auto-set from_name to company name if not already configured
+      if (!profile?.companies?.from_name && profile?.companies?.name) {
+        await supabase.from("companies").update({ from_name: profile.companies.name }).eq("id", profile.company_id);
+      }
       
       // 🤖 AI-first: auto-draft the full email lifecycle in the background
       fire("✅ Event created! AI is drafting your email sequence…");
@@ -6648,7 +6653,7 @@ function SettingsView({ supabase, profile, fire }) {
     setSaving(false); fire("✅ Settings saved!");
   };
   const [fromEmail, setFromEmail] = useState(profile?.companies?.from_email || "hello@evarahq.com");
-  const [fromName, setFromName] = useState(profile?.companies?.from_name || "");
+  const [fromName, setFromName] = useState(profile?.companies?.from_name || profile?.companies?.name || "");
   const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
   const [testSending, setTestSending] = useState(false);
   const [testEmailTo, setTestEmailTo] = useState(profile?.email || "");
@@ -10247,7 +10252,7 @@ function UnsubscribePage() {
     setStatus("loading");
     try {
       await supabase.from("contacts")
-        .update({ unsubscribed: true, unsubscribed_at: new Date().toISOString() })
+        .update({ unsubscribed: true, unsubscribed_at: new Date().toISOString(), opted_in: false })
         .eq("email", email.toLowerCase().trim());
       setStatus("done");
     } catch { setStatus("error"); }
