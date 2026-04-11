@@ -2572,6 +2572,56 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         );
       })()}
 
+      {/* ─── CAMPAIGN HEALTH SCORE ─── */}
+      {activeEvent && campaigns.length > 0 && (() => {
+        let score = 0;
+        const reasons = [];
+        const draftedTypes = new Set(campaigns.map(c => c.email_type)).size;
+        score += Math.min(20, draftedTypes * 4);
+        if (draftedTypes < 3) reasons.push({ text:`Only ${draftedTypes} email type${draftedTypes===1?"":"s"} drafted`, color:C.amber });
+        const sentCount = campaigns.filter(c => c.status === "sent").length;
+        score += Math.min(20, sentCount * 5);
+        if (sentCount === 0) reasons.push({ text:"No emails sent yet", color:C.red });
+        const openRate = metrics?.total_sent > 0 ? (metrics.total_opened / metrics.total_sent) : 0;
+        score += Math.round(openRate * 25);
+        if (openRate > 0 && openRate < 0.3) reasons.push({ text:`${Math.round(openRate*100)}% open rate — below average`, color:C.amber });
+        else if (openRate >= 0.5) reasons.push({ text:`${Math.round(openRate*100)}% open rate — excellent`, color:C.green });
+        score += contacts.length > 0 ? Math.min(15, Math.floor(contacts.length/5)*3) : 0;
+        if (contacts.length === 0) reasons.push({ text:"No contacts imported", color:C.red });
+        if (formShareLink) score += 10;
+        else reasons.push({ text:"No landing page live", color:C.muted });
+        score += Math.round((contacts.length > 0 ? (metrics?.total_confirmed||0)/contacts.length : 0) * 10);
+        score = Math.min(100, score);
+        const health = score >= 80 ? {label:"Strong",color:C.green} : score >= 60 ? {label:"On track",color:C.blue} : score >= 40 ? {label:"Needs attention",color:C.amber} : {label:"At risk",color:C.red};
+        return (
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"12px 16px", marginBottom:12, display:"flex", alignItems:"center", gap:16 }}>
+            <div style={{ position:"relative", width:56, height:56, flexShrink:0 }}>
+              <svg width="56" height="56" style={{ transform:"rotate(-90deg)" }}>
+                <circle cx="28" cy="28" r="22" fill="none" stroke={C.raised} strokeWidth="5" />
+                <circle cx="28" cy="28" r="22" fill="none" stroke={health.color} strokeWidth="5"
+                  strokeDasharray={`${2*Math.PI*22}`} strokeDashoffset={`${2*Math.PI*22*(1-score/100)}`}
+                  strokeLinecap="round" style={{ transition:"stroke-dashoffset .8s ease" }} />
+              </svg>
+              <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ fontSize:14, fontWeight:800, color:health.color }}>{score}</span>
+              </div>
+            </div>
+            <div style={{ flex:1 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5 }}>
+                <span style={{ fontSize:12.5, fontWeight:700, color:C.text }}>Campaign Health</span>
+                <span style={{ fontSize:10.5, fontWeight:700, color:health.color, background:`${health.color}15`, padding:"1px 8px", borderRadius:4 }}>{health.label}</span>
+              </div>
+              <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
+                {reasons.length===0
+                  ? <span style={{ fontSize:11, color:C.green }}>● Campaign is firing on all cylinders</span>
+                  : reasons.slice(0,3).map((r,i) => <span key={i} style={{ fontSize:11, color:r.color }}>● {r.text}</span>)
+                }
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* ─── METRICS CARDS GRID ─── */}
       {activeEvent && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
@@ -4711,25 +4761,47 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 )}
                 {cam.status === "sent" && cam.total_sent > 0 && cam.html_content && (
                   <button onClick={async () => {
-                    // confirmed
+                    const unopenedCount = (cam.total_sent||0) - (cam.total_opened||0);
+                    if (unopenedCount <= 0) { fire("No unopened contacts — great open rate!"); return; }
+
+                    // Step 1: AI generates a new subject line
+                    fire("🧠 AI is writing a new subject line…");
+                    let newSubject = "Following up: " + cam.subject;
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      const aiRes = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+                        method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:100,
+                          messages:[{ role:"user", content:`Write ONE alternative email subject line for a follow-up to contacts who didn't open this email. Original subject: "${cam.subject}". Event: ${activeEvent?.name}. Return ONLY the subject line, no quotes, no explanation.` }]
+                        })
+                      });
+                      const aiData = await aiRes.json();
+                      newSubject = aiData.content?.[0]?.text?.trim() || newSubject;
+                    } catch(e) { /* use fallback */ }
+
+                    // Step 2: Confirm with user
+                    const confirmed = window.confirm(
+                      `Resend to ${unopenedCount} unopened contact${unopenedCount===1?"":"s"}?\n\nNew AI subject line:\n"${newSubject}"\n\nClick OK to send, Cancel to abort.`
+                    );
+                    if (!confirmed) { fire("Resend cancelled"); return; }
+
+                    // Step 3: Send
+                    fire(`📧 Sending to ${unopenedCount} contacts…`);
                     const { data: { session } } = await supabase.auth.getSession();
-                    // Get all contacts who didn't open
                     const { data: ecs } = await supabase.from("event_contacts")
-                      .select("contacts(email,first_name,last_name)")
-                      .eq("event_id", activeEvent?.id);
+                      .select("contacts(email,first_name,last_name)").eq("event_id", activeEvent?.id);
                     const { data: opens } = await supabase.from("email_sends")
-                      .select("email").eq("campaign_id", cam.id).not("opened_at", "is", null);
-                    const openedEmails = new Set((opens || []).map(o => o.email));
-                    const unopened = (ecs || []).map(ec => ec.contacts).filter(c => c?.email && !openedEmails.has(c.email));
-                    if (!unopened.length) { fire("No unopened contacts found — great open rate!"); return; }
+                      .select("email").eq("campaign_id", cam.id).not("opened_at","is",null);
+                    const openedEmails = new Set((opens||[]).map(o => o.email));
+                    const unopened = (ecs||[]).map(ec => ec.contacts).filter(c => c?.email && !openedEmails.has(c.email));
+                    if (!unopened.length) { fire("No unopened contacts found"); return; }
                     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                      body: JSON.stringify({ contacts: unopened, subject: "Following up: " + cam.subject, htmlContent: cam.html_content, plainText: cam.plain_text, ...getSender(profile) })
-                    }).then(r => r.json()).catch(e => ({ error: e.message }));
-                    res.success ? fire(`✅ Resent to ${res.sent} unopened contacts`) : fire(res.error || "Failed", "err");
-                  }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.amber}40`, background: C.amber + "10", color: C.amber, cursor: "pointer" }}>
-                    {cam.total_sent > 0 && cam.total_opened < cam.total_sent ? `Resend Unopened (${cam.total_sent - cam.total_opened})` : "Resend Unopened"}
+                      method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
+                      body: JSON.stringify({ contacts:unopened, subject:newSubject, htmlContent:cam.html_content, plainText:cam.plain_text, ...getSender(profile) })
+                    }).then(r=>r.json()).catch(e=>({error:e.message}));
+                    res.success ? fire(`✅ Resent to ${res.sent} contacts with new subject`) : fire(res.error||"Send failed","err");
+                  }} style={{ fontSize:12, padding:"5px 10px", borderRadius:6, border:`1px solid ${C.amber}40`, background:C.amber+"10", color:C.amber, cursor:"pointer", fontWeight:500 }}>
+                    🧠 Resend to unopened ({Math.max(0,(cam.total_sent||0)-(cam.total_opened||0))})
                   </button>
                 )}
                 {cam.status !== "sent" && (
