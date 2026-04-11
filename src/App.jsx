@@ -696,7 +696,35 @@ function AuthScreen() {
   };
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        button{cursor:pointer;font-family:Outfit,sans-serif}
+        input,select,textarea{font-family:Outfit,sans-serif}
+        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:#2C2C30;border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:#3C3C40}
+        ::selection{background:#0A84FF30;color:#F5F5F7}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes slideRight{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+        @keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+        @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes toast-out{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+        @keyframes ring-fill{from{stroke-dashoffset:var(--full)}to{stroke-dashoffset:var(--dash)}}
+        .nb{outline:none!important}
+        .nb:focus-visible{box-shadow:0 0 0 2px #0A84FF60!important}
+        button:not(.nb):focus-visible{outline:2px solid #0A84FF60;outline-offset:2px}
+        .evara-sidebar{scrollbar-width:none}
+        .evara-sidebar::-webkit-scrollbar{display:none}
+        .metric-card{transition:all .18s ease;cursor:pointer}
+        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)!important}
+        .nav-btn{transition:all .12s ease!important}
+        .nav-btn:hover{color:#F5F5F7!important;background:rgba(255,255,255,.06)!important}
+      `}</style>
       {/* Left panel — product showcase */}
       <div style={{ flex:1, background:"linear-gradient(135deg,#060608 0%,#0a0f1e 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9 }}>
@@ -1175,10 +1203,10 @@ function MainApp({ session }) {
               {!sidebarOpen && <div style={{ height:8 }} />}
               {group.items.map(({ id, label, icon: Icon, badge }) => {
                 const on = view === id;
-                return (<button key={id} data-view={id} className="nb" onClick={() => { setView(id); if (window.innerWidth <= 768) setSidebarOpen(false); }} title={!sidebarOpen ? label : undefined} style={{ display: "flex", alignItems: "center", gap: sidebarOpen?8:0, padding: sidebarOpen?"7px 10px":"8px", justifyContent: sidebarOpen?"flex-start":"center", borderRadius: 7, border: "none", background: on ? `${C.blue}18` : "transparent", color: on ? C.blue : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: sidebarOpen?`2px solid ${on ? C.blue : "transparent"}`:"2px solid transparent", transition: "all .1s", marginBottom: 1 }}>
+                return (<button key={id} data-view={id} className="nb nav-btn" onClick={() => { setView(id); if (window.innerWidth <= 768) setSidebarOpen(false); }} title={!sidebarOpen ? label : undefined} style={{ display: "flex", alignItems: "center", gap: sidebarOpen?8:0, padding: sidebarOpen?"7px 10px":"8px", justifyContent: sidebarOpen?"flex-start":"center", borderRadius: 7, border: "none", background: on ? `${C.blue}16` : "transparent", color: on ? C.blue : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: sidebarOpen?`2px solid ${on ? C.blue : "transparent"}`:"2px solid transparent", marginBottom: 1, boxShadow: on && sidebarOpen ? `inset 0 0 0 1px ${C.blue}18` : "none" }}>
                   <Icon size={14} strokeWidth={on ? 2.5 : 1.5} color={on ? C.blue : C.muted} />
                   {sidebarOpen && <><span style={{ flex: 1 }}>{label}</span>
-                  {badge && <span style={{ fontSize: 9, fontWeight: 700, background: on ? C.blue : C.raised, color: on ? "#fff" : C.muted, padding: "1px 5px", borderRadius: 3 }}>{badge}</span>}</>}
+                  {badge && <span style={{ fontSize: 9, fontWeight: 700, background: on ? C.blue : `${C.blue}20`, color: on ? "#fff" : C.blue, padding: "1px 5px", borderRadius: 3, letterSpacing:"0.3px" }}>{badge}</span>}</>}
                 </button>);
               })}
             </div>
@@ -1542,15 +1570,20 @@ function MainApp({ session }) {
       )}
 
       {toast && (
-        <div style={{ position:"fixed", bottom:28, left:"50%", transform:"translateX(-50%)", background:"#1C1C1F", border:`1px solid ${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}30`, borderRadius:12, padding:"0", display:"flex", flexDirection:"column", animation:"fadeUp .25s ease", zIndex:9999, whiteSpace:"nowrap", boxShadow:"0 12px 40px rgba(0,0,0,.7)", backdropFilter:"blur(12px)", overflow:"hidden", minWidth:280, maxWidth:480 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 16px" }}>
-            <span style={{ fontSize:16, flexShrink:0 }}>{toast.type==="ok"?"✅":toast.type==="err"?"❌":toast.type==="warn"?"⚠️":"ℹ️"}</span>
-            <span style={{ fontSize:13, color:C.text, flex:1, whiteSpace:"normal", lineHeight:1.4 }}>{toast.msg}</span>
-            <button onClick={() => setToast(null)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:16, padding:"0 2px", lineHeight:1, flexShrink:0 }}>×</button>
+        <div style={{ position:"fixed", top:20, right:20, background:"rgba(18,18,22,.96)", border:`1px solid ${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}40`, borderRadius:14, padding:"0", display:"flex", flexDirection:"column", animation:"toast-in .22s cubic-bezier(.34,1.56,.64,1)", zIndex:9999, whiteSpace:"nowrap", boxShadow:`0 20px 60px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.04), inset 0 1px 0 rgba(255,255,255,.05)`, backdropFilter:"blur(20px)", overflow:"hidden", minWidth:300, maxWidth:420 }}>
+          <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:`linear-gradient(90deg,${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}80, transparent)` }} />
+          <div style={{ display:"flex", alignItems:"flex-start", gap:11, padding:"14px 16px 12px" }}>
+            <div style={{ width:28, height:28, borderRadius:8, background:`${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}18`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, marginTop:1 }}>
+              <span style={{ fontSize:13 }}>{toast.type==="ok"?"✅":toast.type==="err"?"❌":toast.type==="warn"?"⚠️":"💬"}</span>
+            </div>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:3 }}>{toast.type==="ok"?"Success":toast.type==="err"?"Error":toast.type==="warn"?"Warning":"Info"}</div>
+              <div style={{ fontSize:13, color:C.text, whiteSpace:"normal", lineHeight:1.5 }}>{toast.msg}</div>
+            </div>
+            <button onClick={() => setToast(null)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:18, padding:"0 2px", lineHeight:1, flexShrink:0, marginTop:2, opacity:.7 }}>×</button>
           </div>
-          {/* Auto-dismiss progress bar */}
-          <div style={{ height:2, background:`${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}40` }}>
-            <div style={{ height:"100%", background:toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue, animation:"toastProgress 4.5s linear forwards", borderRadius:1 }} />
+          <div style={{ height:2, background:`${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue}20` }}>
+            <div style={{ height:"100%", background:`linear-gradient(90deg,${toast.type==="ok"?C.green:toast.type==="err"?C.red:toast.type==="warn"?C.amber:C.blue},${toast.type==="ok"?C.teal:toast.type==="err"?"#FF6B6B":toast.type==="warn"?"#FFD93D":C.teal})`, animation:"toastProgress 4.5s linear forwards", borderRadius:1 }} />
           </div>
         </div>
       )}
@@ -2179,18 +2212,27 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
       {activeEvent && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule") },
-            { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts") },
-            { label: "Pending", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "need a nudge?" : "all responded", color: C.amber, icon: "⏳", action: () => setView("contacts") },
-            { label: "Attended", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% show rate` : "event day", color: C.teal, icon: "🎟", action: () => setView("checkin") },
+            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule"), pct: null },
+            { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0 },
+            { label: "Pending", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "need a nudge?" : "all responded", color: C.amber, icon: "⏳", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_pending||0)/contacts.length)*100) : 0 },
+            { label: "Attended", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% show rate` : "event day", color: C.teal, icon: "🎟", action: () => setView("checkin"), pct: (metrics?.total_confirmed||0) > 0 ? Math.round(((metrics?.total_attended||0)/(metrics?.total_confirmed||1))*100) : 0 },
           ].map(m => (
-            <div key={m.label} onClick={m.action} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 11, padding: "14px 16px", cursor: "pointer", transition: "border-color .15s", position: "relative", overflow: "hidden" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = m.color + "60"}
-              onMouseLeave={e => e.currentTarget.style.borderColor = C.border}>
-              <div style={{ position: "absolute", top: 10, right: 12, fontSize: 18, opacity: 0.18 }}>{m.icon}</div>
-              <div style={{ fontSize: 10, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.9px", marginBottom: 6 }}>{m.label}</div>
-              <div style={{ fontSize: 30, fontWeight: 700, color: m.color, letterSpacing: "-1px", lineHeight: 1 }}>{m.val}</div>
-              {m.sub && <div style={{ fontSize: 11, color: C.muted, marginTop: 5 }}>{m.sub}</div>}
+            <div key={m.label} onClick={m.action} className="metric-card"
+              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px", cursor: "pointer", position: "relative", overflow: "hidden", boxShadow: `0 1px 3px rgba(0,0,0,.3)` }}>
+              {/* Top accent line */}
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${m.color},${m.color}00)` }} />
+              {/* Background icon watermark */}
+              <div style={{ position: "absolute", bottom: 8, right: 12, fontSize: 32, opacity: 0.07, userSelect: "none" }}>{m.icon}</div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 8 }}>{m.label}</div>
+              <div style={{ fontSize: 34, fontWeight: 800, color: m.color, letterSpacing: "-1.5px", lineHeight: 1, marginBottom: 6 }}>
+                {loading ? <span style={{ opacity:.3 }}>—</span> : m.val.toLocaleString()}
+              </div>
+              {m.pct !== null && m.pct > 0 && (
+                <div style={{ height: 3, background: C.raised, borderRadius: 99, marginBottom: 6, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(m.pct,100)}%`, background: m.color, borderRadius: 99, transition: "width .6s ease" }} />
+                </div>
+              )}
+              {m.sub && <div style={{ fontSize: 10.5, color: C.muted, lineHeight: 1.3 }}>{m.sub}</div>}
             </div>
           ))}
         </div>
