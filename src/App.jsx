@@ -1814,57 +1814,87 @@ function MainApp({ session }) {
 }
 
 // ─── EMAIL ACTIVITY TIMELINE ─────────────────────────────────
-function EmailActivityTimeline({ supabase, contactId, eventId }) {
+function EmailActivityTimeline({ supabase, contactId, eventId, contact, eventContact }) {
   const [sends, setSends] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!contactId) return;
     setLoading(true);
-    // Load email sends for this contact, optionally filtered by event
-    let q = supabase.from("email_sends")
+    supabase.from("email_sends")
       .select("*,email_campaigns(name,email_type,subject,event_id,events(name))")
       .eq("contact_id", contactId)
-      .order("sent_at", { ascending: false })
-      .limit(20);
-    q.then(({ data }) => { setSends(data || []); setLoading(false); });
-  }, [contactId, eventId]);
+      .order("sent_at", { ascending: true })
+      .limit(30)
+      .then(({ data }) => { setSends(data || []); setLoading(false); });
+  }, [contactId]);
 
-  if (loading) return <div style={{ fontSize:11, color:C.muted, padding:"4px 0" }}>Loading…</div>;
+  if (loading) return <div style={{ fontSize:11, color:C.muted }}>Loading journey…</div>;
 
-  if (!sends.length) return (
-    <div style={{ fontSize:11, color:C.muted, fontStyle:"italic" }}>
-      No emails sent to this contact yet
-    </div>
+  // Build full chronological story from all touchpoints
+  const events_list = [];
+
+  // Registration
+  if (eventContact?.created_at) {
+    events_list.push({ date: eventContact.created_at, type:"registered", label:"Added to event", icon:"📋", color:C.blue });
+  }
+
+  // Email sends + opens + clicks
+  sends.forEach(s => {
+    const cam = s.email_campaigns || {};
+    const emailLabel = cam.subject || cam.name || cam.email_type?.replace(/_/g," ") || "Email";
+    if (s.sent_at) events_list.push({ date:s.sent_at, type:"sent", label:`Received: ${emailLabel}`, icon:"📧", color:C.muted });
+    if (s.opened_at) events_list.push({ date:s.opened_at, type:"opened", label:`Opened: ${emailLabel}`, icon:"👁", color:C.green });
+    if (s.clicked_at) events_list.push({ date:s.clicked_at, type:"clicked", label:`Clicked link in: ${emailLabel}`, icon:"🖱", color:C.blue });
+    if (s.bounced_at) events_list.push({ date:s.bounced_at, type:"bounced", label:`Bounced: ${emailLabel}`, icon:"❌", color:C.red });
+  });
+
+  // Confirmation
+  if (eventContact?.confirmed_at) {
+    events_list.push({ date: eventContact.confirmed_at, type:"confirmed", label:"Confirmed attendance", icon:"✅", color:C.green });
+  }
+
+  // Attendance
+  if (eventContact?.attended_at || eventContact?.status === "attended") {
+    events_list.push({ date: eventContact?.attended_at || eventContact?.updated_at, type:"attended", label:"Attended the event", icon:"🎪", color:C.teal });
+  }
+
+  // Sort by date
+  events_list.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (!events_list.length) return (
+    <div style={{ fontSize:11, color:C.muted, fontStyle:"italic" }}>No journey events yet — emails will appear here as they're sent</div>
   );
 
-  const icons = { sent:"📧", opened:"👁", clicked:"🖱", bounced:"❌" };
+  const fmtDate = (d) => {
+    const date = new Date(d);
+    return date.toLocaleDateString("en-AU", { day:"numeric", month:"short" }) + " · " + date.toLocaleTimeString("en-AU", { hour:"2-digit", minute:"2-digit" });
+  };
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-      {sends.map(s => {
-        const status = s.clicked_at ? "clicked" : s.opened_at ? "opened" : s.status || "sent";
-        const statusColor = status==="clicked"?C.blue:status==="opened"?C.green:status==="bounced"?C.red:C.muted;
-        const cam = s.email_campaigns || {};
-        const eventName = cam.events?.name;
-        return (
-          <div key={s.id} style={{ display:"flex", alignItems:"flex-start", gap:8, padding:"6px 0", borderBottom:`1px solid ${C.border}` }}>
-            <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>{icons[status] || "📧"}</span>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontSize:11.5, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                {cam.subject || cam.name || "Email"}
-              </div>
-              <div style={{ display:"flex", gap:6, marginTop:2, flexWrap:"wrap" }}>
-                <span style={{ fontSize:10, fontWeight:600, color:statusColor, textTransform:"capitalize" }}>{status}</span>
-                {eventName && <span style={{ fontSize:10, color:C.muted }}>· {eventName}</span>}
-                <span style={{ fontSize:10, color:C.muted }}>
-                  · {s.sent_at ? new Date(s.sent_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"}) : ""}
-                </span>
-              </div>
+    <div style={{ position:"relative" }}>
+      {/* Vertical line */}
+      <div style={{ position:"absolute", left:10, top:8, bottom:8, width:1, background:C.border }} />
+      <div style={{ display:"flex", flexDirection:"column", gap:0 }}>
+        {events_list.map((ev, i) => (
+          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10, paddingBottom:12, position:"relative" }}>
+            {/* Dot */}
+            <div style={{ width:20, height:20, borderRadius:"50%", background:C.card, border:`2px solid ${ev.color}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, flexShrink:0, zIndex:1 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:ev.color }} />
+            </div>
+            <div style={{ flex:1, paddingTop:1 }}>
+              <div style={{ fontSize:12, color:ev.type==="confirmed"||ev.type==="attended"?ev.color:ev.type==="opened"||ev.type==="clicked"?C.text:C.sec, fontWeight:ev.type==="confirmed"||ev.type==="attended"?600:400, lineHeight:1.3 }}>{ev.label}</div>
+              <div style={{ fontSize:10, color:C.muted, marginTop:1 }}>{fmtDate(ev.date)}</div>
             </div>
           </div>
-        );
-      })}
+        ))}
+      </div>
+      {/* Current status */}
+      <div style={{ marginTop:4, padding:"8px 10px", background:C.raised, borderRadius:6, display:"flex", alignItems:"center", gap:8 }}>
+        <div style={{ width:6, height:6, borderRadius:"50%", background: eventContact?.status==="attended"?C.teal:eventContact?.status==="confirmed"?C.green:eventContact?.status==="declined"?C.red:C.amber, flexShrink:0 }} />
+        <span style={{ fontSize:11, color:C.muted }}>Current status: </span>
+        <span style={{ fontSize:11, fontWeight:600, color:C.text, textTransform:"capitalize" }}>{eventContact?.status || "pending"}</span>
+      </div>
     </div>
   );
 }
@@ -2501,8 +2531,46 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         </div>
       )}
 
+      {/* ── SMART NUDGES — proactive AI watching your campaign ── */}
+      {activeEvent && (() => {
+        const nudges = [];
+        const sentCount = campaigns.filter(c=>c.status==="sent").length;
+        const pendingCount = metrics?.total_pending || 0;
+        const openRate = metrics?.total_sent>0 ? Math.round((metrics.total_opened/metrics.total_sent)*100) : null;
+        const scheduledCount = campaigns.filter(c=>c.status==="scheduled").length;
 
+        if (sentCount===0 && campaigns.length>0)
+          nudges.push({ icon:"📧", color:C.blue, msg:`You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready — nothing sent yet.`, cta:"Go to Schedule →", action:()=>setView("schedule") });
 
+        if (openRate !== null && openRate < 25 && sentCount > 0)
+          nudges.push({ icon:"⚠️", color:C.amber, msg:`${openRate}% open rate is below average. Try a different subject line on your next email.`, cta:"Edit emails →", action:()=>setView("edm") });
+
+        if (pendingCount > 0 && daysToEvent !== null && daysToEvent <= 7 && daysToEvent > 0)
+          nudges.push({ icon:"⏰", color:C.red, msg:`${pendingCount} contacts haven't responded — event is in ${daysToEvent} day${daysToEvent===1?"":"s"}. Send a final nudge now.`, cta:"Send nudge →", action:()=>setView("schedule") });
+        else if (pendingCount > 10 && daysToEvent !== null && daysToEvent <= 14)
+          nudges.push({ icon:"📣", color:C.amber, msg:`${pendingCount} contacts are still pending. A reminder email could improve your confirmation rate.`, cta:"Schedule reminder →", action:()=>setView("schedule") });
+
+        if (contacts.length === 0 && activeEvent)
+          nudges.push({ icon:"👥", color:C.blue, msg:"No contacts imported yet. Add your guest list to start tracking RSVPs.", cta:"Add contacts →", action:()=>setView("contacts") });
+
+        if (openRate !== null && openRate >= 65 && sentCount > 0)
+          nudges.push({ icon:"🎉", color:C.green, msg:`${openRate}% open rate — that's exceptional! Your subject lines are working really well.`, cta:null, action:null });
+
+        if (!nudges.length) return null;
+        return (
+          <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:14 }}>
+            {nudges.slice(0,2).map((n, i) => (
+              <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 14px", background:`${n.color}08`, border:`1px solid ${n.color}25`, borderRadius:9, animation:"fadeUp .3s ease" }}>
+                <span style={{ fontSize:18, flexShrink:0 }}>{n.icon}</span>
+                <div style={{ flex:1, fontSize:12.5, color:C.sec, lineHeight:1.5 }}>{n.msg}</div>
+                {n.cta && n.action && (
+                  <button onClick={n.action} style={{ fontSize:11.5, fontWeight:600, color:n.color, background:"transparent", border:`1px solid ${n.color}40`, borderRadius:6, padding:"4px 10px", cursor:"pointer", whiteSpace:"nowrap", flexShrink:0 }}>{n.cta}</button>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ─── METRICS CARDS GRID ─── */}
       {activeEvent && (
@@ -2897,10 +2965,10 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 9px", fontSize: 12, outline: "none", resize: "vertical", minHeight: 56, fontFamily: "inherit", boxSizing: "border-box" }}
                 />
               </div>
-              {/* Email Activity Timeline */}
-              <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>Email Activity</div>
-                <EmailActivityTimeline supabase={supabase} contactId={c.id} eventId={activeEvent?.id} />
+              {/* Contact Journey Timeline */}
+              <div style={{ padding:"14px 18px", borderTop:`1px solid ${C.border}` }}>
+                <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:12 }}>📍 Contact Journey</div>
+                <EmailActivityTimeline supabase={supabase} contactId={c.id} eventId={activeEvent?.id} contact={c} eventContact={selectedContact} />
               </div>
             </div>
           </div>
