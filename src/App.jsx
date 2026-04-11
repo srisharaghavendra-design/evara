@@ -3658,12 +3658,20 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
     finally { setFollowUpGenerating(false); }
   };
 
+  const [segmentCounts, setSegmentCounts] = useState({ all:0, confirmed:0, pending:0, declined:0, attended:0 });
+
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("send_at", { ascending: true })
       .then(({ data }) => { setCampaigns(data || []); setLoading(false); });
-    supabase.from("event_contacts").select("id", { count: "exact" }).eq("event_id", activeEvent.id)
-      .then(({ count }) => setContactCount(count || 0));
+    // Load all segment counts in one query
+    supabase.from("event_contacts").select("status").eq("event_id", activeEvent.id)
+      .then(({ data }) => {
+        const counts = { all: 0, confirmed: 0, pending: 0, declined: 0, attended: 0 };
+        (data || []).forEach(ec => { counts.all++; if (counts[ec.status] !== undefined) counts[ec.status]++; });
+        setContactCount(counts.all);
+        setSegmentCounts(counts);
+      });
   }, [activeEvent, profile]);
 
   const openSendModal = async (cam) => {
@@ -4098,7 +4106,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                       </span>
                     );
                   })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
-                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{ {"all":`Everyone (${contactCount})`,"confirmed":"✅ Confirmed","pending":"⏳ Pending","attended":"📍 Attended","declined":"❌ Declined","vip":"⭐ VIP"}[cam.segment] || cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1) }</span>
+                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{ {"all":`Everyone (${segmentCounts.all})`,"confirmed":`✅ Confirmed (${segmentCounts.confirmed})`,"pending":`⏳ Pending (${segmentCounts.pending})`,"attended":`📍 Attended (${segmentCounts.attended})`,"declined":`❌ Declined (${segmentCounts.declined})`,"vip":`⭐ VIP`}[cam.segment] || cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1) }</span>
                   {cam.status === "sent" && (
                     <span>
                       {` · ✅ ${cam.total_sent || 0} sent`}
@@ -4429,7 +4437,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               <div>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>Send to</div>
                 <select value={newCam.segment} onChange={e => setNewCam(p => ({ ...p, segment: e.target.value }))} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "9px 10px", fontSize: 13, outline: "none", cursor: "pointer" }}>
-                  {["all", "confirmed", "pending", "declined"].map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)} contacts ({s === "all" ? contactCount : "varies"})</option>)}
+                  {["all", "confirmed", "pending", "declined", "attended"].map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)} contacts ({segmentCounts[s] ?? 0})</option>)}
                 </select>
               </div>
             </div>
@@ -6001,6 +6009,18 @@ function FormsView({ supabase, profile, activeEvent, fire }) {
     ]},
   ];
 
+  if (!activeEvent) return (
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:24 }}><h1 style={{ fontSize:24, fontWeight:600, letterSpacing:"-0.6px", color:C.text }}>Registration Forms</h1>
+        <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>Build drag-and-drop forms for your event.</p></div>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:60, gap:14, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:4 }}>📋</div>
+        <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
+        <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to build and manage its registration form.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ animation: "fadeUp .2s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 110px)" }}>
       <div style={{ marginBottom: 12, display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexShrink: 0 }}>
@@ -7097,6 +7117,18 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
         <div style={{ fontSize:48, marginBottom:4 }}>🎪</div>
         <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
         <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to start checking in attendees on the day.</p>
+      </div>
+    </div>
+  );
+
+  if (!activeEvent) return (
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:24 }}><h1 style={{ fontSize:24, fontWeight:600, letterSpacing:"-0.6px", color:C.text }}>Event Check-in</h1>
+        <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>QR scan, walk-in capture, live attendance tracking.</p></div>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:60, gap:14, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:4 }}>📱</div>
+        <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
+        <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to open the check-in station.</p>
       </div>
     </div>
   );
@@ -8538,6 +8570,18 @@ Keep all sessions, just reorder if needed and add a "tip" explaining any change.
   const totalHrs = Math.floor(totalMins / 60);
   const totalMin = totalMins % 60;
 
+  if (!activeEvent) return (
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:24 }}><h1 style={{ fontSize:24, fontWeight:600, letterSpacing:"-0.6px", color:C.text }}>AI Agenda Builder</h1>
+        <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>Build and optimise your event run sheet with AI.</p></div>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:60, gap:14, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:4 }}>🗓</div>
+        <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
+        <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to build its agenda.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
@@ -9272,6 +9316,18 @@ Generated by evara
 
   const npsColor = !analysis ? C.muted : analysis.nps >= 8 ? C.green : analysis.nps >= 6 ? C.amber : C.red;
   const ratingColor = !analysis ? C.muted : analysis.overall_rating >= 4 ? C.green : analysis.overall_rating >= 3 ? C.amber : C.red;
+
+  if (!activeEvent) return (
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:24 }}><h1 style={{ fontSize:24, fontWeight:600, letterSpacing:"-0.6px", color:C.text }}>Feedback Intelligence</h1>
+        <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>Collect, analyse, and act on post-event feedback with AI.</p></div>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:60, gap:14, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:4 }}>📝</div>
+        <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
+        <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to create its feedback form and analyse responses.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
@@ -11009,6 +11065,18 @@ function SeatingView({ supabase, profile, activeEvent, fire }) {
 
   const unassigned = contacts.filter(ec => !assignments[ec.id]);
   const totalTables = Math.ceil(contacts.length / layout.seatsPerTable);
+
+  if (!activeEvent) return (
+    <div style={{ animation:"fadeUp .2s ease" }}>
+      <div style={{ marginBottom:24 }}><h1 style={{ fontSize:24, fontWeight:600, letterSpacing:"-0.6px", color:C.text }}>Seating Planner</h1>
+        <p style={{ color:C.muted, fontSize:13, marginTop:4 }}>Auto-assign seats for confirmed guests.</p></div>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", paddingTop:60, gap:14, textAlign:"center" }}>
+        <div style={{ fontSize:48, marginBottom:4 }}>🪑</div>
+        <div style={{ fontSize:18, fontWeight:600, color:C.text }}>No event selected</div>
+        <p style={{ fontSize:13, color:C.muted, maxWidth:340, lineHeight:1.6 }}>Select an event from the sidebar to manage its seating plan.</p>
+      </div>
+    </div>
+  );
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
