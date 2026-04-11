@@ -2397,7 +2397,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                     </span>
                   ))}
                   <button onClick={async () => {
-                    const tag = (prompt||window.prompt)?.("Add tag (e.g. vip, speaker, sponsor):") || ""; if (!tag.trim()) return;
+                    const tag = window.prompt?.("Add tag (e.g. vip, speaker, sponsor):") || ""; if (!tag.trim()) return;
                     const newTags = [...new Set([...(c.tags||[]), tag.trim().toLowerCase()])];
                     await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
                     setSelectedContact(p => ({ ...p, contacts: { ...p.contacts, tags: newTags } }));
@@ -3572,7 +3572,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-        body: JSON.stringify({ campaignId: sendModal.id, contacts, subject: sendModal.subject, htmlContent: sendModal.html_content, plainText: sendModal.plain_text, companyId: profile.company_id, fromEmail: "hello@evarahq.com", fromName: activeEvent?.name || "evara" })
+        body: JSON.stringify({ campaignId: sendModal.id, contacts, subject: sendModal.subject, htmlContent: sendModal.html_content, plainText: sendModal.plain_text, companyId: profile.company_id, fromEmail: "hello@evarahq.com", fromName: profile?.companies?.from_name || profile?.companies?.name || "evara" })
       });
       const data = await res.json();
       if (data.success) {
@@ -4177,9 +4177,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               </div>
               <button onClick={() => setPreviewCam(null)} style={{ background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "5px 8px", display: "flex", alignItems: "center" }}><X size={14} /></button>
             </div>
-            {/* Email render */}
-            <div style={{ flex: 1, overflow: "auto", background: "#EBEBEB", padding: "20px" }}>
-              <div dangerouslySetInnerHTML={{ __html: previewCam.html_content }} />
+            {/* Email render — sandboxed iframe matches real inbox rendering */}
+            <div style={{ flex: 1, overflow: "hidden", background: "#EBEBEB", padding: "20px" }}>
+              <iframe
+                srcDoc={previewCam.html_content || "<p style='font-family:sans-serif;color:#666;padding:20px'>No content</p>"}
+                sandbox="allow-same-origin"
+                style={{ width: "100%", height: "100%", border: "none", borderRadius: 6, background: "#fff" }}
+                title="Email preview"
+              />
             </div>
             {/* Modal footer */}
             <div style={{ display: "flex", gap: 8, padding: "14px 20px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
@@ -4933,7 +4938,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                           </button>
                         )}
                         <button onClick={async () => {
-                          const note = (window.prompt||((msg,def)=>def))("Add note for " + (c.first_name || c.email) + ":", c.notes || "");
+                          const note = window.prompt?.("Note for " + (c.first_name || c.email) + ":", c.notes || "");
                           if (note === null) return;
                           await supabase.from("contacts").update({ notes: note }).eq("id", c.id);
                           setContacts(p => p.map(x => x.id === c.id ? { ...x, notes: note } : x));
@@ -10184,7 +10189,7 @@ function PublicFormPage({ token }) {
               eventDate: event?.event_date ? new Date(event.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "",
               eventTime: event?.event_time || "",
               location: event?.location || "",
-              orgName: "evara",
+              orgName: event?.company_name || "evara",
             })
           });
         } catch(e) { console.log("Confirmation email failed:", e.message); }
