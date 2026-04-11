@@ -2468,6 +2468,17 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
             { label:"📊 Analytics", action:() => setView("analytics"), color:C.blue },
             { label:"🎪 Check-in", action:() => setView("checkin"), color:C.green },
             { label:"📋 Feedback", action:() => setView("feedback"), color:C.blue },
+            { label:"⬇️ Export CSV", action: () => {
+              const rows = [["First Name","Last Name","Email","Company","Job Title","Status","Confirmed At","Attended"]];
+              contacts.forEach(ec => {
+                const c = ec.contacts || {};
+                rows.push([c.first_name||"",c.last_name||"",c.email||"",c.company_name||"",c.job_title||"",ec.status||"pending",ec.confirmed_at?new Date(ec.confirmed_at).toLocaleDateString("en-AU"):"",ec.status==="attended"?"Yes":"No"]);
+              });
+              const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+              const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+              a.download = `${activeEvent.name} — Guest List.csv`; a.click();
+              fire(`✅ Exported ${contacts.length} contacts`);
+            }, color:C.teal },
             { label:"✨ AI Report", action: async () => {
               fire("🤖 Generating…");
               const { data: { session } } = await supabase.auth.getSession();
@@ -2604,7 +2615,8 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         if (sentCount === 0) reasons.push({ text:"No emails sent yet", color:C.red });
         const openRate = metrics?.total_sent > 0 ? (metrics.total_opened / metrics.total_sent) : 0;
         score += Math.round(openRate * 25);
-        if (openRate > 0 && openRate < 0.3) reasons.push({ text:`${Math.round(openRate*100)}% open rate — below average`, color:C.amber });
+        if (metrics?.total_sent > 0 && openRate === 0) reasons.push({ text:"0% open rate — no opens recorded yet", color:C.red });
+        else if (openRate > 0 && openRate < 0.3) reasons.push({ text:`${Math.round(openRate*100)}% open rate — below average`, color:C.amber });
         else if (openRate >= 0.5) reasons.push({ text:`${Math.round(openRate*100)}% open rate — excellent`, color:C.green });
         score += contacts.length > 0 ? Math.min(15, Math.floor(contacts.length/5)*3) : 0;
         if (contacts.length === 0) reasons.push({ text:"No contacts imported", color:C.red });
