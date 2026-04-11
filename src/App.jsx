@@ -27,7 +27,7 @@ const getSender = (profile) => ({
 // Contextual first-visit hint — shows once, stores dismissal in localStorage
 function ViewHint({ id, icon, title, steps, color = "#0A84FF" }) {
   const key = `evara_hint_${id}`;
-  const [visible, setVisible] = React.useState(() => !localStorage.getItem(key));
+  const [visible, setVisible] = useState(() => !localStorage.getItem(key));
   if (!visible) return null;
   const dismiss = () => { localStorage.setItem(key, "1"); setVisible(false); };
   return (
