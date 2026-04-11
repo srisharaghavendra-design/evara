@@ -10368,6 +10368,13 @@ function PublicFormPage({ token }) {
           last_name: lastName,
           company_id: form.company_id,
           source: isFeedback ? "feedback" : "form",
+          // Consent: set opted_in=true when registering via form
+          // Only update if not already unsubscribed
+          ...(!isFeedback ? {
+            opted_in: true,
+            consent_timestamp: new Date().toISOString(),
+            consent_source: "form",
+          } : {}),
         }, { onConflict: "company_id,email" }).select("id").single();
         contactId = c?.id;
 
@@ -10605,14 +10612,19 @@ function PublicFormPage({ token }) {
                 style={{ width: "100%", height: 44, borderRadius: 10, border: "1.5px solid #D1D1D6", padding: "0 14px", fontSize: 15, outline: "none", background: "#fff", boxSizing: "border-box" }} />
             )}
             {field.type === "checkbox" && (
-              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer" }}
+              <label style={{ display: "flex", alignItems: "flex-start", gap: 10, cursor: "pointer", padding: field.label?.toLowerCase().includes("consent") ? "12px 14px" : "0", background: field.label?.toLowerCase().includes("consent") ? "#F0F4FF" : "transparent", borderRadius: field.label?.toLowerCase().includes("consent") ? 8 : 0, border: field.label?.toLowerCase().includes("consent") ? "1px solid #0A84FF25" : "none" }}
                 onClick={() => setAnswers(p => ({ ...p, [field.id]: !p[field.id] }))}>
                 <div style={{ width: 20, height: 20, borderRadius: 5, border: `2px solid ${answers[field.id] ? "#0A84FF" : "#C7C7CC"}`, background: answers[field.id] ? "#0A84FF" : "#fff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1, transition: "all .12s" }}>
                   {answers[field.id] && <span style={{ color: "#fff", fontSize: 13, lineHeight: 1 }}>✓</span>}
                 </div>
-                <span style={{ fontSize: 14, color: "#333", lineHeight: 1.5 }}>
+                <span style={{ fontSize: 13, color: "#333", lineHeight: 1.5 }}>
                   {field.label}
-                  {field.required && <span style={{ color: "#0A84FF", marginLeft: 3 }}>*</span>}
+                  {field.required && <span style={{ color: "#FF453A", marginLeft: 3 }}>*</span>}
+                  {field.label?.toLowerCase().includes("consent") && (
+                    <span style={{ display: "block", fontSize: 11, color: "#8E8E93", marginTop: 3 }}>
+                      You can unsubscribe at any time. We will never share your data with third parties.
+                    </span>
+                  )}
                 </span>
               </label>
             )}
