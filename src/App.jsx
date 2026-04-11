@@ -4395,29 +4395,34 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
       {/* SEND NOW MODAL */}
       {sendModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 500, animation: "fadeUp .2s ease" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-              <h2 style={{ fontSize: 17, fontWeight: 600, color: C.text }}>Send campaign</h2>
-              <button onClick={() => setSendModal(null)} style={{ background: "transparent", border: "none", color: C.muted, cursor: "pointer" }}><X size={16} /></button>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.75)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 }}>
+          <div style={{ background: C.card, borderRadius: 18, border: `1px solid ${C.border}`, width: 500, animation: "fadeUp .22s ease", boxShadow: "0 32px 80px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06)", overflow: "hidden" }}>
+            {/* Header */}
+            <div style={{ padding: "20px 22px 16px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: `linear-gradient(180deg,${C.raised},${C.card})` }}>
+              <div>
+                <h2 style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 2 }}>Send Campaign</h2>
+                <div style={{ fontSize: 11, color: C.muted }}>Review before sending — this action cannot be undone</div>
+              </div>
+              <button onClick={() => setSendModal(null)} style={{ background: C.raised, border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, cursor: "pointer", width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}><X size={14} /></button>
             </div>
 
+            <div style={{ padding: "20px 22px" }}>
             {/* Email summary card */}
-            <div style={{ background: C.raised, borderRadius: 8, padding: "12px 14px", marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>{sendModal.name}</div>
-              {sendModal.subject && (
-                <div>
-                  <div style={{ fontSize: 12, color: C.muted, marginBottom: 4 }}>"{sendModal.subject}"</div>
-                  <div style={{ fontSize: 10, color: sendModal.subject.length > 60 ? C.amber : C.green }}>
-                    {sendModal.subject.length}/60 chars {sendModal.subject.length > 60 ? "⚠️ may truncate in inbox" : "✅ good length"}
-                  </div>
+            <div style={{ background: C.raised, borderRadius: 10, padding: "14px 16px", marginBottom: 12, border: `1px solid ${C.border}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: `${C.blue}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, flexShrink: 0 }}>
+                  {sendModal.email_type === "save_the_date" ? "📅" : sendModal.email_type === "invitation" ? "✉️" : sendModal.email_type === "reminder" ? "⏰" : sendModal.email_type === "thank_you" ? "🙏" : "📧"}
                 </div>
-              )}
-              {/* Preview + Test buttons inline */}
-              <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sendModal.name}</div>
+                  {sendModal.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>"{sendModal.subject}"</div>}
+                </div>
+                {sendModal.subject && <div style={{ fontSize: 9.5, color: sendModal.subject.length > 60 ? C.amber : C.green, whiteSpace: "nowrap", flexShrink: 0 }}>{sendModal.subject.length > 60 ? "⚠️ Long" : "✅ Good"}</div>}
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
                 <button onClick={() => { setPreviewCam(sendModal); setSendModal(null); }}
-                  style={{ fontSize: 11, padding: "4px 12px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-                  👁 Preview email
+                  style={{ fontSize: 11, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.border}`, background: C.card, color: C.muted, cursor: "pointer" }}>
+                  👁 Preview
                 </button>
                 <button onClick={async () => {
                   const testTo = profile?.email;
@@ -4430,49 +4435,53 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   });
                   const d = await res.json();
                   fire(d.success ? `✅ Test sent to ${testTo}! Check your inbox.` : "Send failed", d.success ? "ok" : "err");
-                }} style={{ fontSize: 11, padding: "4px 12px", borderRadius: 5, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                }} style={{ fontSize: 11, padding: "5px 12px", borderRadius: 6, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, cursor: "pointer" }}>
                   🧪 Send test to me
                 </button>
               </div>
             </div>
 
             {/* Recipient section */}
-            <div style={{ background: `${C.blue}08`, border: `1px solid ${C.blue}20`, borderRadius: 8, padding: "12px 14px", marginBottom: 16 }}>
-              <div style={{ fontSize: 13, fontWeight: 500, color: C.blue, marginBottom: 8 }}>📬 {sendModal.recipientCount} contacts will receive this email</div>
+            <div style={{ background: `${C.blue}08`, border: `1px solid ${C.blue}22`, borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: C.blue, letterSpacing: "-0.5px" }}>{sendModal.recipientCount}</div>
+                <div style={{ fontSize: 11.5, color: C.blue, fontWeight: 600 }}>contacts will receive this</div>
+              </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 11, color: C.muted }}>Send to:</span>
+                <span style={{ fontSize: 11, color: C.muted }}>Segment:</span>
                 <select value={sendModal.segment || "all"} onChange={async (e) => {
                   const seg = e.target.value;
                   const { data: ecs } = await supabase.from("event_contacts").select("*").eq("event_id", activeEvent.id).eq("company_id", profile.company_id);
                   const filtered = (ecs || []).filter(ec => seg === "all" ? true : ec.status === seg);
                   setSendModal(p => ({ ...p, segment: seg, recipientCount: filtered.length }));
-                }} style={{ fontSize: 11, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "3px 8px", outline: "none", cursor: "pointer" }}>
-                  <option value="all">All contacts</option>
+                }} style={{ fontSize: 11, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "4px 8px", outline: "none", cursor: "pointer" }}>
+                  <option value="all">Everyone (excl. declined)</option>
                   <option value="confirmed">Confirmed only</option>
                   <option value="pending">Pending only</option>
-                  <option value="declined">Declined only</option>
+                  <option value="attended">Attended only</option>
                 </select>
               </div>
-              <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Each email is personalised with the recipient's first name.</div>
+              <div style={{ fontSize: 10.5, color: C.muted, marginTop: 6 }}>📝 Personalised with each recipient's name · unsubscribed contacts auto-excluded</div>
             </div>
 
             {sendModal.recipientCount === 0 && (
-              <div style={{ background: `${C.amber}10`, border: `1px solid ${C.amber}30`, borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: C.amber }}>
+              <div style={{ background: `${C.amber}10`, border: `1px solid ${C.amber}30`, borderRadius: 8, padding: "10px 14px", marginBottom: 12, fontSize: 12.5, color: C.amber }}>
                 ⚠️ No contacts match this segment. Add contacts in the Dashboard first.
               </div>
             )}
 
             <div style={{ display: "flex", gap: 9 }}>
-              <button onClick={() => setSendModal(null)} style={{ flex: 1, padding: "11px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, fontSize: 13, cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setSendModal(null)} style={{ flex: 1, padding: "12px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 9, color: C.muted, fontSize: 13, cursor: "pointer", fontWeight: 500 }}>Cancel</button>
               <button onClick={sendNow} disabled={sending || sendModal.recipientCount === 0}
-                style={{ flex: 2, padding: "11px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 8, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 600, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, position: "relative", overflow: "hidden" }}>
+                style={{ flex: 2, padding: "12px", background: sending || sendModal.recipientCount === 0 ? C.raised : C.green, border: "none", borderRadius: 9, color: sending || sendModal.recipientCount === 0 ? C.muted : "#fff", fontSize: 14, fontWeight: 700, cursor: sending ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, position: "relative", overflow: "hidden", boxShadow: !sending && sendModal.recipientCount > 0 ? `0 4px 16px ${C.green}40` : "none" }}>
                 {sending && sendProgress.total > 0 && (
-                  <div style={{ position: "absolute", inset: 0, background: `${C.green}40`, width: `${Math.round(sendProgress.sent / sendProgress.total * 100)}%`, transition: "width .3s", borderRadius: 8 }} />
+                  <div style={{ position: "absolute", inset: 0, background: `${C.green}40`, width: `${Math.round(sendProgress.sent / sendProgress.total * 100)}%`, transition: "width .3s", borderRadius: 9 }} />
                 )}
                 <span style={{ position: "relative", zIndex: 1, display: "flex", alignItems: "center", gap: 8 }}>
-                  {sending ? <><Spin />{sendProgress.total > 1 ? `Sending ${sendProgress.sent}/${sendProgress.total}…` : "Sending…"}</> : <><Send size={14} />Confirm & Send ({sendModal.recipientCount})</>}
+                  {sending ? <><Spin />{sendProgress.total > 1 ? `Sending ${sendProgress.sent}/${sendProgress.total}…` : "Sending…"}</> : <><Send size={14} />Send to {sendModal.recipientCount} contact{sendModal.recipientCount !== 1 ? "s" : ""} →</>}
                 </span>
               </button>
+            </div>
             </div>
           </div>
         </div>
