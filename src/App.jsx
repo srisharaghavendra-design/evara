@@ -1200,13 +1200,56 @@ function MainApp({ session }) {
         .mobile-hamburger{display:none!important}
         input:focus,textarea:focus,select:focus{outline:none;border-color:${C.blue}!important;box-shadow:0 0 0 3px ${C.blue}18}
         @media(max-width:768px){
-          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:216px!important}
+          /* Sidebar — slide in from left */
+          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:260px!important;top:0;bottom:0}
           .evara-sidebar.open{transform:translateX(0)}
           .evara-overlay{display:block!important}
-          .evara-main{margin-left:0!important}
+          .evara-main{margin-left:0!important;width:100vw}
           .mobile-hamburger{display:flex!important}
           .desktop-breadcrumb{display:none!important}
-          .main-padding{padding:16px!important}
+          .main-padding{padding:12px!important}
+          /* Top header — compact on mobile */
+          .evara-topbar{padding:0 12px!important;gap:8px!important;height:48px!important}
+          /* BUILD nav strip — scroll horizontally */
+          .evara-buildnav{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+          .evara-buildnav::-webkit-scrollbar{display:none}
+          /* Metric cards — 2 per row on mobile */
+          .metrics-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
+          /* Quick actions — wrap */
+          .quick-actions{flex-wrap:wrap!important;gap:6px!important}
+          .quick-actions button{font-size:11px!important;padding:5px 10px!important}
+          /* Guest list table — hide less important columns */
+          .guest-col-company{display:none!important}
+          .guest-col-score{display:none!important}
+          /* Email lifecycle strip — scroll */
+          .lifecycle-strip{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+          .lifecycle-strip::-webkit-scrollbar{display:none}
+          /* Modals — full width on mobile */
+          .evara-modal{width:calc(100vw - 24px)!important;max-width:100vw!important;max-height:92vh!important;overflow-y:auto!important;border-radius:14px!important}
+          /* Cards and panels — full width */
+          .health-panel{flex-direction:column!important;gap:12px!important}
+          /* Typography adjustments */
+          h1{font-size:20px!important}
+          /* Contact panel — full screen on mobile */
+          .contact-panel{width:100vw!important;left:0!important;right:0!important}
+          /* eDM builder — single column on mobile */
+          .edm-grid{grid-template-columns:1fr!important}
+          /* Settings — single column */
+          .settings-grid{grid-template-columns:1fr!important}
+          /* ROI — single column */
+          .roi-grid{grid-template-columns:1fr!important}
+          /* Schedule cards — adjust padding */
+          .schedule-card{padding:12px!important}
+          /* Campaign health — stack */
+          .health-card{flex-direction:row!important;align-items:center!important}
+          /* Journey strip — hide on very small */
+          .journey-strip button{padding:6px 4px!important;font-size:10px!important}
+          .journey-strip .journey-icon{font-size:13px!important;margin-bottom:2px!important}
+        }
+        @media(max-width:480px){
+          .metrics-grid{grid-template-columns:1fr 1fr!important}
+          .quick-actions .hide-xs{display:none!important}
+          .lifecycle-strip .lifecycle-label{font-size:8px!important}
         }
       `}</style>
 
@@ -1329,7 +1372,7 @@ function MainApp({ session }) {
       {/* MAIN */}
       <div className="evara-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* ── TOP ROW: breadcrumb + search + actions ── */}
-        <header style={{ height: 48, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 18px", gap: 10, flexShrink: 0, background: C.sidebar }}>
+        <header className="evara-topbar" style={{ height: 48, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 18px", gap: 10, flexShrink: 0, background: C.sidebar }}>
           <button className="mobile-hamburger" onClick={() => setSidebarOpen(p=>!p)}
             style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer", fontSize:16, padding:"5px 10px", lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>☰</button>
           <div className="desktop-breadcrumb" style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
@@ -1503,7 +1546,7 @@ function MainApp({ session }) {
           };
 
           return (
-            <div style={{ borderBottom:`1px solid ${C.border}`, background:C.card, padding:"0 18px", display:"flex", alignItems:"center", gap:2, flexShrink:0, overflowX:"auto", position:"relative" }}>
+            <div className="evara-buildnav" style={{ borderBottom:`1px solid ${C.border}`, background:C.card, padding:"0 18px", display:"flex", alignItems:"center", gap:2, flexShrink:0, overflowX:"auto", position:"relative" }}>
               <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1.5px", color:C.muted, textTransform:"uppercase", marginRight:8, whiteSpace:"nowrap", flexShrink:0 }}>BUILD</span>
               {BUILD_NAV.map((item, i) => {
                 const on = view === item.id;
@@ -1589,7 +1632,7 @@ function MainApp({ session }) {
         };
         return (
         <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.88)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99, padding:20 }}>
-          <div style={{ background:C.card, borderRadius:20, border:`1px solid ${C.border}`, width:580, animation:"fadeUp .22s cubic-bezier(.34,1.56,.64,1)", boxShadow:"0 32px 80px rgba(0,0,0,.9)", overflow:"hidden" }}>
+          <div className="evara-modal" style={{ background:C.card, borderRadius:20, border:`1px solid ${C.border}`, width:580, animation:"fadeUp .22s cubic-bezier(.34,1.56,.64,1)", boxShadow:"0 32px 80px rgba(0,0,0,.9)", overflow:"hidden" }}>
 
             {/* Header */}
             <div style={{ background:`linear-gradient(135deg,${C.blue}18,${C.teal}08)`, padding:"22px 26px 18px", borderBottom:`1px solid ${C.border}`, position:"relative" }}>
@@ -2460,7 +2503,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
       {/* Quick actions strip */}
       {activeEvent && (
-        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+        <div className="quick-actions" style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
           {[
             { label:"✉️ Build email", action:() => setView("edm"), color:C.blue },
             { label:"📅 Schedule", action:() => setView("schedule"), color:C.blue },
@@ -2656,7 +2699,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
       {/* ─── METRICS CARDS GRID ─── */}
       {activeEvent && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+        <div className="metrics-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
             { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule"), pct: null },
             { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0 },
@@ -2810,7 +2853,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                         </div>
                         <div style={{ fontSize:10.5, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", maxWidth:160 }}>{c.email}</div>
                       </td>
-                      <td style={{ padding:"7px 10px", color:C.muted, fontSize:11, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:120 }}>
+                      <td className="guest-col-company" style={{ padding:"7px 10px", color:C.muted, fontSize:11, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:120 }}>
                         {c.company_name || "—"}
                       </td>
                       <td style={{ padding:"7px 10px" }}>
@@ -2825,12 +2868,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                           {ec.status || "pending"}
                         </span>
                       </td>
-                      <td style={{ padding:"7px 10px" }}>
-                        {scoreData.score > 0 && (
-                          <span style={{ fontSize:10, padding:"1px 6px", borderRadius:3, background:scoreData.temp==="hot"?`${C.red}15`:scoreData.temp==="warm"?`${C.amber}15`:`${C.blue}10`, color:scoreData.temp==="hot"?C.red:scoreData.temp==="warm"?C.amber:C.muted, fontWeight:600 }}>
-                            {scoreData.temp} {scoreData.score}
-                          </span>
-                        )}
+                      <td className="guest-col-score" style={{ padding:"7px 10px" }}>
                       </td>
                       <td style={{ padding:"7px 10px" }}>
                         <div style={{ display:"flex", gap:5, alignItems:"center" }}>
@@ -2870,7 +2908,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         return (
           <div style={{ position: "fixed", inset: 0, zIndex: 80, display: "flex" }} onClick={() => setSelectedContact(null)}>
             <div style={{ flex: 1, background: "rgba(0,0,0,.5)", backdropFilter: "blur(4px)" }} />
-            <div style={{ width: 360, background: C.card, borderLeft: `1px solid ${C.border}`, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column", animation: "slideRight .2s ease" }} onClick={e => e.stopPropagation()}>
+            <div className="contact-panel" style={{ width: 360, background: C.card, borderLeft: `1px solid ${C.border}`, height: "100%", overflowY: "auto", display: "flex", flexDirection: "column", animation: "slideRight .2s ease" }} onClick={e => e.stopPropagation()}>
               <div style={{ padding: "16px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: 13, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "1px" }}>Contact Profile</span>
                 <button onClick={() => setSelectedContact(null)} style={{ background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", fontSize: 16, lineHeight: 1, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
@@ -3611,7 +3649,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           {activeEvent.location && <span style={{ fontSize:11, color:C.muted }}>📍 {activeEvent.location}</span>}
         </div>
       )}
-      <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, minHeight: "70vh" }}>
+      <div className="edm-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, minHeight: "70vh" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, overflow: "auto" }}>
           <Sec label="Email type">
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 5 }}>
@@ -9466,7 +9504,7 @@ function ROIView({ supabase, profile, activeEvent, fire }) {
         <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Measure and report event return on investment to your stakeholders.</p>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 320px", gap: 14 }}>
+      <div className="roi-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 320px", gap: 14 }}>
         {/* Costs */}
         <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 18 }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: C.red, marginBottom: 14 }}>💸 Costs</div>
