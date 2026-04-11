@@ -43,10 +43,17 @@ const isBusinessEmail = (email) => {
 };
 
 const C = {
-  bg:"#080809", sidebar:"#0D0D0F", card:"#111114", raised:"#161619",
-  border:"#1C1C1F", borderHi:"#2C2C30",
-  blue:"#0A84FF", text:"#F5F5F7", sec:"#AEAEB2", muted:"#636366",
-  green:"#30D158", red:"#FF453A", amber:"#FF9F0A", teal:"#5AC8FA",
+  // Warm near-black backgrounds — not cold grey, feels alive
+  bg:"#0C0A0F", sidebar:"#100D14", card:"#14111A", raised:"#1A1620",
+  border:"#241F2E", borderHi:"#342C42",
+  // New primary: deep violet — nobody in this space uses this
+  blue:"#7C3AED",   // was #0A84FF — now signature evara violet
+  teal:"#A855F7",   // was cold teal — now lighter violet for gradients
+  // Accent: warm amber — energy, excitement, events
+  amber:"#F59E0B",
+  // Keep greens/reds readable
+  text:"#F5F0FF", sec:"#B8B0C8", muted:"#6B6078",
+  green:"#10B981", red:"#EF4444",
 };
 
 // Generate an ICS calendar file string
@@ -703,15 +710,16 @@ function AuthScreen() {
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         button{cursor:pointer;font-family:Outfit,sans-serif}
         input,select,textarea{font-family:Outfit,sans-serif}
+        h1,h2,h3{font-family:Syne,Outfit,sans-serif!important}
         ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#2C2C30;border-radius:4px}
-        ::-webkit-scrollbar-thumb:hover{background:#3C3C40}
-        ::selection{background:#0A84FF30;color:#F5F5F7}
+        ::-webkit-scrollbar-thumb{background:#342C42;border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:#4A3F5C}
+        ::selection{background:#7C3AED30;color:#F5F0FF}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes slideRight{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
@@ -721,28 +729,32 @@ function AuthScreen() {
         @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes toast-out{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
         @keyframes ring-fill{from{stroke-dashoffset:var(--full)}to{stroke-dashoffset:var(--dash)}}
+        @keyframes glow{0%,100%{box-shadow:0 0 20px #7C3AED40}50%{box-shadow:0 0 40px #7C3AED60}}
         .nb{outline:none!important}
-        .nb:focus-visible{box-shadow:0 0 0 2px #0A84FF60!important}
-        button:not(.nb):focus-visible{outline:2px solid #0A84FF60;outline-offset:2px}
+        .nb:focus-visible{box-shadow:0 0 0 2px #7C3AED60!important}
+        button:not(.nb):focus-visible{outline:2px solid #7C3AED60;outline-offset:2px}
         .evara-sidebar{scrollbar-width:none}
         .evara-sidebar::-webkit-scrollbar{display:none}
         .metric-card{transition:all .18s ease;cursor:pointer}
-        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)!important}
+        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.3)!important}
         .nav-btn{transition:all .12s ease!important}
-        .nav-btn:hover{color:#F5F5F7!important;background:rgba(255,255,255,.06)!important}
+        .nav-btn:hover{color:#F5F0FF!important;background:rgba(124,58,237,.1)!important}
       `}</style>
       {/* Left panel — product showcase */}
-      <div style={{ flex:1, background:"linear-gradient(135deg,#060608 0%,#0a0f1e 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-          <div style={{ width:28, height:28, borderRadius:7, background:C.blue, display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
-          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.4px" }}>evara</span>
-          <span style={{ fontSize:10, background:`${C.blue}20`, color:C.blue, padding:"2px 6px", borderRadius:4, fontWeight:700 }}>BETA</span>
+      <div style={{ flex:1, background:"linear-gradient(145deg,#0C0A0F 0%,#150D2A 60%,#1A0A35 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0, position:"relative", overflow:"hidden" }}>
+        {/* Ambient glow */}
+        <div style={{ position:"absolute", top:"-20%", right:"-10%", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,#7C3AED25,transparent 70%)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", bottom:"10%", left:"-5%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,#F59E0B15,transparent 70%)", pointerEvents:"none" }} />
+        <div style={{ display:"flex", alignItems:"center", gap:9, position:"relative" }}>
+          <div style={{ width:28, height:28, borderRadius:7, background:"linear-gradient(135deg,#7C3AED,#A855F7)", display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
+          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.4px", fontFamily:"Syne,sans-serif" }}>evara</span>
+          <span style={{ fontSize:10, background:"#7C3AED20", color:"#A855F7", padding:"2px 6px", borderRadius:4, fontWeight:700 }}>BETA</span>
         </div>
-        <div>
-          <h2 style={{ fontSize:"clamp(24px,3vw,38px)", fontWeight:800, letterSpacing:"-1px", lineHeight:1.1, marginBottom:16, color:"#F5F5F7" }}>
-            Your all-in-one<br/>event marketing<br/><span style={{ color:C.blue }}>platform.</span>
+        <div style={{ position:"relative" }}>
+          <h2 style={{ fontSize:"clamp(24px,3vw,40px)", fontWeight:800, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:16, color:"#F5F0FF", fontFamily:"Syne,sans-serif" }}>
+            Your all-in-one<br/>event marketing<br/><span style={{ background:"linear-gradient(135deg,#A855F7,#F59E0B)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>platform.</span>
           </h2>
-          <p style={{ fontSize:15, color:"rgba(255,255,255,0.45)", lineHeight:1.65, marginBottom:28, maxWidth:380 }}>
+          <p style={{ fontSize:15, color:"rgba(245,240,255,0.45)", lineHeight:1.65, marginBottom:28, maxWidth:380 }}>
             Replace Mailchimp, Eventbrite, Typeform, Unbounce and Zapier with a single AI-native platform built for event marketing teams.
           </p>
           <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
@@ -1176,11 +1188,11 @@ function MainApp({ session }) {
       <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"width .2s ease", overflow:"hidden" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: sidebarOpen ? 14 : 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px ${C.blue}20`, flexShrink:0 }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: "linear-gradient(135deg,#7C3AED,#A855F7)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px #7C3AED25`, flexShrink:0 }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
             {sidebarOpen && <>
-              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>evara</span>
+              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px", fontFamily:"Syne,sans-serif" }}>evara</span>
               {profile?.companies?.name && <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "1px 6px", borderRadius: 4 }}>{profile.companies.name.slice(0,14)}</span>}
-              <span style={{ fontSize: 9, fontWeight: 600, background: `${C.blue}20`, color: C.blue, padding: "2px 5px", borderRadius: 3, letterSpacing: "0.5px", marginLeft: "auto" }}>BETA</span>
+              <span style={{ fontSize: 9, fontWeight: 600, background: `#7C3AED20`, color: "#A855F7", padding: "2px 5px", borderRadius: 3, letterSpacing: "0.5px", marginLeft: "auto" }}>BETA</span>
             </>}
             <button onClick={() => setSidebarOpen(p=>!p)} style={{ marginLeft:"auto", background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1, flexShrink:0 }} title={sidebarOpen?"Collapse sidebar":"Expand sidebar"}>
               {sidebarOpen ? "◂" : "▸"}
@@ -1384,7 +1396,7 @@ function MainApp({ session }) {
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
-            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
+            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#7C3AED,#A855F7)", border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 600, boxShadow: `0 2px 12px #7C3AED50` }}>
               <Plus size={12} />New Event
             </button>
             <button onClick={() => setShowHelp(p => !p)} title="Keyboard shortcuts & tips (?)"
