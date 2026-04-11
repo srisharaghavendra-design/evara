@@ -18,6 +18,34 @@ const supabase = createClient(
 
 const SUPABASE_URL = "https://sqddpjsgtwblmkgxqyxe.supabase.co";
 
+// Contextual first-visit hint — shows once, stores dismissal in localStorage
+function ViewHint({ id, icon, title, steps, color = "#7C3AED" }) {
+  const key = `evara_hint_${id}`;
+  const [visible, setVisible] = React.useState(() => !localStorage.getItem(key));
+  if (!visible) return null;
+  const dismiss = () => { localStorage.setItem(key, "1"); setVisible(false); };
+  return (
+    <div style={{ background:`linear-gradient(135deg,${color}12,${color}06)`, border:`1px solid ${color}30`, borderRadius:12, padding:"16px 18px", marginBottom:16, position:"relative", animation:"fadeUp .3s ease" }}>
+      <button onClick={dismiss} style={{ position:"absolute", top:12, right:12, background:"transparent", border:"none", color:"#6B6078", cursor:"pointer", fontSize:16, lineHeight:1, padding:"2px 6px" }}>×</button>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
+        <div style={{ width:32, height:32, borderRadius:9, background:`${color}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{icon}</div>
+        <div>
+          <div style={{ fontSize:13, fontWeight:700, color:"#F5F0FF", fontFamily:"Syne,sans-serif" }}>{title}</div>
+          <div style={{ fontSize:11, color:"#6B6078", marginTop:1 }}>Click × to dismiss — won't show again</div>
+        </div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+        {steps.map((s, i) => (
+          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
+            <div style={{ width:20, height:20, borderRadius:6, background:`${color}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color, flexShrink:0, marginTop:1 }}>{i+1}</div>
+            <div style={{ fontSize:12.5, color:"#B8B0C8", lineHeight:1.5 }}>{s}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Helper: get sender identity from company profile
 const getSender = (profile) => ({
   fromName: profile?.companies?.from_name || profile?.companies?.name || "evara",
@@ -1997,8 +2025,57 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   const isPostEvent = daysToEvent !== null && daysToEvent < 0;
   const daysSinceEvent = isPostEvent ? Math.abs(daysToEvent) : null;
 
+  // Compute journey progress
+  const journeySteps = [
+    { id: 1, label: "Event created", icon: "🎪", done: true, action: null },
+    { id: 2, label: "AI drafted emails", icon: "🤖", done: campaigns.length > 0, action: () => setView("edm"), cta: "Build emails →" },
+    { id: 3, label: "Contacts imported", icon: "👥", done: contacts.length > 0, action: () => setView("contacts"), cta: "Add contacts →" },
+    { id: 4, label: "Campaign sent", icon: "📧", done: campaigns.some(c => c.status === "sent"), action: () => setView("schedule"), cta: "Schedule →" },
+    { id: 5, label: "Registration live", icon: "📋", done: !!formShareLink, action: () => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }, cta: "Copy link →" },
+  ];
+  const journeyDone = journeySteps.filter(s => s.done).length;
+  const allDone = journeyDone === journeySteps.length;
+
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+
+      {/* ── JOURNEY PROGRESS STRIP ── */}
+      {!allDone && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, overflow: "hidden", position: "relative" }}>
+          {/* Violet glow behind progress */}
+          <div style={{ position:"absolute", top:0, left:0, height:"100%", width:`${(journeyDone/journeySteps.length)*100}%`, background:`linear-gradient(90deg,${C.blue}10,transparent)`, transition:"width .6s ease", pointerEvents:"none" }} />
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, position:"relative" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <div style={{ width:6, height:6, borderRadius:"50%", background:C.blue, boxShadow:`0 0 8px ${C.blue}` }} />
+              <span style={{ fontSize:12, fontWeight:700, color:C.text }}>Your launch journey</span>
+              <span style={{ fontSize:11, color:C.muted }}>{journeyDone}/{journeySteps.length} complete</span>
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+              <div style={{ width:120, height:4, background:C.raised, borderRadius:99, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${(journeyDone/journeySteps.length)*100}%`, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:99, transition:"width .6s ease" }} />
+              </div>
+              <span style={{ fontSize:11, fontWeight:700, color:C.blue }}>{Math.round(journeyDone/journeySteps.length*100)}%</span>
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:6, position:"relative" }}>
+            {journeySteps.map((step, i) => {
+              const isNext = !step.done && journeySteps.slice(0,i).every(s=>s.done);
+              return (
+                <button key={step.id} onClick={step.action || undefined}
+                  style={{ flex:1, padding:"10px 8px", borderRadius:9, border:`1px solid ${step.done?C.blue+"40":isNext?C.blue+"60":C.border}`, background:step.done?`${C.blue}10`:isNext?`${C.blue}08`:C.raised, cursor:step.done&&!step.action?"default":step.action?"pointer":"default", textAlign:"center", transition:"all .15s", position:"relative" }}
+                  onMouseEnter={e=>{if(step.action||isNext) e.currentTarget.style.transform="translateY(-1px)"}}
+                  onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+                  {isNext && <div style={{ position:"absolute", top:-1, left:-1, right:-1, bottom:-1, borderRadius:10, border:`1.5px solid ${C.blue}`, animation:"pulse 2s ease infinite", pointerEvents:"none" }} />}
+                  <div style={{ fontSize:18, marginBottom:4 }}>{step.done ? "✅" : step.icon}</div>
+                  <div style={{ fontSize:10.5, fontWeight:step.done?500:isNext?700:400, color:step.done?C.green:isNext?C.blue:C.muted, lineHeight:1.3 }}>{step.label}</div>
+                  {isNext && step.cta && <div style={{ fontSize:9.5, color:C.blue, marginTop:3, fontWeight:600 }}>{step.cta}</div>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Post-event mode banner */}
       {isPostEvent && (
         <div style={{ background:`linear-gradient(135deg, ${C.green}15, ${C.teal}10)`, border:`1px solid ${C.green}30`, borderRadius:11, padding:"12px 18px", marginBottom:16, display:"flex", alignItems:"center", gap:12 }}>
@@ -3171,6 +3248,13 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           <span style={{ fontSize:13, color:C.amber, fontWeight:500 }}>No event selected — select an event from the sidebar to save generated emails to your campaign.</span>
         </div>
       )}
+      <ViewHint id="edm" icon="✉️" title="How to build your first email"
+        steps={[
+          "Pick an email type from the left — Start with Invitation for a new event",
+          "Hit Generate — AI writes a polished, on-brand email in under 10 seconds",
+          "Review the preview, tweak subject line if needed, then Save to Campaign",
+          "Once all 5 email types are drafted, head to Scheduling to set your send dates",
+        ]} />
       {activeEvent && (
         <div style={{ padding:"7px 12px", background:C.blue+"08", borderRadius:7, border:`1px solid ${C.blue}18`, marginBottom:10, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
           <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>✉️ {activeEvent.name}</span>
@@ -3861,6 +3945,13 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+      <ViewHint id="schedule" icon="📅" title="How email scheduling works"
+        steps={[
+          "Your AI-drafted emails appear as cards here — review subject lines before sending",
+          "Click 'Auto-schedule' to set optimal send dates based on your event date automatically",
+          "Hit 'Send Now' to send immediately, or set a date to schedule for later",
+          "The lifecycle timeline at top shows your full campaign arc — Save the Date through Thank You",
+        ]} color="#F59E0B" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -4830,6 +4921,13 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+      <ViewHint id="contacts" icon="👥" title="Building your guest list"
+        steps={[
+          "Click 'Import contacts' to paste emails or upload a CSV — evara auto-detects name, email, company columns",
+          "Tag important guests as VIP ⭐ — they're highlighted in your dashboard and can be segmented for sends",
+          "Use 'Add to event' on any contact to link them to your active event as a guest",
+          "Lead scores (Hot/Warm/Cool) update automatically based on opens, clicks and RSVP responses",
+        ]} color="#10B981" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Contacts</h1>
@@ -7196,6 +7294,13 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+      <ViewHint id="checkin" icon="📍" title="Running event day check-in"
+        steps={[
+          "Switch to Kiosk Mode and hand your tablet/laptop to the front desk — guests type their name to self-check-in",
+          "Use Host Mode to manually mark guests as attended by clicking 'Check in' next to their name",
+          "Walk-in guests can be added on the spot — click 'Add walk-in' and enter their details",
+          "Attendance numbers feed directly into your Analytics dashboard in real time",
+        ]} color="#EF4444" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Check-in</h1>
@@ -7782,6 +7887,13 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+      <ViewHint id="analytics" icon="📊" title="Reading your campaign analytics"
+        steps={[
+          "Open rate and click rate update in real-time as SendGrid tracks each email open and click",
+          "The funnel shows your full journey: Sent → Opened → Clicked → Registered → Attended",
+          "Share a read-only dashboard with stakeholders using the 'Share' button — no login required",
+          "ROI tracker lets you enter costs and revenue to calculate your event return on investment",
+        ]} color="#7C3AED" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Analytics</h1>
