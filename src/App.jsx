@@ -18,39 +18,39 @@ const supabase = createClient(
 
 const SUPABASE_URL = "https://sqddpjsgtwblmkgxqyxe.supabase.co";
 
+// Helper: get sender identity from company profile
+const getSender = (profile) => ({
+  fromName: profile?.companies?.from_name || profile?.companies?.name || "evara",
+  fromEmail: "hello@evarahq.com",
+});
+
 // Contextual first-visit hint — shows once, stores dismissal in localStorage
-function ViewHint({ id, icon, title, steps, color = "#7C3AED" }) {
+function ViewHint({ id, icon, title, steps, color = "#0A84FF" }) {
   const key = `evara_hint_${id}`;
   const [visible, setVisible] = React.useState(() => !localStorage.getItem(key));
   if (!visible) return null;
   const dismiss = () => { localStorage.setItem(key, "1"); setVisible(false); };
   return (
-    <div style={{ background:`linear-gradient(135deg,${color}12,${color}06)`, border:`1px solid ${color}30`, borderRadius:12, padding:"16px 18px", marginBottom:16, position:"relative", animation:"fadeUp .3s ease" }}>
-      <button onClick={dismiss} style={{ position:"absolute", top:12, right:12, background:"transparent", border:"none", color:"#6B6078", cursor:"pointer", fontSize:16, lineHeight:1, padding:"2px 6px" }}>×</button>
-      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:12 }}>
-        <div style={{ width:32, height:32, borderRadius:9, background:`${color}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>{icon}</div>
+    <div style={{ background:`${color}08`, border:`1px solid ${color}25`, borderRadius:10, padding:"14px 16px", marginBottom:14, position:"relative", animation:"fadeUp .3s ease" }}>
+      <button onClick={dismiss} style={{ position:"absolute", top:10, right:12, background:"transparent", border:"none", color:"#636366", cursor:"pointer", fontSize:16, lineHeight:1 }}>×</button>
+      <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+        <div style={{ width:30, height:30, borderRadius:8, background:`${color}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:15, flexShrink:0 }}>{icon}</div>
         <div>
-          <div style={{ fontSize:13, fontWeight:700, color:"#F5F0FF", fontFamily:"Syne,sans-serif" }}>{title}</div>
-          <div style={{ fontSize:11, color:"#6B6078", marginTop:1 }}>Click × to dismiss — won't show again</div>
+          <div style={{ fontSize:13, fontWeight:700, color:"#F5F5F7" }}>{title}</div>
+          <div style={{ fontSize:11, color:"#636366", marginTop:1 }}>Click × to dismiss — won't show again</div>
         </div>
       </div>
       <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
         {steps.map((s, i) => (
-          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:10 }}>
-            <div style={{ width:20, height:20, borderRadius:6, background:`${color}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color, flexShrink:0, marginTop:1 }}>{i+1}</div>
-            <div style={{ fontSize:12.5, color:"#B8B0C8", lineHeight:1.5 }}>{s}</div>
+          <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:9 }}>
+            <div style={{ width:18, height:18, borderRadius:5, background:`${color}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:700, color, flexShrink:0, marginTop:1 }}>{i+1}</div>
+            <div style={{ fontSize:12.5, color:"#AEAEB2", lineHeight:1.5 }}>{s}</div>
           </div>
         ))}
       </div>
     </div>
   );
 }
-
-// Helper: get sender identity from company profile
-const getSender = (profile) => ({
-  fromName: profile?.companies?.from_name || profile?.companies?.name || "evara",
-  fromEmail: "hello@evarahq.com",
-});
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxZGRwanNndHdibG1rZ3hxeXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODk5NTAsImV4cCI6MjA4OTY2NTk1MH0.x5BOfQRzn-F_tvUJv3mHRmfdOZiklyMkGzmPfRYoII4";
 
 // Block personal/free email domains
@@ -71,21 +71,10 @@ const isBusinessEmail = (email) => {
 };
 
 const C = {
-  // Void black — mission control screens
-  bg:"#020205", sidebar:"#050508", card:"#0A0A0E", raised:"#0F0F14",
-  border:"#1A1A24", borderHi:"#252535",
-  // Electric blue — live telemetry & primary actions
-  blue:"#00B0FF",
-  // Amber gold — mission status labels, the NASA data color
-  amber:"#E8A020",
-  // All systems go
-  green:"#00E676",
-  // Alert
-  red:"#FF3D3D",
-  // Secondary data stream
-  teal:"#00E5CC",
-  // Typography — slightly warm white so it doesn't feel clinical
-  text:"#E8E8F0", sec:"#8888A8", muted:"#44445A",
+  bg:"#080809", sidebar:"#0D0D0F", card:"#111114", raised:"#161619",
+  border:"#1C1C1F", borderHi:"#2C2C30",
+  blue:"#0A84FF", text:"#F5F5F7", sec:"#AEAEB2", muted:"#636366",
+  green:"#30D158", red:"#FF453A", amber:"#FF9F0A", teal:"#5AC8FA",
 };
 
 // Generate an ICS calendar file string
@@ -742,86 +731,49 @@ function AuthScreen() {
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         button{cursor:pointer;font-family:Outfit,sans-serif}
         input,select,textarea{font-family:Outfit,sans-serif}
-        h1,h2{font-family:Syne,Outfit,sans-serif!important;letter-spacing:-0.5px}
-        .mono{font-family:'JetBrains Mono',monospace!important;font-variant-numeric:tabular-nums}
-        .mission-label{font-family:Outfit,sans-serif;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#44445A}
-        /* Scanline texture — barely visible, registers as "screen" */
-        .scan::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.012) 2px,rgba(255,255,255,0.012) 3px);pointer-events:none;border-radius:inherit}
-        ::-webkit-scrollbar{width:3px;height:3px}
+        ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#1A1A24;border-radius:2px}
-        ::-webkit-scrollbar-thumb:hover{background:#252535}
-        ::selection{background:#00B0FF22;color:#E8E8F0}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        ::-webkit-scrollbar-thumb{background:#2C2C30;border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:#3C3C40}
+        ::selection{background:#0A84FF30;color:#F5F5F7}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes slideRight{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes slideRight{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-        @keyframes blink{0%,100%{opacity:1}49%{opacity:1}50%{opacity:0}99%{opacity:0}}
-        @keyframes toast-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes toast-out{from{opacity:1}to{opacity:0}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+        @keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
+        @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes toast-out{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
         @keyframes ring-fill{from{stroke-dashoffset:var(--full)}to{stroke-dashoffset:var(--dash)}}
-        @keyframes radar{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @keyframes telemetry{0%,100%{opacity:.6}50%{opacity:1}}
-        /* Live dot — green pulse */
-        .live-dot{width:6px;height:6px;border-radius:50%;background:#00E676;box-shadow:0 0 8px #00E67680;animation:pulse 2s ease infinite}
         .nb{outline:none!important}
-        .nb:focus-visible{box-shadow:0 0 0 1px #00B0FF80!important}
+        .nb:focus-visible{box-shadow:0 0 0 2px #0A84FF60!important}
+        button:not(.nb):focus-visible{outline:2px solid #0A84FF60;outline-offset:2px}
         .evara-sidebar{scrollbar-width:none}
         .evara-sidebar::-webkit-scrollbar{display:none}
-        /* Telemetry card hover — data panel activates */
-        .metric-card{transition:all .15s ease;cursor:pointer;border-radius:4px!important}
-        .metric-card:hover{border-color:#00B0FF60!important;box-shadow:0 0 20px #00B0FF15,inset 0 0 20px #00B0FF05!important}
-        /* Nav — mission station selector */
-        .nav-btn{transition:all .1s ease!important;border-radius:2px!important}
-        .nav-btn:hover{color:#E8E8F0!important;background:rgba(0,176,255,0.08)!important}
-        .nav-btn.active{color:#00B0FF!important;background:rgba(0,176,255,0.12)!important;border-left:2px solid #00B0FF!important}
-        .rh{cursor:pointer;transition:background .08s}
-        .rh:hover{background:#0A0A0E!important}
-        .rh:hover td{background:#0F0F14!important}
-        input:focus,textarea:focus,select:focus{outline:none;border-color:#00B0FF!important;box-shadow:0 0 0 1px #00B0FF30}
-        @media(max-width:768px){
-          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .2s ease;width:216px!important}
-          .evara-sidebar.open{transform:translateX(0)}
-          .evara-overlay{display:block!important}
-          .evara-main{margin-left:0!important}
-          .mobile-hamburger{display:flex!important}
-          .main-padding{padding:12px!important}
-        }
-        .mobile-hamburger{display:none!important}
+        .metric-card{transition:all .18s ease;cursor:pointer}
+        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)!important}
+        .nav-btn{transition:all .12s ease!important}
+        .nav-btn:hover{color:#F5F5F7!important;background:rgba(255,255,255,.06)!important}
       `}</style>
-      {/* Left panel — mission control briefing */}
-      <div style={{ flex:1, background:"#000000", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0, position:"relative", overflow:"hidden" }}>
-        {/* Star field texture */}
-        <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(1px 1px at 20% 30%, #ffffff18 0%, transparent 100%),radial-gradient(1px 1px at 80% 10%, #ffffff12 0%, transparent 100%),radial-gradient(1px 1px at 50% 60%, #ffffff10 0%, transparent 100%),radial-gradient(1px 1px at 10% 80%, #ffffff15 0%, transparent 100%),radial-gradient(1px 1px at 90% 70%, #ffffff08 0%, transparent 100%)", pointerEvents:"none" }} />
-        {/* Orbital arc — decorative */}
-        <div style={{ position:"absolute", top:"-40%", right:"-30%", width:700, height:700, borderRadius:"50%", border:"1px solid rgba(0,176,255,0.08)", pointerEvents:"none" }} />
-        <div style={{ position:"absolute", top:"-20%", right:"-10%", width:400, height:400, borderRadius:"50%", border:"1px solid rgba(232,160,32,0.06)", pointerEvents:"none" }} />
-        {/* Ambient telemetry glow */}
-        <div style={{ position:"absolute", bottom:"20%", left:"10%", width:200, height:200, borderRadius:"50%", background:"radial-gradient(circle,#00B0FF08,transparent 70%)", pointerEvents:"none" }} />
-
-        <div style={{ display:"flex", alignItems:"center", gap:9, position:"relative" }}>
-          <div style={{ width:28, height:28, borderRadius:4, background:"#000", border:"1px solid #00B0FF60", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 12px #00B0FF30" }}><Zap size={13} color="#00B0FF" strokeWidth={2.5} /></div>
-          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"3px", textTransform:"uppercase", fontFamily:"Syne,sans-serif", color:"#E8E8F0" }}>evara</span>
-          <span style={{ fontSize:9, background:"#00B0FF15", color:"#00B0FF", padding:"2px 6px", borderRadius:2, fontWeight:700, letterSpacing:"1.5px" }}>BETA</span>
+      {/* Left panel — product showcase */}
+      <div style={{ flex:1, background:"linear-gradient(135deg,#060608 0%,#0a0f1e 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+          <div style={{ width:28, height:28, borderRadius:7, background:C.blue, display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
+          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.4px" }}>evara</span>
+          <span style={{ fontSize:10, background:`${C.blue}20`, color:C.blue, padding:"2px 6px", borderRadius:4, fontWeight:700 }}>BETA</span>
         </div>
-        <div style={{ position:"relative" }}>
-          {/* Mission status label */}
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"3px", textTransform:"uppercase", color:C.amber, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
-            <div className="live-dot" />
-            MISSION CONTROL · EVENT MARKETING
-          </div>
-          <h2 style={{ fontSize:"clamp(28px,3.5vw,46px)", fontWeight:800, letterSpacing:"-2px", lineHeight:1.0, marginBottom:16, color:"#FFFFFF", fontFamily:"Syne,sans-serif" }}>
-            Your event.<br/>Your command<br/><span style={{ color:"#00B0FF" }}>centre.</span>
+        <div>
+          <h2 style={{ fontSize:"clamp(24px,3vw,38px)", fontWeight:800, letterSpacing:"-1px", lineHeight:1.1, marginBottom:16, color:"#F5F5F7" }}>
+            Your all-in-one<br/>event marketing<br/><span style={{ color:C.blue }}>platform.</span>
           </h2>
-          <p style={{ fontSize:14, color:"rgba(232,232,240,0.4)", lineHeight:1.7, marginBottom:28, maxWidth:380, fontFamily:"Outfit,sans-serif" }}>
-            Replace Mailchimp, Eventbrite, Typeform, Unbounce and Zapier. One AI-native platform. Full mission visibility.
+          <p style={{ fontSize:15, color:"rgba(255,255,255,0.45)", lineHeight:1.65, marginBottom:28, maxWidth:380 }}>
+            Replace Mailchimp, Eventbrite, Typeform, Unbounce and Zapier with a single AI-native platform built for event marketing teams.
           </p>
-          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
             {[
               { icon:"✉️", label:"AI eDM Builder", desc:"Full emails from a sentence in seconds" },
               { icon:"👥", label:"Contact management", desc:"Deduplication, VIP tagging, lead scoring" },
@@ -1202,40 +1154,38 @@ function MainApp({ session }) {
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, fontFamily: "Outfit,sans-serif", overflow: "hidden" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        ::-webkit-scrollbar{width:3px;height:3px}
+        ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#1A1A24;border-radius:1px}
-        ::-webkit-scrollbar-thumb:hover{background:#252535}
-        ::selection{background:#00B0FF20;color:#E8E8F0}
+        ::-webkit-scrollbar-thumb{background:#2C2C30;border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:#3C3C42}
+        ::selection{background:#0A84FF28;color:#F5F5F7}
         button{cursor:pointer;font-family:Outfit,sans-serif}
         input,textarea,select{font-family:Outfit,sans-serif}
-        h1,h2{font-family:Syne,Outfit,sans-serif!important}
-        .mono{font-family:'JetBrains Mono',monospace!important;font-variant-numeric:tabular-nums}
-        .live-dot{width:6px;height:6px;border-radius:50%;background:#00E676;box-shadow:0 0 8px #00E67680;display:inline-block;animation:pulse 2s ease infinite}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
-        @keyframes toast-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        @keyframes shimmer{0%{opacity:.5}50%{opacity:1}100%{opacity:.5}}
+        @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
         @keyframes toastProgress{from{width:100%}to{width:0%}}
         @keyframes slideRight{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes telemetry{0%,100%{opacity:.5}50%{opacity:1}}
         .nb{outline:none!important}
-        .nb:focus-visible{box-shadow:0 0 0 1px #00B0FF60!important}
-        .nb:hover{background:rgba(0,176,255,.06)!important;color:#E8E8F0!important}
-        .rh{cursor:pointer;transition:background .08s}
-        .rh:hover td{background:#0A0A0E!important}
-        .rh:hover{background:#0A0A0E!important}
-        .metric-card{transition:all .15s ease;cursor:pointer;border-radius:4px!important}
-        .metric-card:hover{border-color:#00B0FF50!important;box-shadow:0 0 20px #00B0FF12,inset 0 0 20px #00B0FF05!important}
-        .nav-btn{transition:all .1s ease!important}
-        .nav-btn:hover{color:#E8E8F0!important;background:rgba(0,176,255,.07)!important}
+        .nb:focus-visible{box-shadow:0 0 0 2px #0A84FF50!important}
+        .nb:hover{background:rgba(255,255,255,.05)!important;color:${C.text}!important}
+        .mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}
+        .rh{cursor:pointer;transition:background .1s}
+        .rh:hover td{background:${C.raised}!important}
+        .rh:hover{background:${C.raised}!important}
+        .metric-card{transition:transform .18s ease,box-shadow .18s ease;cursor:pointer}
+        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.5)!important}
+        .nav-btn{transition:all .12s ease!important}
+        .nav-btn:hover{color:${C.text}!important;background:rgba(255,255,255,.06)!important}
         .evara-sidebar{scrollbar-width:none}
         .evara-sidebar::-webkit-scrollbar{display:none}
         .mobile-hamburger{display:none!important}
-        input:focus,textarea:focus,select:focus{outline:none;border-color:#00B0FF!important;box-shadow:0 0 0 1px #00B0FF30}
+        input:focus,textarea:focus,select:focus{outline:none;border-color:${C.blue}!important;box-shadow:0 0 0 3px ${C.blue}18}
         @media(max-width:768px){
           .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:216px!important}
           .evara-sidebar.open{transform:translateX(0)}
@@ -1243,7 +1193,7 @@ function MainApp({ session }) {
           .evara-main{margin-left:0!important}
           .mobile-hamburger{display:flex!important}
           .desktop-breadcrumb{display:none!important}
-          .main-padding{padding:12px!important}
+          .main-padding{padding:16px!important}
         }
       `}</style>
 
@@ -1254,11 +1204,11 @@ function MainApp({ session }) {
       <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"width .2s ease", overflow:"hidden" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: sidebarOpen ? 14 : 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 3, background: C.bg, border: `1px solid #00B0FF50`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow:`0 0 10px #00B0FF25`, flexShrink:0 }}><Zap size={13} color="#00B0FF" strokeWidth={2.5} /></div>
+            <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px ${C.blue}20`, flexShrink:0 }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
             {sidebarOpen && <>
-              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "3px", textTransform:"uppercase", fontFamily:"Syne,sans-serif", color: C.text }}>evara</span>
-              {profile?.companies?.name && <span style={{ fontSize: 9, color: C.muted, background: C.raised, padding: "1px 5px", borderRadius: 2, letterSpacing:"0.5px", textTransform:"uppercase" }}>{profile.companies.name.slice(0,12)}</span>}
-              <span style={{ fontSize: 9, fontWeight: 700, background: `#00B0FF15`, color: "#00B0FF", padding: "2px 5px", borderRadius: 2, letterSpacing: "1px", marginLeft: "auto" }}>BETA</span>
+              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px" }}>evara</span>
+              {profile?.companies?.name && <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "1px 6px", borderRadius: 4 }}>{profile.companies.name.slice(0,14)}</span>}
+              <span style={{ fontSize: 9, fontWeight: 600, background: `${C.blue}20`, color: C.blue, padding: "2px 5px", borderRadius: 3, letterSpacing: "0.5px", marginLeft: "auto" }}>BETA</span>
             </>}
             <button onClick={() => setSidebarOpen(p=>!p)} style={{ marginLeft:"auto", background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1, flexShrink:0 }} title={sidebarOpen?"Collapse sidebar":"Expand sidebar"}>
               {sidebarOpen ? "◂" : "▸"}
@@ -1462,8 +1412,8 @@ function MainApp({ session }) {
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
-            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid #00B0FF60`, borderRadius: 3, padding: "6px 14px", color: "#00B0FF", fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", boxShadow: `0 0 12px #00B0FF20`, fontFamily:"Outfit,sans-serif" }}>
-              <Plus size={11} />New Mission
+            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
+              <Plus size={12} />New Event
             </button>
             <button onClick={() => setShowHelp(p => !p)} title="Keyboard shortcuts & tips (?)"
               style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "5px 10px", color: C.muted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
@@ -2063,50 +2013,44 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   const isPostEvent = daysToEvent !== null && daysToEvent < 0;
   const daysSinceEvent = isPostEvent ? Math.abs(daysToEvent) : null;
 
-  // Compute journey progress
+  // Journey progress
   const journeySteps = [
-    { id: 1, label: "Event created", icon: "🎪", done: true, action: null },
-    { id: 2, label: "AI drafted emails", icon: "🤖", done: campaigns.length > 0, action: () => setView("edm"), cta: "Build emails →" },
-    { id: 3, label: "Contacts imported", icon: "👥", done: contacts.length > 0, action: () => setView("contacts"), cta: "Add contacts →" },
-    { id: 4, label: "Campaign sent", icon: "📧", done: campaigns.some(c => c.status === "sent"), action: () => setView("schedule"), cta: "Schedule →" },
-    { id: 5, label: "Registration live", icon: "📋", done: !!formShareLink, action: () => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }, cta: "Copy link →" },
+    { id:1, label:"Event created", icon:"🎪", done:true, action:null },
+    { id:2, label:"AI drafted emails", icon:"🤖", done:campaigns.length>0, action:()=>setView("edm"), cta:"Build emails →" },
+    { id:3, label:"Contacts imported", icon:"👥", done:contacts.length>0, action:()=>setView("contacts"), cta:"Add contacts →" },
+    { id:4, label:"Campaign sent", icon:"📧", done:campaigns.some(c=>c.status==="sent"), action:()=>setView("schedule"), cta:"Schedule →" },
+    { id:5, label:"Registration live", icon:"📋", done:!!formShareLink, action:()=>{navigator.clipboard?.writeText(formShareLink);fire("📋 Reg link copied!");}, cta:"Copy link →" },
   ];
-  const journeyDone = journeySteps.filter(s => s.done).length;
-  const allDone = journeyDone === journeySteps.length;
+  const journeyDone = journeySteps.filter(s=>s.done).length;
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
 
       {/* ── JOURNEY PROGRESS STRIP ── */}
-      {!allDone && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 18px", marginBottom: 16, overflow: "hidden", position: "relative" }}>
-          {/* Violet glow behind progress */}
-          <div style={{ position:"absolute", top:0, left:0, height:"100%", width:`${(journeyDone/journeySteps.length)*100}%`, background:`linear-gradient(90deg,${C.blue}10,transparent)`, transition:"width .6s ease", pointerEvents:"none" }} />
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, position:"relative" }}>
+      {journeyDone < journeySteps.length && (
+        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:C.blue, boxShadow:`0 0 8px ${C.blue}` }} />
+              <div style={{ width:6, height:6, borderRadius:"50%", background:C.blue, boxShadow:`0 0 6px ${C.blue}` }} />
               <span style={{ fontSize:12, fontWeight:700, color:C.text }}>Your launch journey</span>
               <span style={{ fontSize:11, color:C.muted }}>{journeyDone}/{journeySteps.length} complete</span>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:120, height:4, background:C.raised, borderRadius:99, overflow:"hidden" }}>
-                <div style={{ height:"100%", width:`${(journeyDone/journeySteps.length)*100}%`, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:99, transition:"width .6s ease" }} />
+              <div style={{ width:100, height:4, background:C.raised, borderRadius:99, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${(journeyDone/journeySteps.length)*100}%`, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:99, transition:"width .6s" }} />
               </div>
               <span style={{ fontSize:11, fontWeight:700, color:C.blue }}>{Math.round(journeyDone/journeySteps.length*100)}%</span>
             </div>
           </div>
-          <div style={{ display:"flex", gap:6, position:"relative" }}>
+          <div style={{ display:"flex", gap:6 }}>
             {journeySteps.map((step, i) => {
               const isNext = !step.done && journeySteps.slice(0,i).every(s=>s.done);
               return (
-                <button key={step.id} onClick={step.action || undefined}
-                  style={{ flex:1, padding:"10px 8px", borderRadius:9, border:`1px solid ${step.done?C.blue+"40":isNext?C.blue+"60":C.border}`, background:step.done?`${C.blue}10`:isNext?`${C.blue}08`:C.raised, cursor:step.done&&!step.action?"default":step.action?"pointer":"default", textAlign:"center", transition:"all .15s", position:"relative" }}
-                  onMouseEnter={e=>{if(step.action||isNext) e.currentTarget.style.transform="translateY(-1px)"}}
-                  onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-                  {isNext && <div style={{ position:"absolute", top:-1, left:-1, right:-1, bottom:-1, borderRadius:10, border:`1.5px solid ${C.blue}`, animation:"pulse 2s ease infinite", pointerEvents:"none" }} />}
-                  <div style={{ fontSize:18, marginBottom:4 }}>{step.done ? "✅" : step.icon}</div>
-                  <div style={{ fontSize:10.5, fontWeight:step.done?500:isNext?700:400, color:step.done?C.green:isNext?C.blue:C.muted, lineHeight:1.3 }}>{step.label}</div>
-                  {isNext && step.cta && <div style={{ fontSize:9.5, color:C.blue, marginTop:3, fontWeight:600 }}>{step.cta}</div>}
+                <button key={step.id} onClick={step.action||undefined}
+                  style={{ flex:1, padding:"9px 6px", borderRadius:8, border:`1px solid ${step.done?C.blue+"30":isNext?C.blue+"50":C.border}`, background:step.done?`${C.blue}08`:isNext?`${C.blue}06`:C.raised, cursor:step.action?"pointer":"default", textAlign:"center", transition:"all .15s" }}>
+                  <div style={{ fontSize:16, marginBottom:3 }}>{step.done?"✅":step.icon}</div>
+                  <div style={{ fontSize:10, fontWeight:step.done?400:isNext?700:400, color:step.done?C.green:isNext?C.blue:C.muted, lineHeight:1.3 }}>{step.label}</div>
+                  {isNext && step.cta && <div style={{ fontSize:9, color:C.blue, marginTop:2, fontWeight:600 }}>{step.cta}</div>}
                 </button>
               );
             })}
@@ -2150,32 +2094,40 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           </div>
         </div>
       )}
-      {/* ─── MISSION BRIEFING PANEL ─── */}
-      <div style={{ marginBottom: 16, background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, position: "relative", overflow: "hidden" }}>
-        {/* Top telemetry line */}
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,${C.blue},${C.teal}80,transparent)` }} />
-        {/* Mission header bar */}
-        <div style={{ padding: "10px 18px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", background: `${C.blue}06` }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div className="live-dot" />
-            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "2.5px", color: C.blue }}>MISSION BRIEFING</span>
-            <span style={{ fontSize: 9, color: C.muted, letterSpacing: "1px" }}>·</span>
-            <span onClick={async () => {
-              const statuses = ["draft", "published", "completed"];
-              const curr = activeEvent.status || "draft";
-              const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
-              await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
-              fire(`Status → ${next.toUpperCase()}`);
-            }} style={{ fontSize: 9, fontWeight: 700, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.amber, letterSpacing: "1.5px", cursor: "pointer", textTransform: "uppercase" }}>
-              {activeEvent.status === "published" ? "● ACTIVE" : activeEvent.status === "completed" ? "✓ COMPLETE" : "○ DRAFT"}
-            </span>
+      {/* ─── EVENT HERO HEADER ─── */}
+      <div style={{ marginBottom: 20, background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "18px 20px", position: "relative", overflow: "hidden" }}>
+        {/* Subtle gradient accent */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${C.blue},${C.teal},${C.blue}00)` }} />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: C.blue, textTransform: "uppercase", letterSpacing: "1.8px", marginBottom: 6 }}>Active Event</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.6px", color: C.text, margin: 0, lineHeight: 1.2 }}>{{"Conference":"🎤 ","Workshop":"🛠 ","Webinar":"🖥 ","Product Launch":"🚀 ","Awards":"🏆 ","Team Event":"🤝 "}[activeEvent.event_type]||""}{activeEvent.name}</h1>
+              <span onClick={async () => {
+                const statuses = ["draft", "published", "completed"];
+                const curr = activeEvent.status || "draft";
+                const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
+                await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
+                fire(`Event status → ${next}`);
+              }} style={{ fontSize: 10, fontWeight: 700, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "18", padding: "3px 9px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.6px", flexShrink: 0, cursor: "pointer", border: `1px solid ${(activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue)}30` }} title="Click to change status">
+                {activeEvent.status === "published" ? "🟢 " : activeEvent.status === "completed" ? "✅ " : "⚪ "}
+                {(activeEvent.status || "draft").charAt(0).toUpperCase() + (activeEvent.status || "draft").slice(1)}
+              </span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {activeEvent.event_type && <span style={{ background: `${C.blue}14`, color: C.blue, fontSize: 10.5, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{activeEvent.event_type}</span>}
+              {activeEvent.event_format && activeEvent.event_format !== "In-person" && <span style={{ background: `${C.teal}14`, color: C.teal, fontSize: 10.5, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span>}
+              {activeEvent.event_date && <span style={{ fontSize: 12, color: C.sec }}>📅 {new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}{activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}</span>}
+              {activeEvent.location && <span style={{ fontSize: 12, color: C.muted }}>📍 {activeEvent.location}</span>}
+              {activeEvent.expected_attendees && <span style={{ fontSize: 12, color: C.muted }}>👥 {activeEvent.expected_attendees} expected</span>}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 9, padding: "4px 10px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 2, color: C.muted, cursor: "pointer", letterSpacing: "1px", fontWeight: 600 }}>
-              EDIT
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "6px 12px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, cursor: "pointer", fontWeight: 500 }}>
+              Edit
             </button>
             <button onClick={async () => {
-              fire("🤖 Generating mission report…");
+              fire("🤖 Generating AI report…");
               const { data: { session } } = await supabase.auth.getSession();
               const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
                 method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
@@ -2184,70 +2136,11 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               const d = await res.json();
               if (d.success && d.html) { const w = window.open("","_blank"); w.document.write(d.html); w.document.close(); fire("✅ Report ready!"); }
               else fire("Report failed","err");
-            }} style={{ fontSize: 9, padding: "4px 10px", background: `${C.blue}15`, border: `1px solid ${C.blue}40`, borderRadius: 2, color: C.blue, cursor: "pointer", letterSpacing: "1px", fontWeight: 700 }}>
-              AI REPORT
+            }} style={{ fontSize: 11, padding: "6px 12px", background: `${C.blue}14`, border: `1px solid ${C.blue}30`, borderRadius: 7, color: C.blue, cursor: "pointer", fontWeight: 600 }}>
+              ✨ AI Report
             </button>
           </div>
         </div>
-        {/* Mission data */}
-        <div style={{ padding: "16px 18px", display: "flex", alignItems: "flex-start", gap: 24 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h1 style={{ fontSize: 20, fontWeight: 800, color: C.text, margin: "0 0 10px", lineHeight: 1.1, letterSpacing: "-0.5px", fontFamily: "Syne,sans-serif" }}>
-              {activeEvent.name}
-            </h1>
-            {/* Mission parameters */}
-            <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
-              {activeEvent.event_date && (
-                <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>LAUNCH DATE</div>
-                  <div style={{ fontSize: 12, color: C.sec, fontFamily: "'JetBrains Mono',monospace" }}>
-                    {new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }).toUpperCase()}
-                    {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
-                  </div>
-                </div>
-              )}
-              {activeEvent.location && (
-                <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>LOCATION</div>
-                  <div style={{ fontSize: 12, color: C.sec }}>{activeEvent.location}</div>
-                </div>
-              )}
-              {activeEvent.event_type && (
-                <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>TYPE</div>
-                  <div style={{ fontSize: 12, color: C.sec, textTransform: "uppercase", letterSpacing: "0.5px" }}>{activeEvent.event_type}</div>
-                </div>
-              )}
-              {activeEvent.expected_attendees && (
-                <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.muted, marginBottom: 3 }}>CAPACITY</div>
-                  <div style={{ fontSize: 12, color: C.sec, fontFamily: "'JetBrains Mono',monospace" }}>{activeEvent.expected_attendees}</div>
-                </div>
-              )}
-            </div>
-          </div>
-          {/* T-MINUS countdown */}
-          {daysToEvent !== null && !isPostEvent && (
-            <div style={{ textAlign: "center", flexShrink: 0, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 4, padding: "12px 20px", minWidth: 110 }}>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.amber, marginBottom: 6 }}>T-MINUS</div>
-              <div style={{ fontSize: 36, fontWeight: 700, color: daysToEvent <= 7 ? C.red : daysToEvent <= 14 ? C.amber : C.blue, fontFamily: "'JetBrains Mono',monospace", lineHeight: 1, letterSpacing: "-2px" }}>{daysToEvent}</div>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1.5px", color: C.muted, marginTop: 4 }}>DAYS</div>
-            </div>
-          )}
-          {isPostEvent && (
-            <div style={{ textAlign: "center", flexShrink: 0, background: `${C.green}08`, border: `1px solid ${C.green}30`, borderRadius: 4, padding: "12px 20px", minWidth: 110 }}>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "2px", color: C.green, marginBottom: 6 }}>MISSION</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: C.green, fontFamily: "Syne,sans-serif", letterSpacing: "1px" }}>COMPLETE</div>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "1.5px", color: C.muted, marginTop: 4 }}>T+{daysSinceEvent}D</div>
-            </div>
-          )}
-        </div>
-        {/* Description strip */}
-        {activeEvent.description && (
-          <div style={{ padding: "8px 18px 12px", borderTop: `1px solid ${C.border}` }}>
-            <p style={{ color: C.muted, fontSize: 11, lineHeight: 1.5, margin: 0 }}>{activeEvent.description}</p>
-          </div>
-        )}
       </div>
       {/* Description / notes row */}
       {(activeEvent.description || activeEvent.capacity || activeEvent.internal_notes) && (
@@ -2407,34 +2300,31 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
 
 
-      {/* ─── TELEMETRY PANELS ─── */}
+      {/* ─── METRICS CARDS GRID ─── */}
       {activeEvent && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "EMAILS SENT", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} SCHEDULED`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "NO SENDS YET"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "SENT TODAY" : `T+${d}D AGO`; })(), color: C.blue, action: () => setView("schedule"), pct: null, status: (metrics?.total_sent||0) > 0 ? "ACTIVE" : "STANDBY" },
-            { label: "CONFIRMED", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `OF ${contacts.length} INVITED` : "AWAITING RSVPs", color: C.green, action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0, status: (metrics?.total_confirmed||0) > 0 ? "GO" : "PENDING" },
-            { label: "PENDING", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "NUDGE REQUIRED" : "ALL RESPONDED", color: C.amber, action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_pending||0)/contacts.length)*100) : 0, status: (metrics?.total_pending||0) > 5 ? "ATTENTION" : "NOMINAL" },
-            { label: "ATTENDED", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% SHOW RATE` : "EVENT DAY", color: C.teal, action: () => setView("checkin"), pct: (metrics?.total_confirmed||0) > 0 ? Math.round(((metrics?.total_attended||0)/(metrics?.total_confirmed||1))*100) : 0, status: (metrics?.total_attended||0) > 0 ? "LIVE" : "T-MINUS" },
+            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule"), pct: null },
+            { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0 },
+            { label: "Pending", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "need a nudge?" : "all responded", color: C.amber, icon: "⏳", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_pending||0)/contacts.length)*100) : 0 },
+            { label: "Attended", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% show rate` : "event day", color: C.teal, icon: "🎟", action: () => setView("checkin"), pct: (metrics?.total_confirmed||0) > 0 ? Math.round(((metrics?.total_attended||0)/(metrics?.total_confirmed||1))*100) : 0 },
           ].map(m => (
             <div key={m.label} onClick={m.action} className="metric-card"
-              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", cursor: "pointer", position: "relative", overflow: "hidden" }}>
-              {/* Left accent bar — signal indicator */}
-              <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 2, background: m.color, opacity: 0.8 }} />
-              {/* Top scan line */}
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,${m.color}60,transparent)` }} />
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "2px" }}>{m.label}</div>
-                <div style={{ fontSize: 8, fontWeight: 700, color: m.color, letterSpacing: "1px", background: `${m.color}12`, padding: "1px 5px", borderRadius: 2 }}>{m.status}</div>
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 700, color: m.color, letterSpacing: "-2px", lineHeight: 1, marginBottom: 8, fontFamily: "'JetBrains Mono', monospace", fontVariantNumeric: "tabular-nums" }}>
-                {loading ? <span style={{ opacity:.2 }}>—</span> : m.val.toLocaleString()}
+              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px", cursor: "pointer", position: "relative", overflow: "hidden", boxShadow: `0 1px 3px rgba(0,0,0,.3)` }}>
+              {/* Top accent line */}
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${m.color},${m.color}00)` }} />
+              {/* Background icon watermark */}
+              <div style={{ position: "absolute", bottom: 8, right: 12, fontSize: 32, opacity: 0.07, userSelect: "none" }}>{m.icon}</div>
+              <div style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 8 }}>{m.label}</div>
+              <div style={{ fontSize: 34, fontWeight: 800, color: m.color, letterSpacing: "-1.5px", lineHeight: 1, marginBottom: 6 }}>
+                {loading ? <span style={{ opacity:.3 }}>—</span> : m.val.toLocaleString()}
               </div>
               {m.pct !== null && m.pct > 0 && (
-                <div style={{ height: 2, background: C.raised, marginBottom: 7, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.min(m.pct,100)}%`, background: m.color, transition: "width .8s ease" }} />
+                <div style={{ height: 3, background: C.raised, borderRadius: 99, marginBottom: 6, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(m.pct,100)}%`, background: m.color, borderRadius: 99, transition: "width .6s ease" }} />
                 </div>
               )}
-              {m.sub && <div style={{ fontSize: 9, color: C.muted, letterSpacing: "1px" }}>{m.sub}</div>}
+              {m.sub && <div style={{ fontSize: 10.5, color: C.muted, lineHeight: 1.3 }}>{m.sub}</div>}
             </div>
           ))}
         </div>
@@ -2457,27 +2347,22 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         </div>
       )}
       {activeEvent && !loading && contacts.length > 0 && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:4, overflow:"hidden", marginBottom:16 }}>
-          {/* CREW MANIFEST header */}
-          <div style={{ padding:"10px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", background:`${C.blue}05` }}>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"2.5px", color:C.blue }}>CREW MANIFEST</span>
-            <span style={{ fontSize:9, color:C.muted }}>·</span>
-            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1px", color:C.muted, fontFamily:"'JetBrains Mono',monospace" }}>{contacts.length} PERSONNEL</span>
-            <div style={{ display:"flex", gap:5, marginLeft:8 }}>
+        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:11, overflow:"hidden", marginBottom:16 }}>
+          {/* Header + filter tabs */}
+          <div style={{ padding:"11px 14px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+            <span style={{ fontSize:13, fontWeight:600, color:C.text, marginRight:4 }}>Guest List</span>
             {["all","pending","confirmed","attended","declined"].map(f => {
               const count = f === "all" ? contacts.length : contacts.filter(c => c.status === f).length;
-              const col = f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue;
               return (
                 <button key={f} onClick={() => setFilt(f)}
-                  style={{ fontSize:9, padding:"2px 8px", borderRadius:2, border:`1px solid ${filt===f?col:C.border}`, background:filt===f?`${col}15`:"transparent", color:filt===f?col:C.muted, cursor:"pointer", fontWeight:700, letterSpacing:"0.8px", textTransform:"uppercase" }}>
-                  {f === "all" ? "ALL" : f.toUpperCase()} {count}
+                  style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${filt===f?(f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue):C.border}`, background:filt===f?`${f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue}15`:"transparent", color:filt===f?(f==="pending"?C.amber:f==="confirmed"?C.green:f==="attended"?C.teal:f==="declined"?C.red:C.blue):C.muted, cursor:"pointer", fontWeight:filt===f?600:400 }}>
+                  {f === "all" ? "All" : f.charAt(0).toUpperCase()+f.slice(1)} ({count})
                 </button>
               );
             })}
-            </div>
-            <div style={{ marginLeft:"auto" }}>
-              <button onClick={() => setView("contacts")} style={{ fontSize:9, padding:"2px 8px", borderRadius:2, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", letterSpacing:"1px", fontWeight:600 }}>
-                FULL ROSTER →
+            <div style={{ marginLeft:"auto", display:"flex", gap:6 }}>
+              <button onClick={() => setView("contacts")} style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                Manage all →
               </button>
             </div>
           </div>
@@ -3347,10 +3232,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
       )}
       <ViewHint id="edm" icon="✉️" title="How to build your first email"
         steps={[
-          "Pick an email type from the left — Start with Invitation for a new event",
+          "Pick an email type from the left — start with Invitation for a new event",
           "Hit Generate — AI writes a polished, on-brand email in under 10 seconds",
-          "Review the preview, tweak subject line if needed, then Save to Campaign",
-          "Once all 5 email types are drafted, head to Scheduling to set your send dates",
+          "Review the preview, tweak the subject line if needed, then Save to Campaign",
+          "Once all 5 types are drafted, head to Scheduling to set your send dates",
         ]} />
       {activeEvent && (
         <div style={{ padding:"7px 12px", background:C.blue+"08", borderRadius:7, border:`1px solid ${C.blue}18`, marginBottom:10, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
@@ -4042,13 +3927,6 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
-      <ViewHint id="schedule" icon="📅" title="How email scheduling works"
-        steps={[
-          "Your AI-drafted emails appear as cards here — review subject lines before sending",
-          "Click 'Auto-schedule' to set optimal send dates based on your event date automatically",
-          "Hit 'Send Now' to send immediately, or set a date to schedule for later",
-          "The lifecycle timeline at top shows your full campaign arc — Save the Date through Thank You",
-        ]} color="#F59E0B" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
@@ -5018,13 +4896,6 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
-      <ViewHint id="contacts" icon="👥" title="Building your guest list"
-        steps={[
-          "Click 'Import contacts' to paste emails or upload a CSV — evara auto-detects name, email, company columns",
-          "Tag important guests as VIP ⭐ — they're highlighted in your dashboard and can be segmented for sends",
-          "Use 'Add to event' on any contact to link them to your active event as a guest",
-          "Lead scores (Hot/Warm/Cool) update automatically based on opens, clicks and RSVP responses",
-        ]} color="#10B981" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Contacts</h1>
@@ -7391,13 +7262,6 @@ function CheckInView({ supabase, profile, activeEvent, fire }) {
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
-      <ViewHint id="checkin" icon="📍" title="Running event day check-in"
-        steps={[
-          "Switch to Kiosk Mode and hand your tablet/laptop to the front desk — guests type their name to self-check-in",
-          "Use Host Mode to manually mark guests as attended by clicking 'Check in' next to their name",
-          "Walk-in guests can be added on the spot — click 'Add walk-in' and enter their details",
-          "Attendance numbers feed directly into your Analytics dashboard in real time",
-        ]} color="#EF4444" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Event Check-in</h1>
@@ -7984,13 +7848,6 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
-      <ViewHint id="analytics" icon="📊" title="Reading your campaign analytics"
-        steps={[
-          "Open rate and click rate update in real-time as SendGrid tracks each email open and click",
-          "The funnel shows your full journey: Sent → Opened → Clicked → Registered → Attended",
-          "Share a read-only dashboard with stakeholders using the 'Share' button — no login required",
-          "ROI tracker lets you enter costs and revenue to calculate your event return on investment",
-        ]} color="#7C3AED" />
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, letterSpacing: "-0.6px" }}>Analytics</h1>
