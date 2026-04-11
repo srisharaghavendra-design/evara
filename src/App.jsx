@@ -116,14 +116,6 @@ const NAV_GROUPS = [
     { id:"analytics", label:"Analytics",  icon:BarChart2 },
     { id:"overview",  label:"All Events", icon:Layout },
   ]},
-  { label: "Marketing", items: [
-    { id:"edm",       label:"eDM Builder",   icon:Mail, badge:"AI" },
-    { id:"schedule",  label:"Scheduling",    icon:Calendar },
-    { id:"campaign",  label:"Campaigns",     icon:Layout, badge:"AI" },
-    { id:"social",    label:"AI Social",     icon:Radio, badge:"AI" },
-    { id:"landing",   label:"Landing Pages", icon:Globe },
-    { id:"forms",     label:"Forms",         icon:FileText },
-  ]},
   { label: "Event Day", items: [
     { id:"checkin",   label:"Check-in",    icon:UserCheck2 },
     { id:"agenda",    label:"Agenda",      icon:ClipboardList },
@@ -136,6 +128,16 @@ const NAV_GROUPS = [
     { id:"feedback",  label:"Feedback",      icon:ClipboardList, badge:"AI" },
     { id:"roi",       label:"ROI",           icon:BarChart2 },
   ]},
+];
+
+// Top bar BUILD tools — ordered by event flow
+const BUILD_NAV = [
+  { id:"edm",      label:"Emails",        icon:"✉️", badge:"AI" },
+  { id:"schedule", label:"Schedule",      icon:"📅" },
+  { id:"landing",  label:"Landing Page",  icon:"🌐" },
+  { id:"forms",    label:"Forms",         icon:"📋" },
+  { id:"campaign", label:"Campaigns",     icon:"⚡", badge:"AI" },
+  { id:"social",   label:"Social",        icon:"📢", badge:"AI" },
 ];
 const NAV = NAV_GROUPS.flatMap(g => g.items);
 
@@ -1321,114 +1323,80 @@ function MainApp({ session }) {
 
       {/* MAIN */}
       <div className="evara-main" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-        <header style={{ height: 52, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 22px", gap: 12, flexShrink: 0, background: C.sidebar }}>
-          {/* Mobile hamburger */}
+        {/* ── TOP ROW: breadcrumb + search + actions ── */}
+        <header style={{ height: 48, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 18px", gap: 10, flexShrink: 0, background: C.sidebar }}>
           <button className="mobile-hamburger" onClick={() => setSidebarOpen(p=>!p)}
-            style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer", fontSize:16, padding:"5px 10px", lineHeight:1, alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            ☰
-          </button>
-          <div className="desktop-breadcrumb" style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 4 }}>
-            <span style={{ fontSize: 12, color: C.muted }}>evara</span>
-            {activeEvent && <><span style={{ fontSize: 12, color: C.muted }}>/</span>
-            <span style={{ fontSize: 12, color: C.muted, maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{activeEvent.name}</span></>}
-            <span style={{ fontSize: 12, color: C.muted }}>/</span>
+            style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer", fontSize:16, padding:"5px 10px", lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>☰</button>
+          <div className="desktop-breadcrumb" style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
+            <span style={{ fontSize:12, color:C.muted }}>evara</span>
+            {activeEvent && <><span style={{ fontSize:12, color:C.muted }}>/</span>
+            <span style={{ fontSize:12, color:C.muted, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{activeEvent.name}</span></>}
+            <span style={{ fontSize:12, color:C.muted }}>/</span>
             {(() => {
-              const label = NAV.find(n => n.id === view)?.label || (view === "settings" ? "Settings" : view === "calendar" ? "Calendar" : "Dashboard");
-              // Update page title
+              const allNav = [...NAV, ...BUILD_NAV];
+              const label = allNav.find(n => n.id === view)?.label || (view==="settings"?"Settings":view==="calendar"?"Calendar":"Dashboard");
               document.title = `${label} · ${activeEvent?.name || "evara"}`;
-              return <span style={{ fontSize: 12.5, fontWeight: 500, color: C.text }}>{label}</span>;
+              return <span style={{ fontSize:12.5, fontWeight:500, color:C.text }}>{label}</span>;
             })()}
           </div>
-          <div style={{ width: 1, height: 18, background: C.border }} />
-          <div style={{ position:"relative", flex:1, maxWidth:280 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, background: C.card, border: `1px solid ${globalSearch?C.blue:C.border}`, borderRadius: 7, padding: "6px 11px" }}>
-              <Search size={12} color={C.muted} strokeWidth={1.5} />
-              <input placeholder="Search events, contacts… (⌘K)" value={globalSearch}
+          <div style={{ width:1, height:16, background:C.border, flexShrink:0 }} />
+          {/* Search */}
+          <div style={{ position:"relative", flex:1, maxWidth:260 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7, background:C.card, border:`1px solid ${globalSearch?C.blue:C.border}`, borderRadius:7, padding:"5px 10px" }}>
+              <Search size={11} color={C.muted} strokeWidth={1.5} />
+              <input placeholder="Search… (⌘K)" value={globalSearch}
                 onChange={e => setGlobalSearch(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Escape") { setGlobalSearch(""); e.target.blur(); }
-                  if (e.key === "Enter" && globalSearch.length > 1) { setView("contacts"); }
-                }}
-                style={{ background: "none", border: "none", outline: "none", color: C.sec, fontSize: 12.5, width: "100%" }} />
-              {globalSearch && <button onClick={() => setGlobalSearch("")} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:14, lineHeight:1, padding:0 }}>×</button>}
+                onKeyDown={e => { if (e.key==="Escape"){setGlobalSearch("");e.target.blur();} if(e.key==="Enter"&&globalSearch.length>1){setView("contacts");} }}
+                style={{ background:"none", border:"none", outline:"none", color:C.sec, fontSize:12, width:"100%" }} />
+              {globalSearch && <button onClick={()=>setGlobalSearch("")} style={{ background:"transparent",border:"none",color:C.muted,cursor:"pointer",fontSize:13,lineHeight:1,padding:0 }}>×</button>}
             </div>
-            {/* Command palette dropdown */}
             {globalSearch.length > 0 && (() => {
               const q = globalSearch.toLowerCase();
-              const matchedEvents = events.filter(e => e.name?.toLowerCase().includes(q) || e.location?.toLowerCase().includes(q)).slice(0,4);
-              const modules = [
-                {id:"dashboard",label:"Dashboard",icon:"📊"},{id:"edm",label:"eDM Builder",icon:"✉️"},
-                {id:"schedule",label:"Scheduling",icon:"📅"},{id:"contacts",label:"Contacts",icon:"👥"},
-                {id:"analytics",label:"Analytics",icon:"📈"},{id:"campaign",label:"Campaign Builder",icon:"⚡"},
-                {id:"calendar",label:"Calendar",icon:"🗓"},{id:"checkin",label:"Check-in",icon:"✓"},
-                {id:"overview",label:"All Events",icon:"🗂"},{id:"settings",label:"Settings",icon:"⚙️"},
-              ].filter(m => m.label.toLowerCase().includes(q)).slice(0,4);
+              const matchedEvents = events.filter(e => e.name?.toLowerCase().includes(q)||e.location?.toLowerCase().includes(q)).slice(0,4);
+              const modules = [...NAV,...BUILD_NAV].filter(m=>m.label.toLowerCase().includes(q)).slice(0,4);
               if (!matchedEvents.length && !modules.length) return null;
               return (
                 <div style={{ position:"absolute", top:"100%", left:0, right:0, marginTop:4, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, boxShadow:"0 8px 32px rgba(0,0,0,.5)", zIndex:300, overflow:"hidden" }}>
-                  {matchedEvents.length > 0 && <>
-                    <div style={{ padding:"6px 12px 3px", fontSize:9.5, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px" }}>Events</div>
-                    {matchedEvents.map(ev => (
-                      <div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); setGlobalSearch(""); fire(`Switched to ${ev.name}`); }}
-                        style={{ padding:"8px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:9, fontSize:13 }}
-                        onMouseEnter={e=>e.currentTarget.style.background=C.raised}
-                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <span style={{ fontSize:15 }}>🎪</span>
-                        <div>
-                          <div style={{ color:C.text, fontWeight:500 }}>{ev.name}</div>
-                          {ev.event_date && <div style={{ fontSize:11, color:C.muted }}>{new Date(ev.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </>}
-                  {modules.length > 0 && <>
-                    <div style={{ padding:"6px 12px 3px", fontSize:9.5, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", borderTop:matchedEvents.length?`1px solid ${C.border}`:undefined }}>Go to</div>
-                    {modules.map(m => (
-                      <div key={m.id} onClick={() => { setView(m.id); setGlobalSearch(""); }}
-                        style={{ padding:"8px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:9, fontSize:13 }}
-                        onMouseEnter={e=>e.currentTarget.style.background=C.raised}
-                        onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                        <span style={{ fontSize:15 }}>{m.icon}</span>
-                        <span style={{ color:C.text }}>{m.label}</span>
-                      </div>
-                    ))}
-                  </>}
+                  {matchedEvents.length > 0 && <>{<div style={{ padding:"6px 12px 3px", fontSize:9.5, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px" }}>Events</div>}
+                    {matchedEvents.map(ev => (<div key={ev.id} onClick={() => { setActiveEvent(ev); setView("dashboard"); setGlobalSearch(""); fire(`Switched to ${ev.name}`); }}
+                      style={{ padding:"8px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:9, fontSize:13 }}
+                      onMouseEnter={e=>e.currentTarget.style.background=C.raised} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <span>🎪</span><div><div style={{ color:C.text, fontWeight:500 }}>{ev.name}</div>{ev.event_date&&<div style={{ fontSize:11,color:C.muted }}>{new Date(ev.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"short",year:"numeric"})}</div>}</div>
+                    </div>))}</>}
+                  {modules.length > 0 && <><div style={{ padding:"6px 12px 3px", fontSize:9.5, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", borderTop:matchedEvents.length?`1px solid ${C.border}`:undefined }}>Go to</div>
+                    {modules.map(m => (<div key={m.id} onClick={() => { setView(m.id); setGlobalSearch(""); }}
+                      style={{ padding:"8px 12px", cursor:"pointer", display:"flex", alignItems:"center", gap:9, fontSize:13 }}
+                      onMouseEnter={e=>e.currentTarget.style.background=C.raised} onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                      <span>{m.icon||"→"}</span><span style={{ color:C.text }}>{m.label}</span>
+                    </div>))}</>}
                   <div style={{ padding:"6px 12px", borderTop:`1px solid ${C.border}` }}>
-                    <div onClick={() => { setView("contacts"); }} style={{ fontSize:11, color:C.muted, cursor:"pointer" }}>
-                      Press Enter to search all contacts for "{globalSearch}"
-                    </div>
+                    <div onClick={() => { setView("contacts"); }} style={{ fontSize:11, color:C.muted, cursor:"pointer" }}>Press Enter to search contacts for "{globalSearch}"</div>
                   </div>
                 </div>
               );
             })()}
           </div>
-          {/* Quick event stats */}
+          {/* Quick stats */}
           {activeEvent && metrics && (
             <div style={{ display:"flex", gap:1, background:C.raised, borderRadius:7, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0 }}>
-              {[
-                { label:"Sent", val:metrics?.total_sent||0, color:C.blue },
-                { label:"Opened", val:metrics?.total_opened||0, color:C.teal },
-                { label:"Confirmed", val:metrics?.total_confirmed||0, color:C.green },
-              ].map((s,i) => (
-                <div key={s.label} style={{ padding:"4px 10px", borderRight: i<2?`1px solid ${C.border}`:"none", textAlign:"center" }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
-                  <div style={{ fontSize:9, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>{s.label}</div>
+              {[{label:"Sent",val:metrics?.total_sent||0,color:C.blue},{label:"Opened",val:metrics?.total_opened||0,color:C.teal},{label:"Confirmed",val:metrics?.total_confirmed||0,color:C.green}].map((s,i)=>(
+                <div key={s.label} style={{ padding:"3px 9px", borderRight:i<2?`1px solid ${C.border}`:"none", textAlign:"center" }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
+                  <div style={{ fontSize:8.5, color:C.muted, textTransform:"uppercase", letterSpacing:"0.5px" }}>{s.label}</div>
                 </div>
               ))}
             </div>
           )}
-          <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
-            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: C.blue, border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 500, boxShadow: `0 2px 8px ${C.blue}40` }}>
-              <Plus size={12} />New Event
+          <div style={{ display:"flex", alignItems:"center", gap:6, marginLeft:"auto" }}>
+            <button onClick={() => setShowNewEvent(true)} style={{ display:"flex", alignItems:"center", gap:5, background:C.blue, border:"none", borderRadius:7, padding:"6px 13px", color:"#fff", fontSize:12, fontWeight:600, boxShadow:`0 2px 8px ${C.blue}40`, whiteSpace:"nowrap" }}>
+              <Plus size={11} />New Event
             </button>
-            <button onClick={() => setShowHelp(p => !p)} title="Keyboard shortcuts & tips (?)"
-              style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "5px 10px", color: C.muted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-              ?
-            </button>
-            <div style={{ position: "relative", cursor: "pointer", padding: 4 }} onClick={() => setShowNotifs(p => !p)}>
+            <button onClick={() => setShowHelp(p=>!p)} title="Keyboard shortcuts (?)"
+              style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, padding:"5px 9px", color:C.muted, cursor:"pointer", fontSize:12, fontWeight:700 }}>?</button>
+            <div style={{ position:"relative", cursor:"pointer", padding:4 }} onClick={() => setShowNotifs(p=>!p)}>
             <Bell size={15} color={C.muted} />
-            {notifCount > 0 && <div style={{ position: "absolute", top: 2, right: 2, width: 7, height: 7, borderRadius: "50%", background: C.red, boxShadow: `0 0 0 1.5px ${C.sidebar}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontSize: 6, color: "#fff", fontWeight: 700 }}>{notifCount > 9 ? "9+" : notifCount}</span>
+            {notifCount > 0 && <div style={{ position:"absolute", top:2, right:2, width:7, height:7, borderRadius:"50%", background:C.red, boxShadow:`0 0 0 1.5px ${C.sidebar}`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              <span style={{ fontSize:6, color:"#fff", fontWeight:700 }}>{notifCount>9?"9+":notifCount}</span>
             </div>}
             {showNotifs && (
               <div style={{ position: "absolute", top: 28, right: 0, width: 300, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, boxShadow: "0 8px 32px rgba(0,0,0,.4)", zIndex: 200, overflow: "hidden" }}
@@ -1454,7 +1422,30 @@ function MainApp({ session }) {
           </div>
         </header>
 
-        <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "26px" }}>
+        {/* ── BUILD NAV STRIP — ordered by event flow ── */}
+        {activeEvent && (
+          <div style={{ borderBottom:`1px solid ${C.border}`, background:C.card, padding:"0 18px", display:"flex", alignItems:"center", gap:2, flexShrink:0, overflowX:"auto" }}>
+            {/* Flow label */}
+            <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1.5px", color:C.muted, textTransform:"uppercase", marginRight:8, whiteSpace:"nowrap", flexShrink:0 }}>BUILD</span>
+            {/* Arrow flow indicator */}
+            {BUILD_NAV.map((item, i) => {
+              const on = view === item.id;
+              return (
+                <div key={item.id} style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
+                  <button onClick={() => setView(item.id)}
+                    style={{ display:"flex", alignItems:"center", gap:5, padding:"9px 12px", background:"transparent", border:"none", borderBottom:`2px solid ${on?C.blue:"transparent"}`, color:on?C.blue:C.muted, cursor:"pointer", fontSize:12.5, fontWeight:on?600:400, whiteSpace:"nowrap", transition:"all .1s", position:"relative" }}>
+                    <span style={{ fontSize:13 }}>{item.icon}</span>
+                    {item.label}
+                    {item.badge && <span style={{ fontSize:8.5, fontWeight:700, background:on?C.blue:`${C.blue}20`, color:on?"#fff":C.blue, padding:"1px 4px", borderRadius:3, letterSpacing:"0.3px" }}>{item.badge}</span>}
+                  </button>
+                  {i < BUILD_NAV.length - 1 && <span style={{ fontSize:10, color:C.border, userSelect:"none", marginLeft:2 }}>→</span>}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
           {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
