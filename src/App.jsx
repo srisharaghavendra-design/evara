@@ -17,6 +17,12 @@ const supabase = createClient(
 );
 
 const SUPABASE_URL = "https://sqddpjsgtwblmkgxqyxe.supabase.co";
+
+// Helper: get sender identity from company profile
+const getSender = (profile) => ({
+  fromName: profile?.companies?.from_name || profile?.companies?.name || "evara",
+  fromEmail: "hello@evarahq.com",
+});
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxZGRwanNndHdibG1rZ3hxeXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODk5NTAsImV4cCI6MjA4OTY2NTk1MH0.x5BOfQRzn-F_tvUJv3mHRmfdOZiklyMkGzmPfRYoII4";
 
 // Block personal/free email domains
@@ -131,7 +137,7 @@ function buildEmailHtml({
   eventDate = "",
   eventTime = "",
   location = "",
-  orgName = "Orbis Events",
+  orgName = "evara",
   headerImageUrl = null,
   bodyImageUrl = null,
   footerImageUrl = null,
@@ -2305,7 +2311,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                 const { data:{ session } } = await supabase.auth.getSession();
                 const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
                   method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-                  body: JSON.stringify({ contacts: targets.map(ec => ec.contacts), triggerType:"reminder", eventName:activeEvent.name, eventDate:activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}) : "", location:activeEvent.location||"", orgName:profile?.companies?.name||"evara" })
+                  body: JSON.stringify({ contacts: targets.map(ec => ec.contacts), triggerType:"reminder", eventName:activeEvent.name, eventDate:activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}) : "", location:activeEvent.location||"", orgName:profile?.companies?.from_name||profile?.companies?.name||"evara" })
                 });
                 const d = await res.json();
                 setSelectedRows(new Set());
@@ -2526,7 +2532,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                   const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                    body: JSON.stringify({ contacts: [c], triggerType: "confirmation", eventName: activeEvent.name, eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", orgName: profile?.companies?.name || "evara" })
+                    body: JSON.stringify({ contacts: [c], triggerType: "confirmation", eventName: activeEvent.name, eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", orgName: profile?.companies?.from_name || profile?.companies?.name || "evara" })
                   });
                   const d = await res.json();
                   fire(d.sent > 0 ? `✅ Confirmation sent to ${c.email}` : `Send failed`, d.sent > 0 ? "ok" : "err");
@@ -2538,7 +2544,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                   const res = await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                    body: JSON.stringify({ contacts: [c], triggerType: "reminder", eventName: activeEvent.name, eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", orgName: profile?.companies?.name || "evara", eventUrl: formShareLink || "" })
+                    body: JSON.stringify({ contacts: [c], triggerType: "reminder", eventName: activeEvent.name, eventDate: activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "", location: activeEvent.location || "", orgName: profile?.companies?.from_name || profile?.companies?.name || "evara", eventUrl: formShareLink || "" })
                   });
                   const d = await res.json();
                   fire(d.sent > 0 ? `✅ Reminder sent to ${c.email}` : "Send failed", d.sent > 0 ? "ok" : "err");
@@ -2944,7 +2950,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           eventTime: activeEvent.event_time || p.eventTime || "",
           location: activeEvent.location || p.location || "", 
           description: activeEvent.description || p.description || "",
-          orgName: p.orgName || profile?.companies?.name || ""
+          orgName: p.orgName || profile?.companies?.from_name || profile?.companies?.name || ""
         }));
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormLink(`${window.location.origin}/form/${data.share_token}`); });
@@ -3023,7 +3029,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           eventDate: info.eventDate,
           eventTime: info.eventTime,
           location: info.location,
-          orgName: profile?.companies?.name || "Orbis Events",
+          orgName: profile?.companies?.from_name || profile?.companies?.name || "evara",
           headerImageUrl: images.header,
           bodyImageUrl: images.body,
           footerImageUrl: images.footer,
@@ -3052,7 +3058,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             eventDate: info.eventDate,
             eventTime: info.eventTime,
             location: info.location,
-            orgName: profile?.companies?.name || "Orbis Events",
+            orgName: profile?.companies?.from_name || profile?.companies?.name || "evara",
             headerImageUrl: images.header,
             bodyImageUrl: images.body,
             footerImageUrl: images.footer,
@@ -3479,7 +3485,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), fromEmail: "hello@evarahq.com", fromName: profile?.companies?.name || "evara" }),
+                body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
               });
               setSendingTest(false);
               const d = await res.json();
@@ -3494,7 +3500,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                  body: JSON.stringify({ contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), fromEmail: "hello@evarahq.com", fromName: profile?.companies?.name || "evara" }),
+                  body: JSON.stringify({ contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
                 });
                 setSendingTest(false);
                 const d = await res.json();
@@ -3548,7 +3554,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                body: JSON.stringify({ contacts, subject: preview.subject, htmlContent: preview.html, plainText: preview.plain_text, campaignId: preview.campaign_id })
+                body: JSON.stringify({ contacts, subject: preview.subject, htmlContent: preview.html, plainText: preview.plain_text, campaignId: preview.campaign_id, ...getSender(profile) })
               }).then(r => r.json()).catch(e => ({ error: e.message }));
               if (res.success) {
               fire(`✅ Sent to ${res.sent} contacts! Dashboard will update.`);
@@ -3581,7 +3587,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                  body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text })
+                  body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text, ...getSender(profile) })
                 }).then(r => r.json()).catch(e => ({ error: e.message }));
                 if (r.success) {
                   fire(`✅ Test sent to ${testEmail}! Check your inbox.`);
@@ -4309,7 +4315,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                       method: "POST",
                       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                      body: JSON.stringify({ contacts: unopened, subject: "Following up: " + cam.subject, htmlContent: cam.html_content, plainText: cam.plain_text })
+                      body: JSON.stringify({ contacts: unopened, subject: "Following up: " + cam.subject, htmlContent: cam.html_content, plainText: cam.plain_text, ...getSender(profile) })
                     }).then(r => r.json()).catch(e => ({ error: e.message }));
                     res.success ? fire(`✅ Resent to ${res.sent} unopened contacts`) : fire(res.error || "Failed", "err");
                   }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.amber}40`, background: C.amber + "10", color: C.amber, cursor: "pointer" }}>
@@ -4431,7 +4437,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   const { data: { session } } = await supabase.auth.getSession();
                   const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                     method: "POST", headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                    body: JSON.stringify({ contacts: [{ email: testTo, first_name: profile?.full_name?.split(" ")[0] || "Test" }], subject: `[TEST] ${sendModal.subject}`, htmlContent: sendModal.html_content, plainText: sendModal.plain_text })
+                    body: JSON.stringify({ contacts: [{ email: testTo, first_name: profile?.full_name?.split(" ")[0] || "Test" }], subject: `[TEST] ${sendModal.subject}`, htmlContent: sendModal.html_content, plainText: sendModal.plain_text, ...getSender(profile) })
                   });
                   const d = await res.json();
                   fire(d.success ? `✅ Test sent to ${testTo}! Check your inbox.` : "Send failed", d.success ? "ok" : "err");
