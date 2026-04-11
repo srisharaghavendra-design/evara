@@ -1200,56 +1200,48 @@ function MainApp({ session }) {
         .mobile-hamburger{display:none!important}
         input:focus,textarea:focus,select:focus{outline:none;border-color:${C.blue}!important;box-shadow:0 0 0 3px ${C.blue}18}
         @media(max-width:768px){
-          /* Sidebar — slide in from left */
-          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:260px!important;top:0;bottom:0}
-          .evara-sidebar.open{transform:translateX(0)}
+          /* Sidebar — fixed, hidden by default, slides in */
+          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%)!important;transition:transform .25s ease!important;width:260px!important;top:0;bottom:0;left:0}
+          .evara-sidebar.open{transform:translateX(0)!important}
           .evara-overlay{display:block!important}
-          .evara-main{margin-left:0!important;width:100vw}
+          /* Main content — full width */
+          .evara-main{margin-left:0!important;width:100%!important;max-width:100vw!important}
           .mobile-hamburger{display:flex!important}
           .desktop-breadcrumb{display:none!important}
           .main-padding{padding:12px!important}
-          /* Top header — compact on mobile */
-          .evara-topbar{padding:0 12px!important;gap:8px!important;height:48px!important}
-          /* BUILD nav strip — scroll horizontally */
-          .evara-buildnav{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-          .evara-buildnav::-webkit-scrollbar{display:none}
-          /* Metric cards — 2 per row on mobile */
+          /* Topbar — compact */
+          .evara-topbar{padding:0 10px!important;gap:6px!important}
+          /* BUILD nav — horizontal scroll, hide arrows */
+          .evara-buildnav{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 10px!important}
+          .evara-buildnav::-webkit-scrollbar{display:none!important}
+          .evara-buildnav span{display:none!important}
+          /* Metric cards — 2 per row */
           .metrics-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
-          /* Quick actions — wrap */
-          .quick-actions{flex-wrap:wrap!important;gap:6px!important}
-          .quick-actions button{font-size:11px!important;padding:5px 10px!important}
-          /* Guest list table — hide less important columns */
+          /* Quick actions — scroll horizontally */
+          .quick-actions{flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;gap:6px!important;padding-bottom:4px!important}
+          .quick-actions::-webkit-scrollbar{display:none!important}
+          .quick-actions button{font-size:11px!important;padding:5px 10px!important;white-space:nowrap!important;flex-shrink:0!important}
+          /* Hide non-critical table columns */
           .guest-col-company{display:none!important}
           .guest-col-score{display:none!important}
-          /* Email lifecycle strip — scroll */
-          .lifecycle-strip{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-          .lifecycle-strip::-webkit-scrollbar{display:none}
-          /* Modals — full width on mobile */
-          .evara-modal{width:calc(100vw - 24px)!important;max-width:100vw!important;max-height:92vh!important;overflow-y:auto!important;border-radius:14px!important}
-          /* Cards and panels — full width */
-          .health-panel{flex-direction:column!important;gap:12px!important}
-          /* Typography adjustments */
-          h1{font-size:20px!important}
-          /* Contact panel — full screen on mobile */
-          .contact-panel{width:100vw!important;left:0!important;right:0!important}
-          /* eDM builder — single column on mobile */
-          .edm-grid{grid-template-columns:1fr!important}
-          /* Settings — single column */
-          .settings-grid{grid-template-columns:1fr!important}
+          /* Modals — full width */
+          .evara-modal{width:calc(100vw - 20px)!important;max-width:100vw!important;max-height:88vh!important;overflow-y:auto!important;border-radius:12px!important;margin:0 auto!important}
+          /* Contact panel — full width */
+          .contact-panel{width:100vw!important}
+          /* eDM builder — single column */
+          .edm-grid{grid-template-columns:1fr!important;min-height:auto!important}
           /* ROI — single column */
           .roi-grid{grid-template-columns:1fr!important}
-          /* Schedule cards — adjust padding */
-          .schedule-card{padding:12px!important}
-          /* Campaign health — stack */
-          .health-card{flex-direction:row!important;align-items:center!important}
-          /* Journey strip — hide on very small */
-          .journey-strip button{padding:6px 4px!important;font-size:10px!important}
-          .journey-strip .journey-icon{font-size:13px!important;margin-bottom:2px!important}
+          /* Search bar — hidden on mobile topbar to save space */
+          .topbar-search{display:none!important}
+          /* Stats strip — hide on very small */
+          .topbar-stats{display:none!important}
+          /* New event button — icon only */
+          .new-event-btn span{display:none!important}
         }
         @media(max-width:480px){
           .metrics-grid{grid-template-columns:1fr 1fr!important}
-          .quick-actions .hide-xs{display:none!important}
-          .lifecycle-strip .lifecycle-label{font-size:8px!important}
+          h1{font-size:18px!important}
         }
       `}</style>
 
@@ -1257,7 +1249,7 @@ function MainApp({ session }) {
       {sidebarOpen && <div className="evara-overlay" onClick={() => setSidebarOpen(false)} style={{ display:"none", position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:199 }} />}
 
       {/* SIDEBAR */}
-      <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"width .2s ease", overflow:"hidden" }}>
+      <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: typeof window !== "undefined" && window.innerWidth <= 768 ? 260 : sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"all .25s ease", overflow:"hidden" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: sidebarOpen ? 14 : 8 }}>
             <div style={{ width: 26, height: 26, borderRadius: 6, background: C.blue, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px ${C.blue}20`, flexShrink:0 }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
@@ -1374,7 +1366,7 @@ function MainApp({ session }) {
         {/* ── TOP ROW: breadcrumb + search + actions ── */}
         <header className="evara-topbar" style={{ height: 48, borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", padding: "0 18px", gap: 10, flexShrink: 0, background: C.sidebar }}>
           <button className="mobile-hamburger" onClick={() => setSidebarOpen(p=>!p)}
-            style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer", fontSize:16, padding:"5px 10px", lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>☰</button>
+            style={{ background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, cursor:"pointer", fontSize:18, padding:"6px 11px", lineHeight:1, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, minWidth:40 }}>☰</button>
           <div className="desktop-breadcrumb" style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
             <span style={{ fontSize:12, color:C.muted }}>evara</span>
             {activeEvent && <><span style={{ fontSize:12, color:C.muted }}>/</span>
@@ -1389,7 +1381,7 @@ function MainApp({ session }) {
           </div>
           <div style={{ width:1, height:16, background:C.border, flexShrink:0 }} />
           {/* Search */}
-          <div style={{ position:"relative", flex:1, maxWidth:260 }}>
+          <div className="topbar-search" style={{ position:"relative", flex:1, maxWidth:260 }}>
             <div style={{ display:"flex", alignItems:"center", gap:7, background:C.card, border:`1px solid ${globalSearch?C.blue:C.border}`, borderRadius:7, padding:"5px 10px" }}>
               <Search size={11} color={C.muted} strokeWidth={1.5} />
               <input placeholder="Search… (⌘K)" value={globalSearch}
@@ -1426,7 +1418,7 @@ function MainApp({ session }) {
           </div>
           {/* Quick stats */}
           {activeEvent && metrics && (
-            <div style={{ display:"flex", gap:1, background:C.raised, borderRadius:7, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0 }}>
+            <div className="topbar-stats" style={{ display:"flex", gap:1, background:C.raised, borderRadius:7, border:`1px solid ${C.border}`, overflow:"hidden", flexShrink:0 }}>
               {[{label:"Sent",val:metrics?.total_sent||0,color:C.blue},{label:"Opened",val:metrics?.total_opened||0,color:C.teal},{label:"Confirmed",val:metrics?.total_confirmed||0,color:C.green}].map((s,i)=>(
                 <div key={s.label} style={{ padding:"3px 9px", borderRight:i<2?`1px solid ${C.border}`:"none", textAlign:"center" }}>
                   <div style={{ fontSize:12, fontWeight:700, color:s.color, lineHeight:1.2 }}>{s.val}</div>
