@@ -20,6 +20,18 @@ serve(async (req) => {
     const ANTHROPIC_KEY = Deno.env.get("ANTHROPIC_API_KEY");
     if (!ANTHROPIC_KEY) throw new Error("ANTHROPIC_API_KEY not set");
 
+    // Fetch brand voice to improve email quality
+    let brandVoice: any = null;
+    if (companyId) {
+      const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: bv } = await supabase.from("brand_voice").select("*").eq("company_id", companyId).maybeSingle();
+      brandVoice = bv;
+    }
+
     const EMAIL_TYPE_PROMPTS: Record<string, string> = {
       save_the_date: "Save the Date announcement — exciting, brief, builds anticipation. Include the date prominently. CTA: 'Save the Date'",
       invitation: "Formal invitation — compelling, creates FOMO, emphasises exclusivity and value. CTA: 'Register Now' or 'Accept Invitation'",
@@ -44,9 +56,16 @@ Date: ${eventDate || "TBC"}
 Time: ${eventTime || "TBC"}
 Location: ${location || "TBC"}
 Organisation: ${orgName || ""}
-Tone: ${tone}
+Tone: ${brandVoice?.tone_adjectives?.length ? brandVoice.tone_adjectives.join(", ") : tone}
 ${description ? `Description: ${description}` : ""}
 ${extra ? `Additional context: ${extra}` : ""}
+${brandVoice?.audience ? `Target audience: ${brandVoice.audience}` : ""}
+${brandVoice?.industry ? `Industry: ${brandVoice.industry}` : ""}
+${brandVoice?.avoid_phrases?.length ? `Do NOT use these phrases: ${brandVoice.avoid_phrases.join(", ")}` : ""}
+${brandVoice?.signature_phrases?.length ? `Consider using these signature phrases naturally: ${brandVoice.signature_phrases.join(", ")}` : ""}
+${brandVoice?.preferred_cta ? `Preferred CTA style: ${brandVoice.preferred_cta}` : ""}
+${brandVoice?.email_sign_off ? `Sign off: ${brandVoice.email_sign_off}` : ""}
+${brandVoice?.extra_context ? `Brand context: ${brandVoice.extra_context}` : ""}
 
 Return ONLY valid JSON (no markdown):
 {
@@ -194,6 +213,7 @@ Return ONLY valid JSON (no markdown):
       plain_text: content.plain_text,
       content,
       campaign_id: campaignId,
+      brand_voice_applied: !!brandVoice,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
   } catch (err) {
