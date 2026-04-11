@@ -1718,7 +1718,7 @@ function MainApp({ session }) {
           <div style={{ background:C.card, borderRadius:14, border:`1px solid ${C.border}`, padding:28, width:440, animation:"fadeUp .2s ease" }}
             onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize:17, fontWeight:700, color:C.text, marginBottom:4 }}>Duplicate Event</h2>
-            <p style={{ fontSize:12, color:C.muted, marginBottom:20 }}>Creates a new draft with all email templates copied. Contacts are not duplicated.</p>
+            <p style={{ fontSize:12, color:C.muted, marginBottom:20 }}>Creates a new draft with all email templates copied. Date references and event name are automatically updated.</p>
             <div style={{ marginBottom:14 }}>
               <label style={{ display:"block", fontSize:11.5, color:C.muted, marginBottom:5 }}>New event name *</label>
               <input value={dupName} onChange={e => setDupName(e.target.value)} autoFocus
@@ -1760,16 +1760,33 @@ function MainApp({ session }) {
                 setEvents(p => [...p, newEv]);
                 setActiveEvent(newEv);
                 setShowDupModal(false);
-                // Copy campaigns
+                // Copy campaigns — update date references if new date provided
                 const { data: existingCams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).limit(20);
                 let camCount = 0;
                 if (existingCams?.length) {
-                  const dupCams = existingCams.filter(c => c.html_content).map(c => ({
-                    event_id: newEv.id, company_id: profile.company_id,
-                    name: c.name, email_type: c.email_type, subject: c.subject,
-                    html_content: c.html_content, plain_text: c.plain_text,
-                    template_style: c.template_style, status:"draft", segment: c.segment || "all",
-                  }));
+                  const oldDate = activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}) : null;
+                  const newDateFmt = dupDate ? new Date(dupDate).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}) : null;
+                  const dupCams = existingCams.filter(c => c.html_content).map(c => {
+                    let html = c.html_content || "";
+                    let plain = c.plain_text || "";
+                    let subj = c.subject || "";
+                    // Update old event name references
+                    html = html.replace(new RegExp(activeEvent.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'), dupName.trim());
+                    plain = plain.replace(new RegExp(activeEvent.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'), dupName.trim());
+                    subj = subj.replace(new RegExp(activeEvent.name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi'), dupName.trim());
+                    // Update date references if both old and new dates exist
+                    if (oldDate && newDateFmt) {
+                      html = html.replace(new RegExp(oldDate, 'gi'), newDateFmt);
+                      plain = plain.replace(new RegExp(oldDate, 'gi'), newDateFmt);
+                    }
+                    return {
+                      event_id: newEv.id, company_id: profile.company_id,
+                      name: c.name?.replace(activeEvent.name, dupName.trim()) || c.name,
+                      email_type: c.email_type, subject: subj,
+                      html_content: html, plain_text: plain,
+                      template_style: c.template_style, status:"draft", segment: c.segment || "all",
+                    };
+                  });
                   if (dupCams.length) { await supabase.from("email_campaigns").insert(dupCams); camCount = dupCams.length; }
                 }
                 // Copy landing page
@@ -2272,7 +2289,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               {!campaigns.some(c=>c.email_type==="thank_you"&&c.status==="sent") ? " Send a thank you email →" : " Thank you email sent ✓"}
             </div>
           </div>
-          <div style={{ display:"flex", gap:8 }}>
+          <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
             {!campaigns.some(c=>c.email_type==="thank_you"&&c.status==="sent") && (
               <button onClick={() => setView("schedule")} style={{ fontSize:12, padding:"6px 13px", background:C.green, border:"none", borderRadius:7, color:"#fff", cursor:"pointer", fontWeight:600 }}>
                 Send Thank You →
@@ -2280,6 +2297,9 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
             )}
             <button onClick={() => setView("feedback")} style={{ fontSize:12, padding:"6px 13px", background:"transparent", border:`1px solid ${C.green}50`, borderRadius:7, color:C.green, cursor:"pointer" }}>
               Feedback Form
+            </button>
+            <button onClick={() => { setShowDupModal(true); setDupName(`${activeEvent.name} — Next`); }} style={{ fontSize:12, padding:"6px 13px", background:"transparent", border:`1px solid ${C.blue}50`, borderRadius:7, color:C.blue, cursor:"pointer", fontWeight:600 }}>
+              ⧉ Run it again →
             </button>
             <button onClick={async () => {
               fire("🤖 Generating AI report…");
@@ -2782,7 +2802,14 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                         {c.company_name || "—"}
                       </td>
                       <td style={{ padding:"7px 10px" }}>
-                        <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:999, fontWeight:600, textTransform:"capitalize", background:statusColor+"18", color:statusColor }}>
+                        <span onClick={async (e) => {
+                          e.stopPropagation();
+                          const cycle = { pending:"confirmed", confirmed:"attended", attended:"declined", declined:"pending" };
+                          const next = cycle[ec.status || "pending"] || "pending";
+                          await supabase.from("event_contacts").update({ status:next, ...(next==="confirmed"?{confirmed_at:new Date().toISOString()}:{}) }).eq("id", ec.id);
+                          setContacts(p => p.map(x => x.id===ec.id ? {...x, status:next} : x));
+                          fire(`${c.first_name||c.email} → ${next}`);
+                        }} title="Click to change status" style={{ fontSize:10.5, padding:"2px 8px", borderRadius:999, fontWeight:600, textTransform:"capitalize", background:statusColor+"18", color:statusColor, cursor:"pointer", userSelect:"none" }}>
                           {ec.status || "pending"}
                         </span>
                       </td>
@@ -2794,9 +2821,15 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                         )}
                       </td>
                       <td style={{ padding:"7px 10px" }}>
-                        <button onClick={() => setSelectedContact(ec)} style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                          View →
-                        </button>
+                        <div style={{ display:"flex", gap:5, alignItems:"center" }}>
+                          <button onClick={() => setSelectedContact(ec)} style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                            View →
+                          </button>
+                          {c.phone && (
+                            <a href={`tel:${c.phone}`} style={{ fontSize:10.5, padding:"2px 6px", borderRadius:4, border:`1px solid ${C.green}30`, background:`${C.green}08`, color:C.green, textDecoration:"none" }}
+                              title={`Call ${c.phone}`}>📞</a>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
