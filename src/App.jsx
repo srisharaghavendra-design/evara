@@ -2356,31 +2356,34 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
 
 
-      {/* ─── METRICS CARDS GRID ─── */}
+      {/* ─── TELEMETRY PANELS ─── */}
       {activeEvent && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8, marginBottom: 16 }}>
           {[
-            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule"), pct: null },
-            { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0 },
-            { label: "Pending", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "need a nudge?" : "all responded", color: C.amber, icon: "⏳", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_pending||0)/contacts.length)*100) : 0 },
-            { label: "Attended", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% show rate` : "event day", color: C.teal, icon: "🎟", action: () => setView("checkin"), pct: (metrics?.total_confirmed||0) > 0 ? Math.round(((metrics?.total_attended||0)/(metrics?.total_confirmed||1))*100) : 0 },
+            { label: "EMAILS SENT", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} SCHEDULED`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "NO SENDS YET"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "SENT TODAY" : `T+${d}D AGO`; })(), color: C.blue, action: () => setView("schedule"), pct: null, status: (metrics?.total_sent||0) > 0 ? "ACTIVE" : "STANDBY" },
+            { label: "CONFIRMED", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `OF ${contacts.length} INVITED` : "AWAITING RSVPs", color: C.green, action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0, status: (metrics?.total_confirmed||0) > 0 ? "GO" : "PENDING" },
+            { label: "PENDING", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "NUDGE REQUIRED" : "ALL RESPONDED", color: C.amber, action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_pending||0)/contacts.length)*100) : 0, status: (metrics?.total_pending||0) > 5 ? "ATTENTION" : "NOMINAL" },
+            { label: "ATTENDED", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% SHOW RATE` : "EVENT DAY", color: C.teal, action: () => setView("checkin"), pct: (metrics?.total_confirmed||0) > 0 ? Math.round(((metrics?.total_attended||0)/(metrics?.total_confirmed||1))*100) : 0, status: (metrics?.total_attended||0) > 0 ? "LIVE" : "T-MINUS" },
           ].map(m => (
             <div key={m.label} onClick={m.action} className="metric-card"
-              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px", cursor: "pointer", position: "relative", overflow: "hidden", boxShadow: `0 1px 3px rgba(0,0,0,.3)` }}>
-              {/* Top accent line */}
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${m.color},${m.color}00)` }} />
-              {/* Background icon watermark */}
-              <div style={{ position: "absolute", bottom: 8, right: 12, fontSize: 32, opacity: 0.07, userSelect: "none" }}>{m.icon}</div>
-              <div style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "1.2px", marginBottom: 8 }}>{m.label}</div>
-              <div style={{ fontSize: 34, fontWeight: 800, color: m.color, letterSpacing: "-1.5px", lineHeight: 1, marginBottom: 6 }}>
-                {loading ? <span style={{ opacity:.3 }}>—</span> : m.val.toLocaleString()}
+              style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 4, padding: "14px 16px", cursor: "pointer", position: "relative", overflow: "hidden" }}>
+              {/* Left accent bar — signal indicator */}
+              <div style={{ position: "absolute", top: 0, left: 0, bottom: 0, width: 2, background: m.color, opacity: 0.8 }} />
+              {/* Top scan line */}
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 1, background: `linear-gradient(90deg,${m.color}60,transparent)` }} />
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: C.muted, letterSpacing: "2px" }}>{m.label}</div>
+                <div style={{ fontSize: 8, fontWeight: 700, color: m.color, letterSpacing: "1px", background: `${m.color}12`, padding: "1px 5px", borderRadius: 2 }}>{m.status}</div>
+              </div>
+              <div style={{ fontSize: 36, fontWeight: 700, color: m.color, letterSpacing: "-2px", lineHeight: 1, marginBottom: 8, fontFamily: "'JetBrains Mono', monospace", fontVariantNumeric: "tabular-nums" }}>
+                {loading ? <span style={{ opacity:.2 }}>—</span> : m.val.toLocaleString()}
               </div>
               {m.pct !== null && m.pct > 0 && (
-                <div style={{ height: 3, background: C.raised, borderRadius: 99, marginBottom: 6, overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${Math.min(m.pct,100)}%`, background: m.color, borderRadius: 99, transition: "width .6s ease" }} />
+                <div style={{ height: 2, background: C.raised, marginBottom: 7, overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(m.pct,100)}%`, background: m.color, transition: "width .8s ease" }} />
                 </div>
               )}
-              {m.sub && <div style={{ fontSize: 10.5, color: C.muted, lineHeight: 1.3 }}>{m.sub}</div>}
+              {m.sub && <div style={{ fontSize: 9, color: C.muted, letterSpacing: "1px" }}>{m.sub}</div>}
             </div>
           ))}
         </div>
