@@ -864,6 +864,7 @@ function MainApp({ session }) {
   const [metrics, setMetrics] = useState(null); // header quick-stats
   const [campaigns, setCampaigns] = useState([]); // shared across views
   const [campaignsVersion, setCampaignsVersion] = useState(0); // bump to force reload
+  const [contactsVersion, setContactsVersion] = useState(0); // bump to force guest list reload
 
   // Smart notifications — check events on load
   useEffect(() => {
@@ -1336,13 +1337,13 @@ function MainApp({ session }) {
         </header>
 
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "26px" }}>
-          {view === "dashboard" && <DashView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
+          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
-          {view === "contacts" && profile && <ContactView key="contacts" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} />}
+          {view === "contacts" && profile && <ContactView key="contacts" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} onContactsChanged={() => setContactsVersion(v => v + 1)} />}
           {view === "schedule" && profile && <ScheduleView key={`schedule-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
-          {view === "checkin"   && profile && <CheckInView key="checkin"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
+          {view === "checkin"   && profile && <CheckInView key={`checkin-${contactsVersion}`}  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "social"    && profile && <SocialView key="social"   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} campaigns={campaigns} />}
           {view === "campaign"  && profile && <CampaignView key="campaign"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
@@ -4456,7 +4457,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 }
 
 // ─── CONTACT VIEW ─────────────────────────────────────────────
-function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", setGlobalSearch }) {
+function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", setGlobalSearch, onContactsChanged }) {
   const [contacts, setContacts] = useState([]);
   const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState(globalSearch || "");
@@ -4825,6 +4826,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                 if (!error) added++;
               }
               fire(`✅ ${added} contact${added !== 1 ? "s" : ""} added to ${activeEvent.name}`);
+              if (added > 0) onContactsChanged?.();
             }} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue+"10", color: C.blue, cursor: "pointer" }}>
               + Add {filtered.length > 0 && filtered.length < contacts.length ? filtered.length : "all"} to {activeEvent.name.slice(0, 20)}{activeEvent.name.length > 20 ? "…" : ""}
             </button>
@@ -4975,6 +4977,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               }
               setSelContacts(new Set());
               fire(`✅ ${n} added to ${activeEvent.name}`);
+              if (n > 0) onContactsChanged?.();
             }} style={{ fontSize:12, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.green}40`, background:"transparent", color:C.green, cursor:"pointer" }}>+ Add to event</button>}
             <button onClick={() => {
               const toExport = filtered.filter(c => selContacts.has(c.id));
@@ -5061,7 +5064,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                         {activeEvent && (
                           <button onClick={async () => {
                             const { error } = await supabase.from("event_contacts").upsert({ event_id: activeEvent.id, contact_id: c.id, company_id: profile.company_id, status: "pending" }, { onConflict: "event_id,contact_id", ignoreDuplicates: true });
-                            if (!error) fire(`✅ ${c.first_name || c.email} added to ${activeEvent.name}`);
+                            if (!error) { fire(`✅ ${c.first_name || c.email} added to ${activeEvent.name}`); onContactsChanged?.(); }
                             else fire("Already in this event", "err");
                           }} title={`Add to ${activeEvent?.name}`}
                           style={{ fontSize: 11, padding: "3px 8px", background: C.blue + "15", border: `1px solid ${C.blue}30`, borderRadius: 4, color: C.blue, cursor: "pointer", whiteSpace: "nowrap" }}>
