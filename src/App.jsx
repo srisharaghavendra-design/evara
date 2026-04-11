@@ -1963,90 +1963,85 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           </div>
         </div>
       )}
-      <div style={{ marginBottom: 22, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ fontSize: 10.5, fontWeight: 600, color: C.blue, textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: 4 }}>Active Event</div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text, margin: 0 }}>{{"Conference":"🎤 ","Workshop":"🛠 ","Webinar":"🖥 ","Product Launch":"🚀 ","Awards":"🏆 ","Team Event":"🤝 "}[activeEvent.event_type]||""}{activeEvent.name}</h1>
-            <span onClick={async () => {
-              const statuses = ["draft", "published", "completed"];
-              const curr = activeEvent.status || "draft";
-              const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
-              await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
-              fire(`Event status → ${next}`);
-            }} style={{ fontSize: 11, fontWeight: 600, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "15", padding: "2px 8px", borderRadius: 4, textTransform: "capitalize", flexShrink: 0, cursor: "pointer" }} title="Click to change status">
-              <span style={{ fontSize: 9.5, marginRight: 2 }}>
-                {activeEvent.status === "published" ? "🟢" : activeEvent.status === "completed" ? "✅" : "⚪"}
+      {/* ─── EVENT HERO HEADER ─── */}
+      <div style={{ marginBottom: 20, background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: "18px 20px", position: "relative", overflow: "hidden" }}>
+        {/* Subtle gradient accent */}
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg,${C.blue},${C.teal},${C.blue}00)` }} />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: C.blue, textTransform: "uppercase", letterSpacing: "1.8px", marginBottom: 6 }}>Active Event</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
+              <h1 style={{ fontSize: 22, fontWeight: 700, letterSpacing: "-0.6px", color: C.text, margin: 0, lineHeight: 1.2 }}>{{"Conference":"🎤 ","Workshop":"🛠 ","Webinar":"🖥 ","Product Launch":"🚀 ","Awards":"🏆 ","Team Event":"🤝 "}[activeEvent.event_type]||""}{activeEvent.name}</h1>
+              <span onClick={async () => {
+                const statuses = ["draft", "published", "completed"];
+                const curr = activeEvent.status || "draft";
+                const next = statuses[(statuses.indexOf(curr) + 1) % statuses.length];
+                await supabase.from("events").update({ status: next }).eq("id", activeEvent.id);
+                fire(`Event status → ${next}`);
+              }} style={{ fontSize: 10, fontWeight: 700, color: activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue, background: (activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue) + "18", padding: "3px 9px", borderRadius: 99, textTransform: "uppercase", letterSpacing: "0.6px", flexShrink: 0, cursor: "pointer", border: `1px solid ${(activeEvent.status === "draft" ? C.muted : activeEvent.status === "completed" ? C.green : C.blue)}30` }} title="Click to change status">
+                {activeEvent.status === "published" ? "🟢 " : activeEvent.status === "completed" ? "✅ " : "⚪ "}
+                {(activeEvent.status || "draft").charAt(0).toUpperCase() + (activeEvent.status || "draft").slice(1)}
               </span>
-              {(activeEvent.status || "draft").charAt(0).toUpperCase() + (activeEvent.status || "draft").slice(1)}
-            </span>
-            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              {activeEvent.event_type && <span style={{ background: `${C.blue}14`, color: C.blue, fontSize: 10.5, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{activeEvent.event_type}</span>}
+              {activeEvent.event_format && activeEvent.event_format !== "In-person" && <span style={{ background: `${C.teal}14`, color: C.teal, fontSize: 10.5, padding: "2px 8px", borderRadius: 99, fontWeight: 600 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span>}
+              {activeEvent.event_date && <span style={{ fontSize: 12, color: C.sec }}>📅 {new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}{activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}</span>}
+              {activeEvent.location && <span style={{ fontSize: 12, color: C.muted }}>📍 {activeEvent.location}</span>}
+              {activeEvent.expected_attendees && <span style={{ fontSize: 12, color: C.muted }}>👥 {activeEvent.expected_attendees} expected</span>}
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+            <button onClick={() => setShowEditEvent(true)} style={{ fontSize: 11, padding: "6px 12px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, cursor: "pointer", fontWeight: 500 }}>
               Edit
             </button>
-            <button onClick={() => {
-              const txt = [activeEvent.name, activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "", activeEvent.event_time || "", activeEvent.location ? "📍 " + activeEvent.location : ""].filter(Boolean).join("\n");
-              navigator.clipboard?.writeText(txt);
-              fire("📋 Event details copied");
-            }} style={{ fontSize: 11, padding: "2px 8px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 4, color: C.muted, cursor: "pointer" }}>
-              📋 Copy
+            <button onClick={async () => {
+              fire("🤖 Generating AI report…");
+              const { data: { session } } = await supabase.auth.getSession();
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
+                method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                body: JSON.stringify({ eventId: activeEvent.id, companyId: profile?.company_id })
+              });
+              const d = await res.json();
+              if (d.success && d.html) { const w = window.open("","_blank"); w.document.write(d.html); w.document.close(); fire("✅ Report ready!"); }
+              else fire("Report failed","err");
+            }} style={{ fontSize: 11, padding: "6px 12px", background: `${C.blue}14`, border: `1px solid ${C.blue}30`, borderRadius: 7, color: C.blue, cursor: "pointer", fontWeight: 600 }}>
+              ✨ AI Report
             </button>
           </div>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
-            {activeEvent.event_type ? <span style={{ background: C.blue+"15", color: C.blue, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_type}</span> : ""}
-            {activeEvent.event_format && activeEvent.event_format !== "In-person" ? <span style={{ background: C.teal+"15", color: C.teal, fontSize: 10.5, padding: "1px 7px", borderRadius: 4, fontWeight: 600, marginRight: 6 }}>{activeEvent.event_format === "Online / Webinar" ? "🖥 Online" : "🔀 Hybrid"}</span> : ""}{activeEvent.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "Date TBC"}{activeEvent.rsvp_deadline && (() => {
-              const daysLeft = Math.ceil((new Date(activeEvent.rsvp_deadline) - new Date()) / (1000*60*60*24));
-              if (daysLeft < 0) return "";
-              return <> · <span style={{ color: daysLeft <= 3 ? C.red : C.amber }}>📋 RSVP by {new Date(activeEvent.rsvp_deadline).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}{daysLeft === 0 ? " (TODAY!)" : daysLeft <= 3 ? ` (${daysLeft}d!)` : daysLeft <= 7 ? ` (${daysLeft}d left)` : ""}</span></>;
-            })()}
-            {activeEvent.event_time ? ` · ${activeEvent.event_time}` : ""}
-            {activeEvent.location ? ` · 📍 ${activeEvent.location}` : ""}
-            {(() => {
-              const sent = campaigns.filter(c => c.status === "sent" && c.sent_at);
-              if (!sent.length) return null;
-              const last = sent.sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0];
-              const daysAgo = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24));
-              return <span style={{ marginLeft:6, fontSize:11, color:C.muted }}>· 📧 {daysAgo===0?"emailed today":`last email ${daysAgo}d ago`}</span>;
-            })()}
-            {activeEvent.expected_attendees ? ` · 👥 ${activeEvent.expected_attendees} expected` : ""}
-          </p>
-          {activeEvent.description && (
-            <p style={{ color: C.muted, fontSize: 12, marginTop: 3, fontStyle: "italic", opacity: 0.75 }}>{activeEvent.description}</p>
-          )}
-          {activeEvent.capacity && (
-            <p style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-              {(() => {
-                const pct = Math.round((contacts.length / activeEvent.capacity) * 100);
-                const isOver = contacts.length >= activeEvent.capacity;
-                const isNear = pct >= 80 && !isOver;
-                return (
-                  <span style={{ color: isOver ? C.red : isNear ? C.amber : C.muted, fontWeight: isOver || isNear ? 600 : 400 }}>
-                    {isOver ? "🔴 SOLD OUT" : isNear ? "🟡 Nearly full" : "👥 Capacity"}: {contacts.length}/{activeEvent.capacity} ({pct}% full)
-                    {isOver && <span onClick={() => fire("Set up a Waitlist form in the Forms section")} style={{ color: C.blue, marginLeft: 8, cursor: "pointer", textDecoration: "underline", fontSize: 11 }}>Set up waitlist →</span>}
-                  </span>
-                );
-              })()}
-            </p>
-          )}
-          {activeEvent.internal_notes && (
-            <div style={{ marginTop:6, padding:"7px 10px", background:`${C.amber}08`, border:`1px solid ${C.amber}20`, borderRadius:6, display:"flex", alignItems:"flex-start", gap:7 }}>
-              <span style={{ fontSize:12, flexShrink:0 }}>📌</span>
-              <span style={{ fontSize:11.5, color:C.amber, lineHeight:1.5 }}>{activeEvent.internal_notes}</span>
-            </div>
-          )}
         </div>
-        <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
-          {formShareLink && (
-            <div style={{ display: "flex", gap: 5 }}>
-              <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }}
-                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
-                📝 Reg Link
-              </button>
-              <button onClick={() => window.open(formShareLink, "_blank")}
-                style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.blue}40`, borderRadius: 7, padding: "7px 13px", color: C.blue, cursor: "pointer" }}>
-                👁 View Form
-              </button>
-            </div>
-          )}
+      </div>
+      {/* Description / notes row */}
+      {(activeEvent.description || activeEvent.capacity || activeEvent.internal_notes) && (
+        <div style={{ marginBottom: 14, padding: "12px 16px", background: C.card, borderRadius: 10, border: `1px solid ${C.border}` }}>
+          {activeEvent.description && <p style={{ color: C.muted, fontSize: 12, fontStyle: "italic", marginBottom: activeEvent.capacity || activeEvent.internal_notes ? 6 : 0 }}>{activeEvent.description}</p>}
+          {activeEvent.capacity && (() => {
+            const pct = Math.round((contacts.length / activeEvent.capacity) * 100);
+            const isOver = contacts.length >= activeEvent.capacity;
+            const isNear = pct >= 80 && !isOver;
+            return <p style={{ color: isOver ? C.red : isNear ? C.amber : C.muted, fontSize: 12, fontWeight: isOver || isNear ? 600 : 400 }}>
+              {isOver ? "🔴 SOLD OUT" : isNear ? "🟡 Nearly full" : "👥 Capacity"}: {contacts.length}/{activeEvent.capacity} ({pct}% full)
+            </p>;
+          })()}
+          {activeEvent.internal_notes && <div style={{ marginTop:6, padding:"6px 10px", background:`${C.amber}08`, border:`1px solid ${C.amber}20`, borderRadius:6, display:"flex", gap:7 }}>
+            <span style={{ fontSize:12 }}>📌</span>
+            <span style={{ fontSize:11.5, color:C.amber, lineHeight:1.5 }}>{activeEvent.internal_notes}</span>
+          </div>}
+        </div>
+      )}
+      {/* Quick action row — form link + shared dashboard */}
+      {(formShareLink || activeEvent.share_token) && (
+        <div style={{ marginBottom:14, display:"flex", gap:8, flexWrap:"wrap" }}>
+          {formShareLink && <>
+            <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
+              📝 Copy Reg Link
+            </button>
+            <button onClick={() => window.open(formShareLink, "_blank")}
+              style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: `${C.blue}10`, border: `1px solid ${C.blue}30`, borderRadius: 7, padding: "7px 13px", color: C.blue, cursor: "pointer" }}>
+              👁 Preview Form
+            </button>
+          </>}
           <button onClick={async () => {
             let token = activeEvent.share_token;
             if (!token) {
@@ -2055,51 +2050,17 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
             }
             const shareUrl = `${window.location.hostname === "localhost" ? "https://evara-tau.vercel.app" : window.location.origin}/share/${token}`;
             await navigator.clipboard?.writeText(shareUrl);
-            fire(`📊 Dashboard link copied! Share: ${shareUrl.replace("https://","")}`);
-          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
+            fire(`📊 Dashboard link copied!`);
+          }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
             📊 Share Dashboard
           </button>
           <button onClick={() => setLiveMode(p => !p)}
-            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${liveMode ? C.green + "60" : C.border}`, background: liveMode ? C.green + "12" : "transparent", color: liveMode ? C.green : C.muted, cursor: "pointer" }}>
+            style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${liveMode ? C.green + "60" : C.border}`, background: liveMode ? `${C.green}10` : C.raised, color: liveMode ? C.green : C.muted, cursor: "pointer" }}>
             <div style={{ width: 7, height: 7, borderRadius: "50%", background: liveMode ? C.green : C.muted, animation: liveMode ? "pulse 1.5s infinite" : "none" }} />
-            {liveMode ? "Live ✓ (10s refresh)" : "Enable Live Mode"}
+            {liveMode ? "Live ✓" : "Live Mode"}
           </button>
-          <button onClick={async () => {
-              fire("🤖 Generating AI report…");
-              const { data: { session } } = await supabase.auth.getSession();
-              const res = await fetch(`${SUPABASE_URL}/functions/v1/post-event-report`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ eventId: activeEvent.id, companyId: profile?.company_id })
-              });
-              const data = await res.json();
-              if (data.success && data.html) {
-                const win = window.open("", "_blank");
-                win.document.write(data.html);
-                win.document.close();
-                fire("✅ Report ready — print or save as PDF!");
-              } else { fire("Report generation failed", "err"); }
-            }} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "7px 13px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer" }}>
-              <Sparkles size={11} />✨ AI Report
-          </button>
-          {daysToEvent !== null && (
-            <div style={{ textAlign: "center", background: C.card, border: `1px solid ${daysToEvent <= 3 ? C.red + "50" : daysToEvent <= 7 ? C.amber + "50" : C.border}`, borderRadius: 10, padding: "12px 20px" }}>
-              <div style={{ fontSize: 32, fontWeight: 700, color: daysToEvent <= 3 ? C.red : daysToEvent <= 7 ? C.amber : C.text, lineHeight: 1 }}>{daysToEvent > 0 ? daysToEvent : daysToEvent === 0 ? "🎉" : Math.abs(daysToEvent)}</div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginTop: 4 }}>{daysToEvent > 0 ? "Days to go" : daysToEvent === 0 ? "Today!" : "Days ago"}</div>
-            </div>
-          )}
-          {metrics && <div style={{ display: "flex", gap: 16 }}>
-            {[
-              { l: "Open Rate", v: metrics.total_sent > 0 ? `${Math.round((metrics.total_opened / metrics.total_sent) * 100)}%` : "0%", good: metrics.total_sent > 0 && (metrics.total_opened / metrics.total_sent) > 0.2 },
-              { l: "Click Rate", v: metrics.total_sent > 0 && metrics.total_clicked > 0 ? `${Math.round((metrics.total_clicked / metrics.total_sent) * 100)}%` : "—", good: metrics.total_sent > 0 && (metrics.total_clicked / metrics.total_sent) > 0.05 },
-              { l: "Show Rate", v: metrics.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}%` : "0%", good: metrics.total_confirmed > 0 && (metrics.total_attended / metrics.total_confirmed) > 0.7 },
-            ].map(s => (<div key={s.l} style={{ textAlign: "right" }}>
-              <div style={{ fontSize: 24, fontWeight: 600, color: s.good ? C.green : C.text, letterSpacing: "-0.8px" }}>{s.v}</div>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>{s.l}</div>
-            </div>))}
-          </div>}
         </div>
-      </div>
+      )}
 
       {/* Event lifecycle timeline — only show once campaigns exist */}
       {activeEvent && daysToEvent !== null && campaigns.length > 0 && (
