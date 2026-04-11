@@ -731,7 +731,7 @@ function AuthScreen() {
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
   return (
-    <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
+    <div className="auth-root" style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -760,9 +760,15 @@ function AuthScreen() {
         .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.4)!important}
         .nav-btn{transition:all .12s ease!important}
         .nav-btn:hover{color:#F5F5F7!important;background:rgba(255,255,255,.06)!important}
+        /* ── MOBILE LOGIN FIX ── */
+        @media(max-width:768px){
+          .auth-left-panel{display:none!important}
+          .auth-right-panel{flex:1!important;min-width:0!important;width:100%!important;padding:32px 24px!important;overflow-y:auto!important}
+          .auth-root{flex-direction:column!important}
+        }
       `}</style>
       {/* Left panel — product showcase */}
-      <div style={{ flex:1, background:"linear-gradient(135deg,#060608 0%,#0a0f1e 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
+      <div className="auth-left-panel" style={{ flex:1, background:"linear-gradient(135deg,#060608 0%,#0a0f1e 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:9 }}>
           <div style={{ width:28, height:28, borderRadius:7, background:C.blue, display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
           <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.4px" }}>evara</span>
@@ -798,7 +804,7 @@ function AuthScreen() {
       </div>
 
       {/* Right panel — form */}
-      <div style={{ width:420, background:C.bg, padding:"48px 40px", display:"flex", flexDirection:"column", justifyContent:"center", borderLeft:`1px solid ${C.border}`, flexShrink:0 }}>
+      <div className="auth-right-panel" style={{ width:420, background:C.bg, padding:"48px 40px", display:"flex", flexDirection:"column", justifyContent:"center", borderLeft:`1px solid ${C.border}`, flexShrink:0 }}>
       <div style={{ animation: "fadeUp .3s ease" }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 24, fontWeight: 700, letterSpacing: "-0.5px", marginBottom: 6 }}>{mode === "login" ? "Welcome back" : "Get started free"}</h1>
@@ -4663,10 +4669,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   ))}
                 </div>
               </div>
+            </>
             );
-          })()}
-          </>
-          );
           })()}
 
           {campaigns.length > 0 && (() => {
