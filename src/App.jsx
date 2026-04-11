@@ -863,6 +863,7 @@ function MainApp({ session }) {
   const [showNotifs, setShowNotifs] = useState(false);
   const [metrics, setMetrics] = useState(null); // header quick-stats
   const [campaigns, setCampaigns] = useState([]); // shared across views
+  const [campaignsVersion, setCampaignsVersion] = useState(0); // bump to force reload
 
   // Smart notifications — check events on load
   useEffect(() => {
@@ -1058,6 +1059,7 @@ function MainApp({ session }) {
       }).then(r => r.json()).then(res => {
         if (res.success && res.drafts_created > 0) {
           fire(`🤖 ${res.drafts_created} email drafts ready in eDM Builder — review & send!`);
+          setCampaignsVersion(v => v + 1); // force ScheduleView and eDM to reload
         }
       }).catch(() => {});
     }
@@ -1335,11 +1337,11 @@ function MainApp({ session }) {
 
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "26px" }}>
           {view === "dashboard" && <DashView supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
-          {view === "edm" && profile && <EdmView key="edm" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
+          {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "contacts" && profile && <ContactView key="contacts" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} globalSearch={globalSearch} setGlobalSearch={setGlobalSearch} />}
-          {view === "schedule" && profile && <ScheduleView key="schedule" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
+          {view === "schedule" && profile && <ScheduleView key={`schedule-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} addNotif={addNotif} />}
           {view === "checkin"   && profile && <CheckInView key="checkin"  supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "social"    && profile && <SocialView key="social"   supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "analytics" && profile && <AnalyticsView key="analytics" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} campaigns={campaigns} />}
