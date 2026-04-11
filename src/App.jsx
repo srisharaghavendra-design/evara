@@ -1450,7 +1450,7 @@ function MainApp({ session }) {
         )}
 
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
-          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} />}
+          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} onFormSaved={() => {
@@ -1782,7 +1782,7 @@ function EmailActivityTimeline({ supabase, contactId, eventId }) {
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────
-function DashView({ supabase, profile, activeEvent, fire, setView, events = [], setActiveEvent }) {
+function DashView({ supabase, profile, activeEvent, fire, setView, events = [], setActiveEvent, showMorningBrief, setShowMorningBrief }) {
   const [contacts, setContacts] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
@@ -1815,6 +1815,8 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   const [sending, setSending] = useState(null);
   const [liveMode, setLiveMode] = useState(false);
   const [showEditEvent, setShowEditEvent] = useState(false);
+  const [whatNextLoading, setWhatNextLoading] = useState(false);
+  const [whatNextResult, setWhatNextResult] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [campaigns, setCampaigns] = useState([]);
   const [insights, setInsights] = useState(null);
@@ -2348,41 +2350,35 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           ))}
 
           {/* ── WHAT SHOULD I DO NEXT? ── */}
-          {(() => {
-            const [whatNextLoading, setWhatNextLoading] = useState(false);
-            const [whatNextResult, setWhatNextResult] = useState(null);
-            return (
-              <div style={{ marginLeft:"auto", position:"relative" }}>
-                <button onClick={async () => {
-                  if (whatNextLoading) return;
-                  if (whatNextResult) { setWhatNextResult(null); return; }
-                  setWhatNextLoading(true);
-                  try {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const context = `Event: ${activeEvent.name}\nDays to event: ${daysToEvent ?? "unknown"}\nEmails sent: ${campaigns.filter(c=>c.status==="sent").length}/${campaigns.length}\nOpen rate: ${metrics?.total_sent>0?Math.round((metrics.total_opened/metrics.total_sent)*100):0}%\nConfirmed: ${metrics?.total_confirmed||0}\nPending: ${metrics?.total_pending||0}\nContacts: ${contacts.length}\nLanding page: ${formShareLink?"yes":"no"}`;
-                    const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
-                      method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-                      body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200,
-                        messages:[{ role:"user", content:`You are an event marketing expert. Based on this campaign status, tell me the ONE most important thing to do right now. Be direct, specific, 1-2 sentences max. No fluff.\n\n${context}` }]
-                      })
-                    });
-                    const d = await res.json();
-                    setWhatNextResult(d.content?.[0]?.text || "Keep going — you're on track!");
-                  } catch { setWhatNextResult("Check your campaign status and make sure all emails are scheduled."); }
-                  finally { setWhatNextLoading(false); }
-                }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.blue}50`, background:`${C.blue}12`, color:C.blue, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
-                  {whatNextLoading ? <><Spin />Thinking…</> : "🧠 What should I do next?"}
-                </button>
-                {whatNextResult && (
-                  <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, width:320, background:C.card, border:`1px solid ${C.blue}40`, borderRadius:10, padding:"14px 16px", zIndex:50, boxShadow:"0 8px 32px rgba(0,0,0,.5)", animation:"fadeUp .2s ease" }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1px", marginBottom:8 }}>🧠 AI RECOMMENDS</div>
-                    <div style={{ fontSize:13, color:C.text, lineHeight:1.6 }}>{whatNextResult}</div>
-                    <button onClick={() => setWhatNextResult(null)} style={{ marginTop:10, fontSize:11, color:C.muted, background:"transparent", border:"none", cursor:"pointer", padding:0 }}>Dismiss ×</button>
-                  </div>
-                )}
+          <div style={{ marginLeft:"auto", position:"relative" }}>
+            <button onClick={async () => {
+              if (whatNextLoading) return;
+              if (whatNextResult) { setWhatNextResult(null); return; }
+              setWhatNextLoading(true);
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                const context = `Event: ${activeEvent.name}\nDays to event: ${daysToEvent ?? "unknown"}\nEmails sent: ${campaigns.filter(c=>c.status==="sent").length}/${campaigns.length}\nOpen rate: ${metrics?.total_sent>0?Math.round((metrics.total_opened/metrics.total_sent)*100):0}%\nConfirmed: ${metrics?.total_confirmed||0}\nPending: ${metrics?.total_pending||0}\nContacts: ${contacts.length}\nLanding page: ${formShareLink?"yes":"no"}`;
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+                  method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+                  body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:200,
+                    messages:[{ role:"user", content:`You are an event marketing expert. Based on this campaign status, tell me the ONE most important thing to do right now. Be direct, specific, 1-2 sentences max. No fluff.\n\n${context}` }]
+                  })
+                });
+                const d = await res.json();
+                setWhatNextResult(d.content?.[0]?.text || "Keep going — you're on track!");
+              } catch { setWhatNextResult("Check your campaign status and make sure all emails are scheduled."); }
+              finally { setWhatNextLoading(false); }
+            }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.blue}50`, background:`${C.blue}12`, color:C.blue, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
+              {whatNextLoading ? <><Spin />Thinking…</> : "🧠 What should I do next?"}
+            </button>
+            {whatNextResult && (
+              <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, width:320, background:C.card, border:`1px solid ${C.blue}40`, borderRadius:10, padding:"14px 16px", zIndex:50, boxShadow:"0 8px 32px rgba(0,0,0,.5)", animation:"fadeUp .2s ease" }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1px", marginBottom:8 }}>🧠 AI RECOMMENDS</div>
+                <div style={{ fontSize:13, color:C.text, lineHeight:1.6 }}>{whatNextResult}</div>
+                <button onClick={() => setWhatNextResult(null)} style={{ marginTop:10, fontSize:11, color:C.muted, background:"transparent", border:"none", cursor:"pointer", padding:0 }}>Dismiss ×</button>
               </div>
-            );
-          })()}
+            )}
+          </div>
         </div>
       )}
 
