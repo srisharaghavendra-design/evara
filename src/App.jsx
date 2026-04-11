@@ -1200,6 +1200,7 @@ function MainApp({ session }) {
         .mobile-hamburger{display:none!important}
         input:focus,textarea:focus,select:focus{outline:none;border-color:${C.blue}!important;box-shadow:0 0 0 3px ${C.blue}18}
         @media(max-width:768px){
+          html,body{overflow-x:hidden!important;max-width:100vw!important}
           /* Sidebar — fixed, hidden by default, slides in */
           .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%)!important;transition:transform .25s ease!important;width:260px!important;top:0;bottom:0;left:0}
           .evara-sidebar.open{transform:translateX(0)!important}
@@ -1224,6 +1225,8 @@ function MainApp({ session }) {
           /* Event hero action buttons — horizontal scroll */
           .event-hero-actions{overflow-x:auto!important;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch!important}
           .event-hero-actions::-webkit-scrollbar{display:none!important}
+          /* Journey strip scrollbar hidden */
+          .journey-strip-inner::-webkit-scrollbar{display:none!important}
           /* Hide non-critical table columns */
           .guest-col-company{display:none!important}
           .guest-col-score{display:none!important}
@@ -1243,10 +1246,6 @@ function MainApp({ session }) {
           .topbar-stats{display:none!important}
           /* What next button — shrink */
           .what-next-btn{font-size:11px!important;padding:5px 8px!important}
-          /* Campaign health — readable */
-          .health-score-card{flex-direction:row!important}
-          /* Journey strip — compact */
-          .journey-strip-wrap{padding:10px 12px!important}
         }
         @media(max-width:480px){
           .metrics-grid{grid-template-columns:1fr 1fr!important}
@@ -2306,12 +2305,13 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
               <span style={{ fontSize:11, fontWeight:700, color:C.blue }}>{Math.round(journeyDone/journeySteps.length*100)}%</span>
             </div>
           </div>
-          <div style={{ display:"flex", gap:6 }}>
+          <div style={{ display:"flex", gap:6, overflowX:"auto", WebkitOverflowScrolling:"touch", paddingBottom:4 }}
+            className="journey-strip-inner">
             {journeySteps.map((step, i) => {
               const isNext = !step.done && journeySteps.slice(0,i).every(s=>s.done);
               return (
                 <button key={step.id} onClick={step.action||undefined}
-                  style={{ flex:1, padding:"9px 6px", borderRadius:8, border:`1px solid ${step.done?C.blue+"30":isNext?C.blue+"50":C.border}`, background:step.done?`${C.blue}08`:isNext?`${C.blue}06`:C.raised, cursor:step.action?"pointer":"default", textAlign:"center", transition:"all .15s" }}>
+                  style={{ flex:"0 0 auto", minWidth:80, padding:"9px 6px", borderRadius:8, border:`1px solid ${step.done?C.blue+"30":isNext?C.blue+"50":C.border}`, background:step.done?`${C.blue}08`:isNext?`${C.blue}06`:C.raised, cursor:step.action?"pointer":"default", textAlign:"center", transition:"all .15s" }}>
                   <div style={{ fontSize:16, marginBottom:3 }}>{step.done?"✅":step.icon}</div>
                   <div style={{ fontSize:10, fontWeight:step.done?400:isNext?700:400, color:step.done?C.green:isNext?C.blue:C.muted, lineHeight:1.3 }}>{step.label}</div>
                   {isNext && step.cta && <div style={{ fontSize:9, color:C.blue, marginTop:2, fontWeight:600 }}>{step.cta}</div>}
@@ -2462,7 +2462,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
       {/* Event lifecycle timeline — only show once campaigns exist */}
       {activeEvent && daysToEvent !== null && campaigns.length > 0 && (
-        <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:"12px 16px", marginBottom:14, overflowX:"auto" }}>
+        <div style={{ background:C.card, borderRadius:10, border:`1px solid ${C.border}`, padding:"12px 16px", marginBottom:14, overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
           <div style={{ display:"flex", alignItems:"center", gap:0, minWidth:520 }}>
             {[
               { label:"Save the Date", icon:"📅", phase:"pre", daysKey:"save_the_date", refDay:-56 },
@@ -2561,11 +2561,11 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                 setWhatNextResult(d.content?.[0]?.text || "Keep going — you're on track!");
               } catch { setWhatNextResult("Check your campaign status and make sure all emails are scheduled."); }
               finally { setWhatNextLoading(false); }
-            }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.blue}50`, background:`${C.blue}12`, color:C.blue, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
-              {whatNextLoading ? <><Spin />Thinking…</> : "🧠 What should I do next?"}
+            }} className="what-next-btn" style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.blue}50`, background:`${C.blue}12`, color:C.blue, cursor:"pointer", fontWeight:600, whiteSpace:"nowrap" }}>
+              {whatNextLoading ? <><Spin />Thinking…</> : "🧠 What next?"}
             </button>
             {whatNextResult && (
-              <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, width:320, background:C.card, border:`1px solid ${C.blue}40`, borderRadius:10, padding:"14px 16px", zIndex:50, boxShadow:"0 8px 32px rgba(0,0,0,.5)", animation:"fadeUp .2s ease" }}>
+              <div style={{ position:"absolute", top:"calc(100% + 8px)", right:0, width:"min(320px, calc(100vw - 24px))", background:C.card, border:`1px solid ${C.blue}40`, borderRadius:10, padding:"14px 16px", zIndex:50, boxShadow:"0 8px 32px rgba(0,0,0,.5)", animation:"fadeUp .2s ease" }}>
                 <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1px", marginBottom:8 }}>🧠 AI RECOMMENDS</div>
                 <div style={{ fontSize:13, color:C.text, lineHeight:1.6 }}>{whatNextResult}</div>
                 <button onClick={() => setWhatNextResult(null)} style={{ marginTop:10, fontSize:11, color:C.muted, background:"transparent", border:"none", cursor:"pointer", padding:0 }}>Dismiss ×</button>
