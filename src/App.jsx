@@ -5472,14 +5472,14 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                   setShowBulkEmail(false);
                   try {
                     const { data: { session } } = await supabase.auth.getSession();
-                    const recipients = toSend.map(c => ({ email: c.email, first_name: c.first_name || "", last_name: c.last_name || "" }));
+                    const contacts = toSend.map(c => ({ id: c.id, email: c.email, first_name: c.first_name || "", last_name: c.last_name || "" }));
                     const htmlContent = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.7;color:#111;max-width:600px;margin:0 auto;padding:32px 24px">${
-                      bulkBody.split("\n").map(line => line ? `<p style="margin:0 0 12px">${line.replace(/{first_name}/g,'[first_name]')}</p>` : '<br/>').join("")
-                    }<hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="font-size:11px;color:#999">You received this because you're a contact of ${profile?.companies?.name||"our organisation"}. <a href="{{unsubscribeUrl}}">Unsubscribe</a></p></div>`;
+                      bulkBody.split("\n").map(line => line ? `<p style="margin:0 0 12px">${line.replace(/{first_name}/g,'[First Name]')}</p>` : '<br/>').join("")
+                    }<hr style="border:none;border-top:1px solid #eee;margin:24px 0"/><p style="font-size:11px;color:#999">You received this because you're a contact of ${profile?.companies?.name||"our organisation"}. <a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a></p></div>`;
                     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                       method:"POST",
                       headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-                      body: JSON.stringify({ to: recipients, subject: bulkSubject, htmlContent, companyId: profile?.company_id, personalise: true })
+                      body: JSON.stringify({ contacts, subject: bulkSubject, htmlContent, plainText: bulkBody, companyId: profile?.company_id, fromName: profile?.companies?.from_name || profile?.companies?.name || "evara", fromEmail: "hello@evarahq.com" })
                     });
                     const d = await res.json();
                     fire(d.sent > 0 ? `✅ Sent to ${d.sent} contacts!` : `Failed: ${d.error||"check SendGrid"}`, d.sent>0?"ok":"err");
