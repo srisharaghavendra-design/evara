@@ -2883,7 +2883,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           eventTime: activeEvent.event_time || p.eventTime || "",
           location: activeEvent.location || p.location || "", 
           description: activeEvent.description || p.description || "",
-          orgName: p.orgName || ""
+          orgName: p.orgName || profile?.companies?.name || ""
         }));
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormLink(`${window.location.origin}/form/${data.share_token}`); });
@@ -3662,7 +3662,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
-    supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("send_at", { ascending: true })
+    supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id)
+      .order("scheduled_at", { ascending: true, nullsFirst: false })
       .then(({ data }) => { setCampaigns(data || []); setLoading(false); });
     // Load all segment counts in one query
     supabase.from("event_contacts").select("status").eq("event_id", activeEvent.id)
@@ -3712,7 +3713,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
 
   const schedule = async () => {
     if (!activeEvent || !profile) return;
-    const { data } = await supabase.from("email_campaigns").insert({ event_id: activeEvent.id, company_id: profile.company_id, name: `${newCam.email_type.replace(/_/g, " ")} — ${activeEvent.name}`, email_type: newCam.email_type, send_at: newCam.send_at || null, segment: newCam.segment, status: newCam.send_at ? "scheduled" : "draft" }).select().single();
+    const { data } = await supabase.from("email_campaigns").insert({ event_id: activeEvent.id, company_id: profile.company_id, name: `${newCam.email_type.replace(/_/g, " ")} — ${activeEvent.name}`, email_type: newCam.email_type, send_at: newCam.send_at || null, scheduled_at: newCam.send_at || null, segment: newCam.segment, status: newCam.send_at ? "scheduled" : "draft" }).select().single();
     if (data) { setCampaigns(p => [...p, data]); setShowNew(false); fire("Campaign scheduled!"); }
   };
 
