@@ -10256,7 +10256,7 @@ function PublicFormPage({ token }) {
 
   useEffect(() => {
     const load = async () => {
-      const { data: f } = await supabase.from("forms").select("*, events(*)").eq("share_token", token).single();
+      const { data: f } = await supabase.from("forms").select("*, events(*), companies(name)").eq("share_token", token).single();
       if (!f) { setError("Form not found or no longer active."); setLoading(false); return; }
       if (!f.is_active) { setError("This form is no longer accepting responses."); setLoading(false); return; }
       setForm(f);
@@ -10337,7 +10337,7 @@ function PublicFormPage({ token }) {
               eventDate: event?.event_date ? new Date(event.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" }) : "",
               eventTime: event?.event_time || "",
               location: event?.location || "",
-              orgName: event?.company_name || "evara",
+              orgName: form?.companies?.name || "evara",
             })
           });
         } catch(e) { console.log("Confirmation email failed:", e.message); }

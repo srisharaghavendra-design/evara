@@ -29,6 +29,13 @@ serve(async (req) => {
     let sent = 0, failed = 0;
     const errors: string[] = [];
 
+    // Fetch company_id once for email_sends tracking
+    let campaignCompanyId: string | null = null;
+    if (campaignId) {
+      const { data: cam } = await supabase.from("email_campaigns").select("company_id").eq("id", campaignId).single();
+      campaignCompanyId = cam?.company_id || null;
+    }
+
     for (const contact of contacts) {
       if (contact.unsubscribed || !contact.email) { failed++; continue; }
 
@@ -69,6 +76,7 @@ serve(async (req) => {
             campaign_id: campaignId,
             contact_id: contact.id || null,
             email: contact.email,
+            company_id: campaignCompanyId,
             status: "sent",
             sent_at: new Date().toISOString(),
           }, { onConflict: "campaign_id,email", ignoreDuplicates: false });
