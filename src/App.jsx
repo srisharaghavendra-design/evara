@@ -1204,23 +1204,26 @@ function MainApp({ session }) {
           .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%)!important;transition:transform .25s ease!important;width:260px!important;top:0;bottom:0;left:0}
           .evara-sidebar.open{transform:translateX(0)!important}
           .evara-overlay{display:block!important}
-          /* Main content — full width */
-          .evara-main{margin-left:0!important;width:100%!important;max-width:100vw!important}
+          /* Main content — full width, no gap from fixed sidebar */
+          .evara-main{margin-left:0!important;width:100%!important;max-width:100vw!important;flex:1!important}
           .mobile-hamburger{display:flex!important}
           .desktop-breadcrumb{display:none!important}
           .main-padding{padding:12px!important}
           /* Topbar — compact */
           .evara-topbar{padding:0 10px!important;gap:6px!important}
           /* BUILD nav — horizontal scroll, hide arrows */
-          .evara-buildnav{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 10px!important}
+          .evara-buildnav{overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;padding:0 8px!important}
           .evara-buildnav::-webkit-scrollbar{display:none!important}
-          .evara-buildnav span{display:none!important}
+          .evara-buildnav>span{display:none!important}
           /* Metric cards — 2 per row */
           .metrics-grid{grid-template-columns:1fr 1fr!important;gap:8px!important}
           /* Quick actions — scroll horizontally */
           .quick-actions{flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch!important;gap:6px!important;padding-bottom:4px!important}
           .quick-actions::-webkit-scrollbar{display:none!important}
-          .quick-actions button{font-size:11px!important;padding:5px 10px!important;white-space:nowrap!important;flex-shrink:0!important}
+          .quick-actions button{font-size:11px!important;padding:5px 9px!important;white-space:nowrap!important;flex-shrink:0!important}
+          /* Event hero action buttons — horizontal scroll */
+          .event-hero-actions{overflow-x:auto!important;flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch!important}
+          .event-hero-actions::-webkit-scrollbar{display:none!important}
           /* Hide non-critical table columns */
           .guest-col-company{display:none!important}
           .guest-col-score{display:none!important}
@@ -1232,12 +1235,18 @@ function MainApp({ session }) {
           .edm-grid{grid-template-columns:1fr!important;min-height:auto!important}
           /* ROI — single column */
           .roi-grid{grid-template-columns:1fr!important}
-          /* Search bar — hidden on mobile topbar to save space */
+          /* Event title — scale down */
+          .event-hero-title{font-size:18px!important}
+          /* Search bar — hidden on mobile topbar */
           .topbar-search{display:none!important}
-          /* Stats strip — hide on very small */
+          /* Stats strip — hidden on mobile */
           .topbar-stats{display:none!important}
-          /* New event button — icon only */
-          .new-event-btn span{display:none!important}
+          /* What next button — shrink */
+          .what-next-btn{font-size:11px!important;padding:5px 8px!important}
+          /* Campaign health — readable */
+          .health-score-card{flex-direction:row!important}
+          /* Journey strip — compact */
+          .journey-strip-wrap{padding:10px 12px!important}
         }
         @media(max-width:480px){
           .metrics-grid{grid-template-columns:1fr 1fr!important}
@@ -2420,7 +2429,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
       )}
       {/* Quick action row — form link + shared dashboard */}
       {(formShareLink || activeEvent.share_token) && (
-        <div style={{ marginBottom:14, display:"flex", gap:8, flexWrap:"wrap" }}>
+        <div className="event-hero-actions" style={{ marginBottom:14, display:"flex", gap:8, flexWrap:"wrap", overflowX:"auto" }}>
           {formShareLink && <>
             <button onClick={() => { navigator.clipboard?.writeText(formShareLink); fire("📋 Reg link copied!"); }}
               style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, background: C.raised, border: `1px solid ${C.border}`, borderRadius: 7, padding: "7px 13px", color: C.muted, cursor: "pointer" }}>
