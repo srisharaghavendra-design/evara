@@ -1044,6 +1044,7 @@ function MainApp({ session }) {
   const [newEventDate, setNewEventDate] = useState("");
   const [showDupModal, setShowDupModal] = useState(false);
   const [dupName, setDupName] = useState("");
+  const [hoveredNav, setHoveredNav] = useState(null);
   const [dupDate, setDupDate] = useState("");
   const [duping, setDuping] = useState(false);
 
@@ -1428,7 +1429,6 @@ function MainApp({ session }) {
 
         {/* ── BUILD NAV STRIP — ordered by event flow with X-Ray hover preview ── */}
         {activeEvent && (() => {
-          const [hoveredNav, setHoveredNav] = useState(null);
           const sentCampaigns = campaigns.filter(c => c.status === "sent");
           const draftCampaigns = campaigns.filter(c => c.status === "draft");
           const scheduledCampaigns = campaigns.filter(c => c.status === "scheduled");
