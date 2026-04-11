@@ -53,6 +53,14 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // Load brand voice for better quality
+    const { data: bv } = await supabase.from("brand_voice").select("*").eq("company_id", companyId).maybeSingle();
+
+    // Offset days per email type relative to event date
+    const SEND_OFFSETS: Record<string, number> = {
+      save_the_date: -42, invitation: -21, reminder: -7, day_of_details: -1, thank_you: 1
+    };
+
     // Fetch event details
     const { data: event, error: eventErr } = await supabase
       .from("events")
@@ -80,6 +88,10 @@ Date: ${eventDate}
 Location: ${event.location || "TBC"}
 Description: ${event.description || ""}
 Organiser: ${orgName}
+${bv?.tone_adjectives?.length ? `Tone: ${bv.tone_adjectives.join(", ")}` : ""}
+${bv?.audience ? `Audience: ${bv.audience}` : ""}
+${bv?.avoid_phrases?.length ? `Avoid phrases: ${bv.avoid_phrases.join(", ")}` : ""}
+${bv?.preferred_cta ? `Preferred CTA style: ${bv.preferred_cta}` : ""}
 `.trim();
 
     console.log(`Auto-drafting ${EMAIL_SEQUENCE.length} emails for event: ${event.name}`);
@@ -142,6 +154,16 @@ Respond ONLY with a JSON object (no markdown, no explanation):
           content.ps_line ? `\n${content.ps_line}` : "",
         ].join("\n");
 
+        // Calculate send date from event date + offset
+        let sendAt: string | null = null;
+        const offsetDays = SEND_OFFSETS[emailType.type];
+        if (event.event_date && offsetDays !== undefined) {
+          const d = new Date(event.event_date);
+          d.setDate(d.getDate() + offsetDays);
+          sendAt = d.toISOString();
+        }
+        const isScheduled = sendAt && new Date(sendAt) > new Date();
+
         // Save draft to DB
         const { data: saved } = await supabase.from("email_campaigns").insert({
           event_id: eventId,
@@ -151,9 +173,10 @@ Respond ONLY with a JSON object (no markdown, no explanation):
           subject: content.subject,
           html_content: htmlBody,
           plain_text: plainText,
-          status: "draft",
+          send_at: sendAt,
+          scheduled_at: sendAt,
+          status: isScheduled ? "scheduled" : "draft",
           segment: "all",
-          metadata: { timing: emailType.timing, auto_generated: true },
         }).select("id").single();
 
         if (saved) {

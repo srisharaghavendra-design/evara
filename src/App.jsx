@@ -2774,14 +2774,22 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 }
 
 // ─── BRAND VOICE BADGE ───────────────────────────────────────
-function BrandVoiceBadge({ supabase, profile }) {
+function BrandVoiceBadge({ supabase, profile, setView }) {
   const [bv, setBv] = useState(null);
+  const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     if (!profile?.company_id) return;
     supabase.from("brand_voice").select("industry,tone_adjectives,audience").eq("company_id", profile.company_id).maybeSingle()
-      .then(({ data }) => setBv(data));
+      .then(({ data }) => { setBv(data); setLoaded(true); });
   }, [profile]);
-  if (!bv || (!bv.industry && !bv.tone_adjectives?.length && !bv.audience)) return null;
+  if (!loaded) return null;
+  if (!bv || (!bv.industry && !bv.tone_adjectives?.length && !bv.audience)) return (
+    <button onClick={() => setView?.("settings")}
+      style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 10px", background:"#FF9F0A10", border:"1px solid #FF9F0A30", borderRadius:6, marginBottom:2, cursor:"pointer" }}>
+      <span style={{ fontSize:11, color:"#FF9F0A", fontWeight:500 }}>⚡ Set up Brand Voice</span>
+      <span style={{ fontSize:10, color:"#FF9F0A80" }}>· improves AI email quality →</span>
+    </button>
+  );
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 10px", background: "#30D15810", border: "1px solid #30D15830", borderRadius: 6, marginBottom: 2 }}>
       <Sparkles size={11} color="#30D158" strokeWidth={2} />
@@ -3195,7 +3203,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             />
           </Sec>
 
-          <BrandVoiceBadge supabase={supabase} profile={profile} />
+          <BrandVoiceBadge supabase={supabase} profile={profile} setView={setView} />
           <button onClick={generate} disabled={gen} style={{ padding: "11px", borderRadius: 8, border: "none", background: gen ? C.raised : C.blue, color: gen ? C.muted : "#fff", fontSize: 14, fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, transition: "all .15s", boxShadow: gen ? "none" : `0 4px 20px ${C.blue}35`, cursor: "pointer" }}>
             {gen ? <><Spin />Claude is writing… (~15s)</> : <><Sparkles size={14} strokeWidth={1.5} />Generate with AI</>}
           </button>
