@@ -1449,11 +1449,19 @@ function MainApp({ session }) {
 
       {/* NEW EVENT MODAL */}
       {showNewEvent && (
-        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.8)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99 }}>
-          <div style={{ background:C.card, borderRadius:16, border:`1px solid ${C.border}`, width:520, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp .2s ease" }}>
-            <div style={{ padding:"22px 26px 18px", borderBottom:`1px solid ${C.border}` }}>
-              <h2 style={{ fontSize:18, fontWeight:700, color:C.text, margin:0 }}>Create new event</h2>
-              <p style={{ fontSize:12, color:C.muted, marginTop:3 }}>AI auto-drafts your full email sequence in the background</p>
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.82)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:99, padding:20 }}>
+          <div style={{ background:C.card, borderRadius:18, border:`1px solid ${C.border}`, width:520, maxHeight:"90vh", overflowY:"auto", animation:"fadeUp .22s cubic-bezier(.34,1.56,.64,1)", boxShadow:"0 32px 80px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06)", overflow:"hidden" }}>
+            {/* Gradient header */}
+            <div style={{ background:`linear-gradient(135deg,${C.blue}22,${C.teal}12)`, padding:"24px 26px 20px", borderBottom:`1px solid ${C.border}`, position:"relative" }}>
+              <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:"18px 18px 0 0" }} />
+              <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
+                <div>
+                  <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:0, letterSpacing:"-0.4px" }}>Create New Event</h2>
+                  <p style={{ fontSize:12.5, color:C.muted, marginTop:5, lineHeight:1.5 }}>Fill in the details — <span style={{ color:C.blue, fontWeight:600 }}>AI auto-drafts 5 emails</span> the moment you hit Create</p>
+                </div>
+                <button onClick={() => { setShowNewEvent(false); setNewEventName(""); setNewEventExtra({ event_date:"", event_time:"", location:"" }); }}
+                  style={{ background:C.raised, border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, cursor:"pointer", width:30, height:30, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>×</button>
+              </div>
             </div>
             <div style={{ padding:"20px 26px" }}>
               {/* Event name */}
@@ -1534,9 +1542,11 @@ function MainApp({ session }) {
               </div>
 
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={() => { setShowNewEvent(false); setNewEventName(""); setNewEventExtra({event_date:"",event_time:"",location:""}); }} style={{ flex:1, padding:12, background:"transparent", border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
-                <button onClick={createEvent} disabled={!newEventName.trim()} style={{ flex:2, padding:12, background:newEventName.trim()?C.blue:C.border, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:600, cursor:newEventName.trim()?"pointer":"default", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow:newEventName.trim()?`0 4px 16px ${C.blue}40`:"none" }}>
-                  <Sparkles size={14} />Create + Auto-Draft →
+                <button onClick={() => { setShowNewEvent(false); setNewEventName(""); setNewEventExtra({event_date:"",event_time:"",location:""}); }}
+                  style={{ flex:1, padding:12, background:C.raised, border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, fontWeight:500, cursor:"pointer" }}>Cancel</button>
+                <button onClick={createEvent} disabled={!newEventName.trim()}
+                  style={{ flex:2, padding:13, background:newEventName.trim()?C.blue:C.border, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:700, cursor:newEventName.trim()?"pointer":"default", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow:newEventName.trim()?`0 6px 24px ${C.blue}50`:"none", letterSpacing:"-0.2px", transition:"all .15s" }}>
+                  <Sparkles size={14} strokeWidth={2} />✨ Create Event + AI Draft →
                 </button>
               </div>
             </div>
