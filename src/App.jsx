@@ -1601,6 +1601,9 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [showHelp, setShowHelp] = useState(false);
   const [scoreFilter, setScoreFilter] = useState(""); // "hot"|"warm"|"cool"|"cold"|""
+  const [editingContactFields, setEditingContactFields] = useState(false);
+  const [contactEditForm, setContactEditForm] = useState({});
+  const [savingContact, setSavingContact] = useState(false);
   const toggleRow = (id) => setSelectedRows(p => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const toggleAll = (rows) => setSelectedRows(p => p.size === rows.length ? new Set() : new Set(rows.map(r => r.id)));
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -1608,7 +1611,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   // Escape key closes contact panel
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "Escape") { setSelectedContact(null); setShowHelp(false); }
+      if (e.key === "Escape") { setSelectedContact(null); setShowHelp(false); setEditingContactFields(false); }
       if (e.key === "?" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName)) setShowHelp(p => !p);
       if (e.key === "n" && !["INPUT","TEXTAREA","SELECT"].includes(e.target.tagName) && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setShowNewEvent(true); }
     };
@@ -2367,19 +2370,68 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                 </div>
               </div>
               <div style={{ padding: "14px 18px", borderBottom: `1px solid ${C.border}` }}>
-                <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 8 }}>Details</div>
-                {[
-                  { label: "Email", val: c.email }, { label: "Phone", val: c.phone },
-                  { label: "Company", val: c.company_name }, { label: "Title", val: c.job_title },
-                  { label: "LinkedIn", val: c.linkedin_url },
-                  { label: "Registered", val: selectedContact.created_at ? new Date(selectedContact.created_at).toLocaleDateString("en-AU") : null },
-                  { label: "Confirmed", val: selectedContact.confirmed_at ? new Date(selectedContact.confirmed_at).toLocaleDateString("en-AU") : null },
-                ].filter(f => f.val).map(f => (
-                  <div key={f.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                    <span style={{ fontSize: 11.5, color: C.muted }}>{f.label}</span>
-                    <span style={{ fontSize: 11.5, color: C.text }}>{f.val}</span>
+                <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 8 }}>
+                  <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Details</div>
+                  {!editingContactFields ? (
+                    <button onClick={() => { setEditingContactFields(true); setContactEditForm({ first_name: c.first_name||"", last_name: c.last_name||"", phone: c.phone||"", company_name: c.company_name||"", job_title: c.job_title||"", linkedin_url: c.linkedin_url||"" }); }}
+                      style={{ fontSize:11, padding:"2px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                      Edit
+                    </button>
+                  ) : (
+                    <div style={{ display:"flex", gap:5 }}>
+                      <button onClick={() => setEditingContactFields(false)} style={{ fontSize:11, padding:"2px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>Cancel</button>
+                      <button disabled={savingContact} onClick={async () => {
+                        setSavingContact(true);
+                        await supabase.from("contacts").update(contactEditForm).eq("id", c.id);
+                        setContacts(p => p.map(ec => ec.id === selectedContact.id ? { ...ec, contacts: { ...ec.contacts, ...contactEditForm } } : ec));
+                        setSelectedContact(p => ({ ...p, contacts: { ...p.contacts, ...contactEditForm } }));
+                        setEditingContactFields(false);
+                        setSavingContact(false);
+                        fire("✅ Contact updated");
+                      }} style={{ fontSize:11, padding:"2px 9px", borderRadius:5, border:"none", background:C.blue, color:"#fff", cursor:"pointer", fontWeight:600 }}>
+                        {savingContact ? "Saving…" : "Save"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {editingContactFields ? (
+                  <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                    {[
+                      { key:"first_name", label:"First name", ph:"Jane" },
+                      { key:"last_name",  label:"Last name",  ph:"Smith" },
+                      { key:"phone",      label:"Phone",      ph:"+61 400 000 000" },
+                      { key:"company_name", label:"Company",  ph:"Acme Corp" },
+                      { key:"job_title",  label:"Job title",  ph:"Head of Marketing" },
+                      { key:"linkedin_url",label:"LinkedIn",  ph:"linkedin.com/in/..." },
+                    ].map(f => (
+                      <div key={f.key}>
+                        <label style={{ display:"block", fontSize:10, color:C.muted, marginBottom:2 }}>{f.label}</label>
+                        <input value={contactEditForm[f.key]||""} onChange={e => setContactEditForm(p => ({...p,[f.key]:e.target.value}))}
+                          placeholder={f.ph}
+                          style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"5px 8px", fontSize:12, outline:"none", boxSizing:"border-box" }}
+                          onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                      </div>
+                    ))}
                   </div>
-                ))}
+                ) : (
+                  <>
+                    {[
+                      { label: "Email", val: c.email }, { label: "Phone", val: c.phone },
+                      { label: "Company", val: c.company_name }, { label: "Title", val: c.job_title },
+                      { label: "LinkedIn", val: c.linkedin_url },
+                      { label: "Registered", val: selectedContact.created_at ? new Date(selectedContact.created_at).toLocaleDateString("en-AU") : null },
+                      { label: "Confirmed", val: selectedContact.confirmed_at ? new Date(selectedContact.confirmed_at).toLocaleDateString("en-AU") : null },
+                    ].filter(f => f.val).map(f => (
+                      <div key={f.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span style={{ fontSize: 11.5, color: C.muted }}>{f.label}</span>
+                        <span style={{ fontSize: 11.5, color: C.text, maxWidth:160, textAlign:"right", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{f.val}</span>
+                      </div>
+                    ))}
+                    {![c.email,c.phone,c.company_name,c.job_title].some(Boolean) && (
+                      <div style={{ fontSize:11, color:C.muted, fontStyle:"italic" }}>No details — click Edit to add</div>
+                    )}
+                  </>
+                )}
               </div>
               <div style={{ padding: "14px 18px", display: "flex", flexDirection: "column", gap: 7 }}>
                 <div style={{ fontSize: 9.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 4 }}>Actions</div>
@@ -4396,6 +4448,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   const importFileRef = useRef(null);
   const [showDuplicates, setShowDuplicates] = useState(false);
   const [mergingDup, setMergingDup] = useState(false);
+  const [noteModal, setNoteModal] = useState(null); // { contact } | null
+  const [noteText, setNoteText] = useState("");
 
   const PERSONAL_DOMAINS = ["gmail","yahoo","hotmail","outlook","icloud","rediffmail","aol","protonmail","zoho","live","msn","me","mac","ymail","googlemail"];
   const parseImportText = (text) => {
@@ -4990,13 +5044,8 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                             + Event
                           </button>
                         )}
-                        <button onClick={async () => {
-                          const note = window.prompt?.("Note for " + (c.first_name || c.email) + ":", c.notes || "");
-                          if (note === null) return;
-                          await supabase.from("contacts").update({ notes: note }).eq("id", c.id);
-                          setContacts(p => p.map(x => x.id === c.id ? { ...x, notes: note } : x));
-                          fire(note ? "Note saved" : "Note cleared");
-                        }} title={c.notes || "Add note"} style={{ fontSize: 12, background: "transparent", border: "none", cursor: "pointer", opacity: c.notes ? 1 : 0.3, lineHeight: 1 }}>
+                        <button onClick={() => { setNoteModal(c); setNoteText(c.notes || ""); }}
+                          title={c.notes || "Add note"} style={{ fontSize: 12, background: "transparent", border: "none", cursor: "pointer", opacity: c.notes ? 1 : 0.3, lineHeight: 1 }}>
                           📝
                         </button>
                       </div>
@@ -5006,6 +5055,39 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
             </tbody>
           </table>
         )}
+      {/* NOTE MODAL */}
+      {noteModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.75)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:150 }}
+          onClick={() => setNoteModal(null)}>
+          <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:24, width:380, animation:"fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <div>
+                <div style={{ fontSize:14, fontWeight:600, color:C.text }}>Note</div>
+                <div style={{ fontSize:11, color:C.muted, marginTop:2 }}>{noteModal.first_name ? `${noteModal.first_name} ${noteModal.last_name||""}`.trim() : noteModal.email}</div>
+              </div>
+              <button onClick={() => setNoteModal(null)} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:20, lineHeight:1 }}>×</button>
+            </div>
+            <textarea autoFocus value={noteText} onChange={e => setNoteText(e.target.value)} rows={5}
+              placeholder="Add a private note about this contact…"
+              style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:13, outline:"none", resize:"vertical", fontFamily:"inherit", boxSizing:"border-box" }}
+              onFocus={e => e.target.style.borderColor = C.blue}
+              onBlur={e => e.target.style.borderColor = C.border} />
+            <div style={{ display:"flex", gap:8, marginTop:12 }}>
+              <button onClick={() => setNoteModal(null)} style={{ flex:1, padding:"9px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
+              <button onClick={async () => {
+                await supabase.from("contacts").update({ notes: noteText }).eq("id", noteModal.id);
+                setContacts(p => p.map(x => x.id === noteModal.id ? { ...x, notes: noteText } : x));
+                fire(noteText ? "✅ Note saved" : "Note cleared");
+                setNoteModal(null);
+              }} style={{ flex:2, padding:"9px", background:C.blue, border:"none", borderRadius:7, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* IMPORT MODAL */}
       {showDuplicates && duplicates.length > 0 && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}
