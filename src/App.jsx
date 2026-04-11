@@ -3428,7 +3428,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ to: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), companyId: profile?.company_id }),
+                body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), fromEmail: "hello@evarahq.com", fromName: profile?.companies?.name || "evara" }),
               });
               setSendingTest(false);
               const d = await res.json();
@@ -3443,7 +3443,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                  body: JSON.stringify({ to: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), companyId: profile?.company_id }),
+                  body: JSON.stringify({ contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), fromEmail: "hello@evarahq.com", fromName: profile?.companies?.name || "evara" }),
                 });
                 setSendingTest(false);
                 const d = await res.json();
@@ -3686,17 +3686,20 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   }, [activeEvent, profile]);
 
   const openSendModal = async (cam) => {
-    let q = supabase.from("event_contacts").select("id,contacts(first_name,last_name,email)", { count: "exact" }).eq("event_id", activeEvent.id);
+    let q = supabase.from("event_contacts").select("id,contacts(id,first_name,last_name,email,tags,unsubscribed)", { count: "exact" }).eq("event_id", activeEvent.id);
     if (cam.segment === "confirmed") q = q.eq("status", "confirmed");
-    if (cam.segment === "pending") q = q.eq("status", "pending");
-    if (cam.segment === "declined") q = q.eq("status", "declined");
-    if (cam.segment === "attended") q = q.eq("status", "attended");
+    else if (cam.segment === "pending") q = q.eq("status", "pending");
+    else if (cam.segment === "declined") q = q.eq("status", "declined");
+    else if (cam.segment === "attended") q = q.eq("status", "attended");
+    else q = q.neq("status", "declined"); // "all" = everyone except declined
     const { data: rawData, count } = await q;
     // VIP filter: contacts with vip tag
     const data = cam.segment === "vip"
-      ? (rawData || []).filter(r => r.contacts?.tags?.includes("vip"))
+      ? (rawData || []).filter(r => (r.contacts?.tags || []).includes("vip"))
       : rawData;
-    setSendModal({ ...cam, recipients: data || [], recipientCount: count || 0 });
+    // Filter out unsubscribed
+    const eligible = (data || []).filter(r => !r.contacts?.unsubscribed && r.contacts?.email);
+    setSendModal({ ...cam, recipients: eligible, recipientCount: eligible.length });
   };
 
   const sendNow = async () => {
@@ -3705,7 +3708,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
     setSendProgress({ sent: 0, total: sendModal?.recipients?.length || 0 });
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const contacts = sendModal.recipients.map(ec => ({ id: ec.contacts?.id, email: ec.contacts?.email, first_name: ec.contacts?.first_name, company_id: profile.company_id })).filter(c => c.email);
+      const contacts = sendModal.recipients.map(ec => ({ id: ec.contacts?.id, email: ec.contacts?.email, first_name: ec.contacts?.first_name || "", last_name: ec.contacts?.last_name || "" })).filter(c => c.email);
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
