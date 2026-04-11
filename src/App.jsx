@@ -1141,6 +1141,7 @@ function MainApp({ session }) {
       
       // 🤖 AI-first: auto-draft the full email lifecycle in the background
       fire("✅ Event created! AI is drafting your email sequence…");
+      setView("edm"); // ← take them straight to Emails
       const { data: { session: sess } } = await supabase.auth.getSession();
       fetch(`${SUPABASE_URL}/functions/v1/auto-draft-lifecycle`, {
         method: "POST",
@@ -1148,8 +1149,8 @@ function MainApp({ session }) {
         body: JSON.stringify({ eventId: data.id, companyId: profile.company_id })
       }).then(r => r.json()).then(res => {
         if (res.success && res.drafts_created > 0) {
-          fire(`🤖 ${res.drafts_created} email drafts ready in eDM Builder — review & send!`);
-          setCampaignsVersion(v => v + 1); // force ScheduleView and eDM to reload
+          fire(`🤖 ${res.drafts_created} emails drafted! Review them below, then go to Schedule to send.`);
+          setCampaignsVersion(v => v + 1);
         }
       }).catch(() => {});
     }
@@ -3760,6 +3761,32 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               onUpload={f => uploadImage(f, "header")}
               onClear={() => setImages(p => ({ ...p, header: null }))}
             />
+            {images.header && (
+              <button onClick={async () => {
+                if (!window.confirm(`Apply this header image to all ${campaigns.length} email drafts?`)) return;
+                let updated = 0;
+                for (const cam of campaigns) {
+                  if (!cam.html_content) continue;
+                  // Replace existing header img src or inject after opening body tag
+                  let html = cam.html_content;
+                  if (html.includes('class="email-header-img"') || html.includes('id="header-img"')) {
+                    html = html.replace(/(<img[^>]*(?:class="email-header-img"|id="header-img")[^>]*src=")[^"]*(")/g, `$1${images.header}$2`);
+                  } else {
+                    // Replace the brand-color header div with the image
+                    html = html.replace(
+                      /(<td[^>]*background-color[^>]*>)(\s*<\/td>)/,
+                      `$1<img src="${images.header}" style="width:100%;max-width:600px;display:block" />$2`
+                    );
+                  }
+                  await supabase.from("email_campaigns").update({ html_content: html }).eq("id", cam.id);
+                  updated++;
+                }
+                fire(`✅ Header applied to ${updated} emails`);
+                setCampaignsVersion(v => v + 1);
+              }} style={{ width: "100%", marginTop: 6, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, fontSize: 12, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                ✨ Apply this header to all {campaigns.length} emails
+              </button>
+            )}
             <ImageUploadZone
               label="In-body image"
               sublabel="Speaker photo, venue, or banner · 600×300px"
@@ -4951,29 +4978,44 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
       )}
 
       {/* ← NEW: EMAIL PREVIEW MODAL */}
-      {previewCam && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99, padding: 20 }}>
-          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, width: "100%", maxWidth: 680, maxHeight: "90vh", display: "flex", flexDirection: "column", animation: "fadeUp .2s ease" }}>
+      {previewCam && (() => {
+        const [prevMode, setPrevMode] = React.useState("desktop");
+        return (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99, padding: 16 }}>
+          <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, width: "100%", maxWidth: prevMode === "mobile" ? 420 : 700, height: "90vh", display: "flex", flexDirection: "column", animation: "fadeUp .2s ease" }}>
             {/* Modal header */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px", borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
-              <div>
-                <div style={{ fontSize: 11, color: C.muted, marginBottom: 3 }}>Email Preview</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{previewCam.name}</div>
-                {previewCam.subject && <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>Subject: <span style={{ color: C.sec }}>{previewCam.subject}</span></div>}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", borderBottom: `1px solid ${C.border}`, flexShrink: 0, gap: 12 }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 2 }}>Email Preview</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{previewCam.name}</div>
+                {previewCam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 1 }}>Subject: <span style={{ color: C.sec }}>{previewCam.subject}</span></div>}
               </div>
-              <button onClick={() => setPreviewCam(null)} style={{ background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "5px 8px", display: "flex", alignItems: "center" }}><X size={14} /></button>
+              <div style={{ display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+                {/* Desktop / Mobile toggle */}
+                <div style={{ display: "flex", background: C.raised, borderRadius: 7, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+                  {[{id:"desktop",icon:"🖥"},{id:"mobile",icon:"📱"}].map(m => (
+                    <button key={m.id} onClick={() => setPrevMode(m.id)}
+                      style={{ padding: "5px 10px", fontSize: 13, border: "none", background: prevMode === m.id ? C.blue : "transparent", color: prevMode === m.id ? "#fff" : C.muted, cursor: "pointer", transition: "all .15s" }}>
+                      {m.icon}
+                    </button>
+                  ))}
+                </div>
+                <button onClick={() => setPreviewCam(null)} style={{ background: C.raised, border: `1px solid ${C.border}`, borderRadius: 6, color: C.muted, cursor: "pointer", padding: "5px 8px", display: "flex", alignItems: "center" }}><X size={14} /></button>
+              </div>
             </div>
-            {/* Email render — sandboxed iframe matches real inbox rendering */}
-            <div style={{ flex: 1, overflow: "hidden", background: "#EBEBEB", padding: "20px" }}>
-              <iframe
-                srcDoc={previewCam.html_content || "<p style='font-family:sans-serif;color:#666;padding:20px'>No content</p>"}
-                sandbox="allow-same-origin"
-                style={{ width: "100%", height: "100%", border: "none", borderRadius: 6, background: "#fff" }}
-                title="Email preview"
-              />
+            {/* Email render */}
+            <div style={{ flex: 1, overflow: "auto", background: "#E8E8E8", padding: prevMode === "mobile" ? "16px 12px" : "20px", display: "flex", justifyContent: "center" }}>
+              <div style={{ width: prevMode === "mobile" ? "100%" : "100%", maxWidth: prevMode === "mobile" ? 375 : "100%", background: "#fff", borderRadius: prevMode === "mobile" ? 12 : 4, overflow: "hidden", boxShadow: "0 2px 20px rgba(0,0,0,.15)", height: "fit-content", minHeight: 400 }}>
+                <iframe
+                  srcDoc={previewCam.html_content || "<p style='font-family:sans-serif;color:#666;padding:20px'>No content yet</p>"}
+                  sandbox="allow-same-origin"
+                  style={{ width: "100%", minHeight: 500, height: "600px", border: "none", display: "block" }}
+                  title="Email preview"
+                />
+              </div>
             </div>
             {/* Modal footer */}
-            <div style={{ display: "flex", gap: 8, padding: "14px 20px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+            <div style={{ display: "flex", gap: 8, padding: "12px 18px", borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
               <button onClick={() => setPreviewCam(null)} style={{ flex: 1, padding: "9px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, color: C.muted, fontSize: 13, cursor: "pointer" }}>Close</button>
               {previewCam.status !== "sent" && (
                 <button onClick={() => { openSendModal(previewCam); setPreviewCam(null); }}
@@ -4984,7 +5026,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             </div>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* SEND NOW MODAL */}
       {sendModal && (
