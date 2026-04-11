@@ -71,17 +71,21 @@ const isBusinessEmail = (email) => {
 };
 
 const C = {
-  // Warm near-black backgrounds — not cold grey, feels alive
-  bg:"#0C0A0F", sidebar:"#100D14", card:"#14111A", raised:"#1A1620",
-  border:"#241F2E", borderHi:"#342C42",
-  // New primary: deep violet — nobody in this space uses this
-  blue:"#7C3AED",   // was #0A84FF — now signature evara violet
-  teal:"#A855F7",   // was cold teal — now lighter violet for gradients
-  // Accent: warm amber — energy, excitement, events
-  amber:"#F59E0B",
-  // Keep greens/reds readable
-  text:"#F5F0FF", sec:"#B8B0C8", muted:"#6B6078",
-  green:"#10B981", red:"#EF4444",
+  // Void black — mission control screens
+  bg:"#020205", sidebar:"#050508", card:"#0A0A0E", raised:"#0F0F14",
+  border:"#1A1A24", borderHi:"#252535",
+  // Electric blue — live telemetry & primary actions
+  blue:"#00B0FF",
+  // Amber gold — mission status labels, the NASA data color
+  amber:"#E8A020",
+  // All systems go
+  green:"#00E676",
+  // Alert
+  red:"#FF3D3D",
+  // Secondary data stream
+  teal:"#00E5CC",
+  // Typography — slightly warm white so it doesn't feel clinical
+  text:"#E8E8F0", sec:"#8888A8", muted:"#44445A",
 };
 
 // Generate an ICS calendar file string
@@ -738,54 +742,86 @@ function AuthScreen() {
   return (
     <div style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         button{cursor:pointer;font-family:Outfit,sans-serif}
         input,select,textarea{font-family:Outfit,sans-serif}
-        h1,h2,h3{font-family:Syne,Outfit,sans-serif!important}
-        ::-webkit-scrollbar{width:4px;height:4px}
+        h1,h2{font-family:Syne,Outfit,sans-serif!important;letter-spacing:-0.5px}
+        .mono{font-family:'JetBrains Mono',monospace!important;font-variant-numeric:tabular-nums}
+        .mission-label{font-family:Outfit,sans-serif;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:#44445A}
+        /* Scanline texture — barely visible, registers as "screen" */
+        .scan::after{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(255,255,255,0.012) 2px,rgba(255,255,255,0.012) 3px);pointer-events:none;border-radius:inherit}
+        ::-webkit-scrollbar{width:3px;height:3px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#342C42;border-radius:4px}
-        ::-webkit-scrollbar-thumb:hover{background:#4A3F5C}
-        ::selection{background:#7C3AED30;color:#F5F0FF}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        ::-webkit-scrollbar-thumb{background:#1A1A24;border-radius:2px}
+        ::-webkit-scrollbar-thumb:hover{background:#252535}
+        ::selection{background:#00B0FF22;color:#E8E8F0}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes slideRight{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes slideRight{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
-        @keyframes shimmer{0%{background-position:-200px 0}100%{background-position:200px 0}}
-        @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
-        @keyframes toast-out{from{opacity:1}to{opacity:0;transform:translateY(-8px)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+        @keyframes blink{0%,100%{opacity:1}49%{opacity:1}50%{opacity:0}99%{opacity:0}}
+        @keyframes toast-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes toast-out{from{opacity:1}to{opacity:0}}
         @keyframes ring-fill{from{stroke-dashoffset:var(--full)}to{stroke-dashoffset:var(--dash)}}
-        @keyframes glow{0%,100%{box-shadow:0 0 20px #7C3AED40}50%{box-shadow:0 0 40px #7C3AED60}}
+        @keyframes radar{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes telemetry{0%,100%{opacity:.6}50%{opacity:1}}
+        /* Live dot — green pulse */
+        .live-dot{width:6px;height:6px;border-radius:50%;background:#00E676;box-shadow:0 0 8px #00E67680;animation:pulse 2s ease infinite}
         .nb{outline:none!important}
-        .nb:focus-visible{box-shadow:0 0 0 2px #7C3AED60!important}
-        button:not(.nb):focus-visible{outline:2px solid #7C3AED60;outline-offset:2px}
+        .nb:focus-visible{box-shadow:0 0 0 1px #00B0FF80!important}
         .evara-sidebar{scrollbar-width:none}
         .evara-sidebar::-webkit-scrollbar{display:none}
-        .metric-card{transition:all .18s ease;cursor:pointer}
-        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,58,237,.3)!important}
-        .nav-btn{transition:all .12s ease!important}
-        .nav-btn:hover{color:#F5F0FF!important;background:rgba(124,58,237,.1)!important}
+        /* Telemetry card hover — data panel activates */
+        .metric-card{transition:all .15s ease;cursor:pointer;border-radius:4px!important}
+        .metric-card:hover{border-color:#00B0FF60!important;box-shadow:0 0 20px #00B0FF15,inset 0 0 20px #00B0FF05!important}
+        /* Nav — mission station selector */
+        .nav-btn{transition:all .1s ease!important;border-radius:2px!important}
+        .nav-btn:hover{color:#E8E8F0!important;background:rgba(0,176,255,0.08)!important}
+        .nav-btn.active{color:#00B0FF!important;background:rgba(0,176,255,0.12)!important;border-left:2px solid #00B0FF!important}
+        .rh{cursor:pointer;transition:background .08s}
+        .rh:hover{background:#0A0A0E!important}
+        .rh:hover td{background:#0F0F14!important}
+        input:focus,textarea:focus,select:focus{outline:none;border-color:#00B0FF!important;box-shadow:0 0 0 1px #00B0FF30}
+        @media(max-width:768px){
+          .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .2s ease;width:216px!important}
+          .evara-sidebar.open{transform:translateX(0)}
+          .evara-overlay{display:block!important}
+          .evara-main{margin-left:0!important}
+          .mobile-hamburger{display:flex!important}
+          .main-padding{padding:12px!important}
+        }
+        .mobile-hamburger{display:none!important}
       `}</style>
-      {/* Left panel — product showcase */}
-      <div style={{ flex:1, background:"linear-gradient(145deg,#0C0A0F 0%,#150D2A 60%,#1A0A35 100%)", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0, position:"relative", overflow:"hidden" }}>
-        {/* Ambient glow */}
-        <div style={{ position:"absolute", top:"-20%", right:"-10%", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle,#7C3AED25,transparent 70%)", pointerEvents:"none" }} />
-        <div style={{ position:"absolute", bottom:"10%", left:"-5%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle,#F59E0B15,transparent 70%)", pointerEvents:"none" }} />
+      {/* Left panel — mission control briefing */}
+      <div style={{ flex:1, background:"#000000", padding:"48px 52px", display:"flex", flexDirection:"column", justifyContent:"space-between", minWidth:0, position:"relative", overflow:"hidden" }}>
+        {/* Star field texture */}
+        <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(1px 1px at 20% 30%, #ffffff18 0%, transparent 100%),radial-gradient(1px 1px at 80% 10%, #ffffff12 0%, transparent 100%),radial-gradient(1px 1px at 50% 60%, #ffffff10 0%, transparent 100%),radial-gradient(1px 1px at 10% 80%, #ffffff15 0%, transparent 100%),radial-gradient(1px 1px at 90% 70%, #ffffff08 0%, transparent 100%)", pointerEvents:"none" }} />
+        {/* Orbital arc — decorative */}
+        <div style={{ position:"absolute", top:"-40%", right:"-30%", width:700, height:700, borderRadius:"50%", border:"1px solid rgba(0,176,255,0.08)", pointerEvents:"none" }} />
+        <div style={{ position:"absolute", top:"-20%", right:"-10%", width:400, height:400, borderRadius:"50%", border:"1px solid rgba(232,160,32,0.06)", pointerEvents:"none" }} />
+        {/* Ambient telemetry glow */}
+        <div style={{ position:"absolute", bottom:"20%", left:"10%", width:200, height:200, borderRadius:"50%", background:"radial-gradient(circle,#00B0FF08,transparent 70%)", pointerEvents:"none" }} />
+
         <div style={{ display:"flex", alignItems:"center", gap:9, position:"relative" }}>
-          <div style={{ width:28, height:28, borderRadius:7, background:"linear-gradient(135deg,#7C3AED,#A855F7)", display:"flex", alignItems:"center", justifyContent:"center" }}><Zap size={14} color="#fff" strokeWidth={2.5} /></div>
-          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"-0.4px", fontFamily:"Syne,sans-serif" }}>evara</span>
-          <span style={{ fontSize:10, background:"#7C3AED20", color:"#A855F7", padding:"2px 6px", borderRadius:4, fontWeight:700 }}>BETA</span>
+          <div style={{ width:28, height:28, borderRadius:4, background:"#000", border:"1px solid #00B0FF60", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 12px #00B0FF30" }}><Zap size={13} color="#00B0FF" strokeWidth={2.5} /></div>
+          <span style={{ fontSize:18, fontWeight:700, letterSpacing:"3px", textTransform:"uppercase", fontFamily:"Syne,sans-serif", color:"#E8E8F0" }}>evara</span>
+          <span style={{ fontSize:9, background:"#00B0FF15", color:"#00B0FF", padding:"2px 6px", borderRadius:2, fontWeight:700, letterSpacing:"1.5px" }}>BETA</span>
         </div>
         <div style={{ position:"relative" }}>
-          <h2 style={{ fontSize:"clamp(24px,3vw,40px)", fontWeight:800, letterSpacing:"-1.5px", lineHeight:1.05, marginBottom:16, color:"#F5F0FF", fontFamily:"Syne,sans-serif" }}>
-            Your all-in-one<br/>event marketing<br/><span style={{ background:"linear-gradient(135deg,#A855F7,#F59E0B)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>platform.</span>
+          {/* Mission status label */}
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"3px", textTransform:"uppercase", color:C.amber, marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+            <div className="live-dot" />
+            MISSION CONTROL · EVENT MARKETING
+          </div>
+          <h2 style={{ fontSize:"clamp(28px,3.5vw,46px)", fontWeight:800, letterSpacing:"-2px", lineHeight:1.0, marginBottom:16, color:"#FFFFFF", fontFamily:"Syne,sans-serif" }}>
+            Your event.<br/>Your command<br/><span style={{ color:"#00B0FF" }}>centre.</span>
           </h2>
-          <p style={{ fontSize:15, color:"rgba(245,240,255,0.45)", lineHeight:1.65, marginBottom:28, maxWidth:380 }}>
-            Replace Mailchimp, Eventbrite, Typeform, Unbounce and Zapier with a single AI-native platform built for event marketing teams.
+          <p style={{ fontSize:14, color:"rgba(232,232,240,0.4)", lineHeight:1.7, marginBottom:28, maxWidth:380, fontFamily:"Outfit,sans-serif" }}>
+            Replace Mailchimp, Eventbrite, Typeform, Unbounce and Zapier. One AI-native platform. Full mission visibility.
           </p>
-          <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
             {[
               { icon:"✉️", label:"AI eDM Builder", desc:"Full emails from a sentence in seconds" },
               { icon:"👥", label:"Contact management", desc:"Deduplication, VIP tagging, lead scoring" },
@@ -1166,38 +1202,40 @@ function MainApp({ session }) {
   return (
     <div style={{ display: "flex", height: "100vh", background: C.bg, color: C.text, fontFamily: "Outfit,sans-serif", overflow: "hidden" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Syne:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
-        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar{width:3px;height:3px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#2C2C30;border-radius:4px}
-        ::-webkit-scrollbar-thumb:hover{background:#3C3C42}
-        ::selection{background:#0A84FF28;color:#F5F5F7}
+        ::-webkit-scrollbar-thumb{background:#1A1A24;border-radius:1px}
+        ::-webkit-scrollbar-thumb:hover{background:#252535}
+        ::selection{background:#00B0FF20;color:#E8E8F0}
         button{cursor:pointer;font-family:Outfit,sans-serif}
         input,textarea,select{font-family:Outfit,sans-serif}
-        @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        h1,h2{font-family:Syne,Outfit,sans-serif!important}
+        .mono{font-family:'JetBrains Mono',monospace!important;font-variant-numeric:tabular-nums}
+        .live-dot{width:6px;height:6px;border-radius:50%;background:#00E676;box-shadow:0 0 8px #00E67680;display:inline-block;animation:pulse 2s ease infinite}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
         @keyframes spin{to{transform:rotate(360deg)}}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        @keyframes shimmer{0%{opacity:.5}50%{opacity:1}100%{opacity:.5}}
-        @keyframes toast-in{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
+        @keyframes toast-in{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes toastProgress{from{width:100%}to{width:0%}}
         @keyframes slideRight{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes telemetry{0%,100%{opacity:.5}50%{opacity:1}}
         .nb{outline:none!important}
-        .nb:focus-visible{box-shadow:0 0 0 2px #0A84FF50!important}
-        .nb:hover{background:rgba(255,255,255,.05)!important;color:${C.text}!important}
-        .mc:hover{background:${C.raised}!important;border-color:${C.borderHi}!important;transform:translateY(-1px)}
-        .rh{cursor:pointer;transition:background .1s}
-        .rh:hover td{background:${C.raised}!important}
-        .rh:hover{background:${C.raised}!important}
-        .metric-card{transition:transform .18s ease,box-shadow .18s ease;cursor:pointer}
-        .metric-card:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.5)!important}
-        .nav-btn{transition:all .12s ease!important}
-        .nav-btn:hover{color:${C.text}!important;background:rgba(255,255,255,.06)!important}
+        .nb:focus-visible{box-shadow:0 0 0 1px #00B0FF60!important}
+        .nb:hover{background:rgba(0,176,255,.06)!important;color:#E8E8F0!important}
+        .rh{cursor:pointer;transition:background .08s}
+        .rh:hover td{background:#0A0A0E!important}
+        .rh:hover{background:#0A0A0E!important}
+        .metric-card{transition:all .15s ease;cursor:pointer;border-radius:4px!important}
+        .metric-card:hover{border-color:#00B0FF50!important;box-shadow:0 0 20px #00B0FF12,inset 0 0 20px #00B0FF05!important}
+        .nav-btn{transition:all .1s ease!important}
+        .nav-btn:hover{color:#E8E8F0!important;background:rgba(0,176,255,.07)!important}
         .evara-sidebar{scrollbar-width:none}
         .evara-sidebar::-webkit-scrollbar{display:none}
         .mobile-hamburger{display:none!important}
-        input:focus,textarea:focus,select:focus{outline:none;border-color:${C.blue}!important;box-shadow:0 0 0 3px ${C.blue}18}
+        input:focus,textarea:focus,select:focus{outline:none;border-color:#00B0FF!important;box-shadow:0 0 0 1px #00B0FF30}
         @media(max-width:768px){
           .evara-sidebar{position:fixed!important;z-index:200;transform:translateX(-100%);transition:transform .25s ease;width:216px!important}
           .evara-sidebar.open{transform:translateX(0)}
@@ -1205,7 +1243,7 @@ function MainApp({ session }) {
           .evara-main{margin-left:0!important}
           .mobile-hamburger{display:flex!important}
           .desktop-breadcrumb{display:none!important}
-          .main-padding{padding:16px!important}
+          .main-padding{padding:12px!important}
         }
       `}</style>
 
@@ -1216,11 +1254,11 @@ function MainApp({ session }) {
       <aside className={`evara-sidebar${sidebarOpen?" open":""}`} style={{ width: sidebarOpen ? 216 : 56, background: C.sidebar, borderRight: `1px solid ${C.border}`, display: "flex", flexDirection: "column", flexShrink: 0, transition:"width .2s ease", overflow:"hidden" }}>
         <div style={{ padding: "20px 16px 16px", borderBottom: `1px solid ${C.border}` }}>
           <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: sidebarOpen ? 14 : 8 }}>
-            <div style={{ width: 26, height: 26, borderRadius: 6, background: "linear-gradient(135deg,#7C3AED,#A855F7)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: `0 0 0 3px #7C3AED25`, flexShrink:0 }}><Zap size={13} color="#fff" strokeWidth={2.5} /></div>
+            <div style={{ width: 26, height: 26, borderRadius: 3, background: C.bg, border: `1px solid #00B0FF50`, display: "flex", alignItems: "center", justifyContent: "center", boxShadow:`0 0 10px #00B0FF25`, flexShrink:0 }}><Zap size={13} color="#00B0FF" strokeWidth={2.5} /></div>
             {sidebarOpen && <>
-              <span style={{ fontSize: 16, fontWeight: 700, letterSpacing: "-0.4px", fontFamily:"Syne,sans-serif" }}>evara</span>
-              {profile?.companies?.name && <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "1px 6px", borderRadius: 4 }}>{profile.companies.name.slice(0,14)}</span>}
-              <span style={{ fontSize: 9, fontWeight: 600, background: `#7C3AED20`, color: "#A855F7", padding: "2px 5px", borderRadius: 3, letterSpacing: "0.5px", marginLeft: "auto" }}>BETA</span>
+              <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "3px", textTransform:"uppercase", fontFamily:"Syne,sans-serif", color: C.text }}>evara</span>
+              {profile?.companies?.name && <span style={{ fontSize: 9, color: C.muted, background: C.raised, padding: "1px 5px", borderRadius: 2, letterSpacing:"0.5px", textTransform:"uppercase" }}>{profile.companies.name.slice(0,12)}</span>}
+              <span style={{ fontSize: 9, fontWeight: 700, background: `#00B0FF15`, color: "#00B0FF", padding: "2px 5px", borderRadius: 2, letterSpacing: "1px", marginLeft: "auto" }}>BETA</span>
             </>}
             <button onClick={() => setSidebarOpen(p=>!p)} style={{ marginLeft:"auto", background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:16, padding:"2px 4px", lineHeight:1, flexShrink:0 }} title={sidebarOpen?"Collapse sidebar":"Expand sidebar"}>
               {sidebarOpen ? "◂" : "▸"}
@@ -1424,8 +1462,8 @@ function MainApp({ session }) {
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: 7, marginLeft: "auto" }}>
-            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "linear-gradient(135deg,#7C3AED,#A855F7)", border: "none", borderRadius: 7, padding: "6px 13px", color: "#fff", fontSize: 12.5, fontWeight: 600, boxShadow: `0 2px 12px #7C3AED50` }}>
-              <Plus size={12} />New Event
+            <button onClick={() => setShowNewEvent(true)} style={{ display: "flex", alignItems: "center", gap: 6, background: "transparent", border: `1px solid #00B0FF60`, borderRadius: 3, padding: "6px 14px", color: "#00B0FF", fontSize: 11, fontWeight: 700, letterSpacing: "1.5px", textTransform: "uppercase", boxShadow: `0 0 12px #00B0FF20`, fontFamily:"Outfit,sans-serif" }}>
+              <Plus size={11} />New Mission
             </button>
             <button onClick={() => setShowHelp(p => !p)} title="Keyboard shortcuts & tips (?)"
               style={{ background: "transparent", border: `1px solid ${C.border}`, borderRadius: 7, padding: "5px 10px", color: C.muted, cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
