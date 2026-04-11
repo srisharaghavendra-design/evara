@@ -10842,9 +10842,20 @@ function PublicCheckInPage({ eventId }) {
 
 
 // ─── EVENT CALENDAR VIEW ──────────────────────────────────────
-function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire, campaigns, activeEvent }) {
+function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire, campaigns: propCampaigns, activeEvent }) {
   const [month, setMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState(null);
+  const [allCampaigns, setAllCampaigns] = useState(propCampaigns || []);
+
+  useEffect(() => {
+    if (!profile?.company_id) return;
+    supabase.from("email_campaigns")
+      .select("id,name,email_type,status,scheduled_at,send_at,event_id,subject")
+      .eq("company_id", profile.company_id)
+      .not("scheduled_at", "is", null)
+      .order("scheduled_at")
+      .then(({ data }) => setAllCampaigns(data || []));
+  }, [profile?.company_id]);
 
   const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
   const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
@@ -10869,7 +10880,7 @@ function CalendarView({ supabase, profile, events, setActiveEvent, setView, fire
   });
 
   const campaignsByDay = {};
-  (campaigns || []).filter(c => c.scheduled_at || c.send_at).forEach(c => {
+  (allCampaigns || []).filter(c => c.scheduled_at || c.send_at).forEach(c => {
     const d = new Date(c.scheduled_at || c.send_at);
     if (d.getMonth() === month.getMonth() && d.getFullYear() === month.getFullYear()) {
       const day = d.getDate();
