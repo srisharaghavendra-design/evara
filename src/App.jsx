@@ -1536,6 +1536,62 @@ function MainApp({ session }) {
   );
 }
 
+// ─── EMAIL ACTIVITY TIMELINE ─────────────────────────────────
+function EmailActivityTimeline({ supabase, contactId, eventId }) {
+  const [sends, setSends] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!contactId) return;
+    setLoading(true);
+    // Load email sends for this contact, optionally filtered by event
+    let q = supabase.from("email_sends")
+      .select("*,email_campaigns(name,email_type,subject,event_id,events(name))")
+      .eq("contact_id", contactId)
+      .order("sent_at", { ascending: false })
+      .limit(20);
+    q.then(({ data }) => { setSends(data || []); setLoading(false); });
+  }, [contactId, eventId]);
+
+  if (loading) return <div style={{ fontSize:11, color:C.muted, padding:"4px 0" }}>Loading…</div>;
+
+  if (!sends.length) return (
+    <div style={{ fontSize:11, color:C.muted, fontStyle:"italic" }}>
+      No emails sent to this contact yet
+    </div>
+  );
+
+  const icons = { sent:"📧", opened:"👁", clicked:"🖱", bounced:"❌" };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+      {sends.map(s => {
+        const status = s.clicked_at ? "clicked" : s.opened_at ? "opened" : s.status || "sent";
+        const statusColor = status==="clicked"?C.blue:status==="opened"?C.green:status==="bounced"?C.red:C.muted;
+        const cam = s.email_campaigns || {};
+        const eventName = cam.events?.name;
+        return (
+          <div key={s.id} style={{ display:"flex", alignItems:"flex-start", gap:8, padding:"6px 0", borderBottom:`1px solid ${C.border}` }}>
+            <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>{icons[status] || "📧"}</span>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontSize:11.5, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {cam.subject || cam.name || "Email"}
+              </div>
+              <div style={{ display:"flex", gap:6, marginTop:2, flexWrap:"wrap" }}>
+                <span style={{ fontSize:10, fontWeight:600, color:statusColor, textTransform:"capitalize" }}>{status}</span>
+                {eventName && <span style={{ fontSize:10, color:C.muted }}>· {eventName}</span>}
+                <span style={{ fontSize:10, color:C.muted }}>
+                  · {s.sent_at ? new Date(s.sent_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"}) : ""}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── DASHBOARD ───────────────────────────────────────────────
 function DashView({ supabase, profile, activeEvent, fire, setView, events = [], setActiveEvent }) {
   const [contacts, setContacts] = useState([]);
@@ -2396,15 +2452,22 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                       }} style={{ background: "none", border: "none", color: C.muted, cursor: "pointer", fontSize: 12, lineHeight: 1, padding: 0 }}>×</button>
                     </span>
                   ))}
-                  <button onClick={async () => {
-                    const tag = window.prompt?.("Add tag (e.g. vip, speaker, sponsor):") || ""; if (!tag.trim()) return;
-                    const newTags = [...new Set([...(c.tags||[]), tag.trim().toLowerCase()])];
+                  {/* Inline tag input — no window.prompt */}
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const input = e.currentTarget.querySelector("input");
+                    const tag = input?.value?.trim().toLowerCase();
+                    if (!tag) return;
+                    const newTags = [...new Set([...(c.tags||[]), tag])];
                     await supabase.from("contacts").update({ tags: newTags }).eq("id", c.id);
                     setSelectedContact(p => ({ ...p, contacts: { ...p.contacts, tags: newTags } }));
-                    fire(`Tag "${tag.trim()}" added`);
-                  }} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 999, background: "transparent", border: `1px dashed ${C.border}`, color: C.muted, cursor: "pointer" }}>
-                    + Add tag
-                  </button>
+                    input.value = "";
+                    fire(`Tag "${tag}" added`);
+                  }} style={{ display:"inline-flex", alignItems:"center" }}>
+                    <input placeholder="+ tag" maxLength={20}
+                      style={{ width:52, fontSize:11, padding:"2px 7px", borderRadius:999, background:"transparent", border:`1px dashed ${C.border}`, color:C.muted, outline:"none", fontFamily:"inherit" }}
+                      onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                  </form>
                 </div>
               </div>
               {/* Notes */}
@@ -2420,20 +2483,10 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                   style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "7px 9px", fontSize: 12, outline: "none", resize: "vertical", minHeight: 56, fontFamily: "inherit", boxSizing: "border-box" }}
                 />
               </div>
-              {/* Event History - loaded via contact profile side panel */}
+              {/* Email Activity Timeline */}
               <div style={{ padding:"12px 18px", borderTop:`1px solid ${C.border}` }}>
-                <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:6 }}>Event History</div>
-                <button onClick={async () => {
-                  const { data } = await supabase.from("event_contacts").select("*,events(name,event_date)").eq("contact_id", c.id).order("created_at",{ascending:false}).limit(10);
-                  const el = document.getElementById(`evhist-${c.id}`);
-                  if (!el) return;
-                  if (!data?.length) { el.innerHTML = '<div style="font-size:12px;color:#888">No event history yet</div>'; return; }
-                  el.innerHTML = data.map(ec => {
-                    const ev = ec.events||{}; const col = ec.status==="attended"?"#30D158":ec.status==="confirmed"?"#0A84FF":ec.status==="declined"?"#FF453A":"#888";
-                    return `<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:12px"><span style="color:#F5F5F7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">${ev.name||"Unknown"}</span><span style="font-size:10px;color:${col};font-weight:600;text-transform:capitalize;flex-shrink:0;margin-left:8px">${ec.status||"pending"}</span></div>`;
-                  }).join("");
-                }} style={{ fontSize:11, color:C.blue, background:"transparent", border:`1px solid ${C.blue}30`, borderRadius:5, padding:"3px 10px", cursor:"pointer", marginBottom:6 }}>Load history</button>
-                <div id={`evhist-${c.id}`} />
+                <div style={{ fontSize:9.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>Email Activity</div>
+                <EmailActivityTimeline supabase={supabase} contactId={c.id} eventId={activeEvent?.id} />
               </div>
             </div>
           </div>
