@@ -1359,7 +1359,7 @@ function MainApp({ session }) {
         <div style={{ padding: "10px 8px 12px", borderTop: `1px solid ${C.border}`, display: "flex", flexDirection: "column", gap: 1 }}>
           <div style={{ fontSize: 9.5, color: C.muted, padding: "0 10px 6px", opacity: 0.5, display: "flex", justifyContent: "space-between" }}>
           <span>⌘N new · ⌘K search · ⌘, settings · ESC close</span>
-          <span>v2.2</span>
+          <span>v2.3</span>
         </div>
         <button className="nb" onClick={() => { setView("settings"); if (window.innerWidth <= 768) setSidebarOpen(false); }} style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 10px", borderRadius: 7, border: "none", background: view === "settings" ? C.raised : "transparent", color: C.muted, width: "100%", textAlign: "left", fontSize: 13, borderLeft: `2px solid ${view === "settings" ? C.blue : "transparent"}` }}>
             <Settings size={14} strokeWidth={1.5} /><span>Settings</span>
@@ -3881,26 +3881,52 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           {campaigns.length > 0 && (
             <Sec label={`Saved drafts (${campaigns.length}) · ${campaigns.filter(c=>c.status==="scheduled").length} scheduled`}>
               {campaigns.map(cam => (
-                <div key={cam.id} onClick={() => {
+                <div key={cam.id}
+                  style={{ padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.border}`, marginBottom: 6, transition: "border-color .12s", background: C.bg }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = C.blue} onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }} onClick={() => {
                     if (cam.html_content) {
                       setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text, campaign_id: cam.id });
-                      // Scroll preview panel into view
                       setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
                     }
-                  }}
-                  style={{ padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.border}`, marginBottom: 6, cursor: cam.html_content ? "pointer" : "default", transition: "border-color .12s", background: C.bg }}
-                  onMouseEnter={e => cam.html_content && (e.currentTarget.style.borderColor = C.blue)} onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                  }} style={{ cursor: cam.html_content ? "pointer" : "default" }}>
                     <span style={{ fontSize: 14, flexShrink: 0 }}>
                       {cam.email_type === "save_the_date" ? "📅" : cam.email_type === "invitation" ? "✉️" : cam.email_type === "reminder" ? "⏰" : cam.email_type === "day_of_details" ? "📍" : cam.email_type === "thank_you" ? "🙏" : cam.email_type === "confirmation" ? "✅" : "📧"}
                     </span>
                     <span style={{ fontSize: 12.5, fontWeight: 500, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{cam.subject || cam.name}</span>
                     {cam.status === "sent" && <span style={{ fontSize: 9, padding: "1px 6px", borderRadius: 3, background: C.green + "20", color: C.green, flexShrink: 0 }}>Sent</span>}
                   </div>
-                  {cam.subject && cam.name !== cam.subject && <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</div>}
+                  {cam.subject && cam.name !== cam.subject && <div style={{ fontSize: 10.5, color: C.muted, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cam.name}</div>}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <span style={{ fontSize: 10.5, color: C.muted, textTransform: "capitalize" }}>{cam.email_type?.replace(/_/g, " ")}{cam.total_sent > 0 ? ` · ${cam.total_sent} sent` : ""}</span>
-                    <span style={{ fontSize: 10.5, background: cam.status === "sent" ? C.green + "15" : C.blue + "15", color: cam.status === "sent" ? C.green : C.blue, padding: "2px 7px", borderRadius: 4 }}>{cam.status}</span>
+                    <div style={{ display:"flex", gap:4 }}>
+                      {cam.html_content && (
+                        <button onClick={e => { e.stopPropagation(); setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text, campaign_id: cam.id }); }}
+                          style={{ fontSize:10, padding:"2px 7px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                          👁 View
+                        </button>
+                      )}
+                      {cam.status !== "sent" && (
+                        <button onClick={async e => {
+                          e.stopPropagation();
+                          if (!activeEvent || !profile) return;
+                          fire("🔄 Regenerating…");
+                          const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-edm`, {
+                            method:"POST", headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY},
+                            body: JSON.stringify({ eventName:activeEvent.name, eventDate:activeEvent.event_date?new Date(activeEvent.event_date).toLocaleDateString("en-AU",{day:"numeric",month:"long",year:"numeric"}):"", eventTime:activeEvent.event_time||"", location:activeEvent.location||"", description:activeEvent.description||"", orgName:profile?.companies?.name||"", emailType:cam.email_type||"invitation", tone:info.tone||"professional and exciting", companyId:profile.company_id, eventId:activeEvent.id })
+                          });
+                          const d = await res.json();
+                          if (d.success && d.html) {
+                            await supabase.from("email_campaigns").update({ html_content:d.html, subject:d.subject, plain_text:d.plain_text }).eq("id", cam.id);
+                            setCampaigns(p => p.map(c => c.id===cam.id ? {...c, html_content:d.html, subject:d.subject, plain_text:d.plain_text} : c));
+                            setPreview({ subject:d.subject, html:d.html, plain_text:d.plain_text, campaign_id:cam.id });
+                            fire("✅ Regenerated!");
+                          } else fire(d.error||"Failed","err");
+                        }} style={{ fontSize:10, padding:"2px 7px", borderRadius:4, border:`1px solid ${C.blue}30`, background:`${C.blue}08`, color:C.blue, cursor:"pointer" }}>
+                          ✨ Regen
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -7480,7 +7506,7 @@ function SettingsView({ supabase, profile, fire }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px" }}>Profile</div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 10, color: C.muted }}>evara v2.2 · Build 2026-04-11</span>
+          <span style={{ fontSize: 10, color: C.muted }}>evara v2.3 · Build 2026-04-12</span>
           <div style={{ display: "flex", gap: 8 }}>
             {[
               { label: "Supabase", ok: true },
