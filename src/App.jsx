@@ -1416,6 +1416,57 @@ function MainApp({ session }) {
           {view === "roi"       && <ROIView      supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} />}
           {view === "settings"  && <SettingsView supabase={supabase} profile={profile} fire={fire} />}
         </main>
+        {/* ── NEXT STEP BANNER ── */}
+        {activeEvent && (() => {
+          const s1 = campaigns.some(c => c.html_content);
+          const s2 = lpPublished;
+          const s3 = !!formShareLink;
+          const s4 = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
+
+          const cfg = {
+            edm: {
+              ready: s1, readyTip: "✅ Email drafted — next, build your Landing Page",
+              pendingTip: "Draft and save at least one email to continue",
+              nextView: "landing", nextLabel: "Build Landing Page",
+            },
+            landing: {
+              ready: s2, readyTip: "✅ Landing page published — next, set up your Form",
+              pendingTip: "Publish your landing page to continue",
+              nextView: "forms", nextLabel: "Set up Form",
+            },
+            forms: {
+              ready: s3, readyTip: "✅ Form active — next, schedule your emails",
+              pendingTip: "Activate your form to continue",
+              nextView: "schedule", nextLabel: "Go to Schedule",
+            },
+            schedule: {
+              ready: s4, readyTip: "🎉 Campaign scheduled! Track performance in Analytics.",
+              pendingTip: "Schedule at least one email to launch your campaign",
+              nextView: "analytics", nextLabel: "View Analytics",
+            },
+          };
+
+          const b = cfg[view];
+          if (!b) return null;
+
+          const col = b.ready ? C.green : C.amber;
+          return (
+            <div style={{ borderTop:`1px solid ${col}25`, background:`${col}07`, padding:"9px 22px", display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, gap:12 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ width:6, height:6, borderRadius:"50%", background:col, flexShrink:0 }} />
+                <span style={{ fontSize:12.5, color: b.ready ? C.text : C.muted, lineHeight:1.4 }}>
+                  {b.ready ? b.readyTip : b.pendingTip}
+                </span>
+              </div>
+              {b.ready && (
+                <button onClick={() => setView(b.nextView)}
+                  style={{ background:C.blue, border:"none", borderRadius:7, color:"#fff", fontSize:12.5, fontWeight:600, padding:"7px 16px", cursor:"pointer", display:"flex", alignItems:"center", gap:6, whiteSpace:"nowrap", flexShrink:0, boxShadow:`0 4px 12px ${C.blue}40` }}>
+                  {b.nextLabel} →
+                </button>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* NEW EVENT MODAL */}
