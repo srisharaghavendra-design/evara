@@ -281,6 +281,15 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
             <button onClick={() => setStep(1)} style={{ fontSize: 12.5, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>← Templates</button>
             <button onClick={() => save(false)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.text, cursor: "pointer" }}>{saving ? <Spin /> : "Save draft"}</button>
             <button onClick={() => save(true)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>{saving ? <><Spin />Publishing…</> : "Publish →"}</button>
+            {page?.id && (
+              <button onClick={async () => {
+                if (!window.confirm("Delete this landing page? This cannot be undone.")) return;
+                await supabase.from("landing_pages").delete().eq("id", page.id);
+                setPage(null);
+                setStep(1);
+                fire("🗑 Landing page deleted");
+              }} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 7, border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red, cursor: "pointer" }}>🗑</button>
+            )}
           </div>
         )}
       </div>
