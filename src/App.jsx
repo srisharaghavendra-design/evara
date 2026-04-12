@@ -134,12 +134,10 @@ const NAV_GROUPS = [
 
 // Top bar BUILD tools — ordered by event flow
 const BUILD_NAV = [
-  { id:"edm",      label:"Emails",        icon:"✉️", badge:"AI" },
-  { id:"schedule", label:"Schedule",      icon:"📅" },
-  { id:"landing",  label:"Landing Page",  icon:"🌐" },
-  { id:"forms",    label:"Forms",         icon:"📋" },
-  { id:"campaign", label:"Campaigns",     icon:"⚡", badge:"AI" },
-  { id:"social",   label:"Social",        icon:"📢", badge:"AI" },
+  { id:"edm",      label:"Emails",       icon:"✉️", badge:"AI", step:1, hint:"Build & review your AI-generated emails" },
+  { id:"landing",  label:"Landing Page", icon:"🌐", step:2,     hint:"Publish your event page — form lives here" },
+  { id:"schedule", label:"Schedule",     icon:"📅", step:3,     hint:"Add contacts and set your send dates" },
+  { id:"analytics",label:"Results",      icon:"📊", step:4,     hint:"Track opens, clicks and attendance" },
 ];
 const NAV = NAV_GROUPS.flatMap(g => g.items);
 
@@ -1479,116 +1477,120 @@ function MainApp({ session }) {
           </div>
         </header>
 
-        {/* ── BUILD NAV STRIP — ordered by event flow with X-Ray hover preview ── */}
+        {/* ── JOURNEY PROGRESS STRIP — 4-step guided flow ── */}
         {activeEvent && (() => {
-          const sentCampaigns = campaigns.filter(c => c.status === "sent");
-          const draftCampaigns = campaigns.filter(c => c.status === "draft");
-          const scheduledCampaigns = campaigns.filter(c => c.status === "scheduled");
+          // Step completion logic — driven by real data
+          const step1Done = campaigns.some(c => c.html_content);
+          const step2Done = !!formShareLink;
+          const step3Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
+          const step4Done = campaigns.some(c => c.status === "sent");
+          const stepDone = [step1Done, step2Done, step3Done, step4Done];
+          const stepsComplete = stepDone.filter(Boolean).length;
+          const pct = Math.round((stepsComplete / 4) * 100);
 
-          const PREVIEWS = {
-            edm: (
-              <div style={{ padding:"14px 16px", minWidth:260 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>EMAIL DRAFTS</div>
-                {campaigns.length === 0 ? (
-                  <div style={{ fontSize:12, color:C.muted }}>No emails drafted yet — click to generate with AI</div>
-                ) : campaigns.slice(0,5).map(c => (
-                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:7 }}>
-                    <div style={{ width:6, height:6, borderRadius:"50%", background:c.status==="sent"?C.green:c.status==="scheduled"?C.blue:C.muted, flexShrink:0 }} />
-                    <div style={{ flex:1, fontSize:11.5, color:C.sec, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{c.name || c.email_type}</div>
-                    <span style={{ fontSize:9.5, color:c.status==="sent"?C.green:c.status==="scheduled"?C.blue:C.muted, fontWeight:600, textTransform:"uppercase" }}>{c.status}</span>
-                  </div>
-                ))}
-                <div style={{ marginTop:10, fontSize:11, color:C.muted, borderTop:`1px solid ${C.border}`, paddingTop:8 }}>
-                  {sentCampaigns.length} sent · {scheduledCampaigns.length} scheduled · {draftCampaigns.length} draft
-                </div>
-              </div>
-            ),
-            schedule: (
-              <div style={{ padding:"14px 16px", minWidth:240 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>CAMPAIGN TIMELINE</div>
-                {campaigns.length === 0 ? (
-                  <div style={{ fontSize:12, color:C.muted }}>No campaigns scheduled yet</div>
-                ) : campaigns.slice(0,5).map(c => (
-                  <div key={c.id} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
-                    <div style={{ width:5, height:5, borderRadius:"50%", background:c.status==="sent"?C.green:c.status==="scheduled"?C.blue:C.muted, flexShrink:0 }} />
-                    <div style={{ flex:1, fontSize:11, color:C.sec }}>{c.email_type?.replace(/_/g," ")}</div>
-                    <span style={{ fontSize:10, color:C.muted }}>{c.send_at ? new Date(c.send_at).toLocaleDateString("en-AU",{day:"numeric",month:"short"}) : "—"}</span>
-                  </div>
-                ))}
-              </div>
-            ),
-            landing: (
-              <div style={{ padding:"14px 16px", minWidth:220 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>LANDING PAGE</div>
-                <div style={{ fontSize:12, color:formShareLink ? C.green : C.muted, marginBottom:6, fontWeight:formShareLink?600:400 }}>
-                  {formShareLink ? "✓ Live — registration open" : "○ Not published yet"}
-                </div>
-                {formShareLink && <div style={{ fontSize:10, color:C.muted, wordBreak:"break-all", lineHeight:1.4 }}>{formShareLink.slice(0,40)}…</div>}
-                <div style={{ fontSize:11, color:C.muted, marginTop:8 }}>Click to edit your landing page design</div>
-              </div>
-            ),
-            forms: (
-              <div style={{ padding:"14px 16px", minWidth:220 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>REGISTRATION FORM</div>
-                <div style={{ fontSize:12, color:C.muted, lineHeight:1.6 }}>
-                  Drag-and-drop form builder.<br/>Share the link — contacts self-register.
-                </div>
-                <div style={{ marginTop:8, fontSize:11, color:formShareLink?C.green:C.muted }}>
-                  {formShareLink ? "✓ Form is live" : "○ Form not created yet"}
-                </div>
-              </div>
-            ),
-            campaign: (
-              <div style={{ padding:"14px 16px", minWidth:240 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>AI CAMPAIGN BUILDER</div>
-                <div style={{ fontSize:12, color:C.muted, lineHeight:1.6 }}>Generate all 7 emails, landing page, form fields, hashtags and a LinkedIn post — from one event brief.</div>
-                <div style={{ marginTop:8, fontSize:11, color:C.blue, fontWeight:600 }}>One click → full campaign ✨</div>
-              </div>
-            ),
-            social: (
-              <div style={{ padding:"14px 16px", minWidth:220 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:C.blue, letterSpacing:"1.5px", marginBottom:10 }}>AI SOCIAL CONTENT</div>
-                <div style={{ fontSize:12, color:C.muted, lineHeight:1.6 }}>Generate LinkedIn posts, tweets, and event hashtags from your event brief.</div>
-                <div style={{ marginTop:8, fontSize:11, color:C.blue, fontWeight:600 }}>AI writes, you post ✨</div>
-              </div>
-            ),
-          };
+          const activeStep = BUILD_NAV.findIndex(s => s.id === view);
 
           return (
-            <div className="evara-buildnav" style={{ borderBottom:`1px solid ${C.border}`, background:C.card, padding:"0 18px", display:"flex", alignItems:"center", gap:2, flexShrink:0, overflowX:"auto", position:"relative" }}>
-              <span style={{ fontSize:9, fontWeight:700, letterSpacing:"1.5px", color:C.muted, textTransform:"uppercase", marginRight:8, whiteSpace:"nowrap", flexShrink:0 }}>BUILD</span>
-              {BUILD_NAV.map((item, i) => {
-                const on = view === item.id;
-                const hovered = hoveredNav === item.id;
-                return (
-                  <div key={item.id} style={{ display:"flex", alignItems:"center", flexShrink:0, position:"relative" }}>
-                    <button
-                      onClick={() => setView(item.id)}
-                      onMouseEnter={() => setHoveredNav(item.id)}
-                      onMouseLeave={() => setHoveredNav(null)}
-                      style={{ display:"flex", alignItems:"center", gap:5, padding:"9px 12px", background:"transparent", border:"none", borderBottom:`2px solid ${on?C.blue:"transparent"}`, color:on?C.blue:hovered?C.text:C.muted, cursor:"pointer", fontSize:12.5, fontWeight:on?600:400, whiteSpace:"nowrap", transition:"all .1s" }}>
-                      <span style={{ fontSize:13 }}>{item.icon}</span>
-                      {item.label}
-                      {item.badge && <span style={{ fontSize:8.5, fontWeight:700, background:on?C.blue:`${C.blue}20`, color:on?"#fff":C.blue, padding:"1px 4px", borderRadius:3 }}>{item.badge}</span>}
-                    </button>
-                    {/* X-Ray hover preview */}
-                    {hovered && PREVIEWS[item.id] && (
-                      <div
+            <div style={{ borderBottom:`1px solid ${C.border}`, background:C.card, flexShrink:0 }}>
+              {/* Progress bar */}
+              <div style={{ height:3, background:C.raised, position:"relative" }}>
+                <div style={{ position:"absolute", top:0, left:0, height:"100%", width:`${pct}%`, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:"0 2px 2px 0", transition:"width .4s ease" }} />
+              </div>
+
+              {/* Step strip */}
+              <div style={{ display:"flex", alignItems:"stretch", padding:"0 20px", gap:0 }}>
+                {BUILD_NAV.map((item, i) => {
+                  const isCurrent = view === item.id;
+                  const isDone = stepDone[i];
+                  const isPending = !isDone && !isCurrent;
+                  const hovered = hoveredNav === item.id;
+
+                  const dotColor = isDone ? C.green : isCurrent ? C.blue : C.border;
+                  const labelColor = isDone ? C.green : isCurrent ? C.blue : hovered ? C.text : C.muted;
+                  const numBg = isDone ? C.green + "20" : isCurrent ? C.blue + "18" : "transparent";
+                  const numColor = isDone ? C.green : isCurrent ? C.blue : C.muted;
+
+                  return (
+                    <div key={item.id} style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
+                      <button
+                        onClick={() => setView(item.id)}
                         onMouseEnter={() => setHoveredNav(item.id)}
                         onMouseLeave={() => setHoveredNav(null)}
-                        style={{ position:"absolute", top:"100%", left:0, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, boxShadow:"0 12px 40px rgba(0,0,0,.6)", zIndex:200, animation:"fadeUp .15s ease", minWidth:220 }}>
-                        <div style={{ position:"absolute", top:-1, left:0, right:0, height:2, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:"10px 10px 0 0" }} />
-                        {PREVIEWS[item.id]}
-                      </div>
-                    )}
-                    {i < BUILD_NAV.length - 1 && <span style={{ fontSize:10, color:C.border, userSelect:"none", marginLeft:2 }}>→</span>}
+                        style={{
+                          display:"flex", flexDirection:"column", alignItems:"flex-start",
+                          gap:3, padding:"10px 14px",
+                          background:"transparent", border:"none",
+                          borderBottom:`2.5px solid ${isCurrent ? C.blue : "transparent"}`,
+                          cursor:"pointer", transition:"all .12s", minWidth:120
+                        }}>
+                        {/* Top row: step number + icon + label + badge */}
+                        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                          <div style={{
+                            width:18, height:18, borderRadius:"50%",
+                            background:numBg, border:`1.5px solid ${dotColor}`,
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:9.5, fontWeight:700, color:numColor, flexShrink:0
+                          }}>
+                            {isDone ? "✓" : item.step}
+                          </div>
+                          <span style={{ fontSize:13 }}>{item.icon}</span>
+                          <span style={{ fontSize:12.5, fontWeight:isCurrent ? 600 : 400, color:labelColor, whiteSpace:"nowrap" }}>
+                            {item.label}
+                          </span>
+                          {item.badge && (
+                            <span style={{ fontSize:8, fontWeight:700, background:isCurrent ? C.blue : `${C.blue}18`, color:isCurrent ? "#fff" : C.blue, padding:"1px 4px", borderRadius:3 }}>
+                              {item.badge}
+                            </span>
+                          )}
+                        </div>
+                        {/* Hint text — only shown for current step */}
+                        {isCurrent && (
+                          <div style={{ fontSize:10.5, color:C.muted, paddingLeft:24, whiteSpace:"nowrap" }}>
+                            {item.hint}
+                          </div>
+                        )}
+                        {/* Done status — for completed steps */}
+                        {isDone && !isCurrent && (
+                          <div style={{ fontSize:10, color:C.green + "99", paddingLeft:24, whiteSpace:"nowrap" }}>Complete</div>
+                        )}
+                        {/* Pending nudge — first incomplete non-current */}
+                        {isPending && !isDone && i === stepDone.indexOf(false) && activeStep > i && (
+                          <div style={{ fontSize:10, color:C.amber, paddingLeft:24, whiteSpace:"nowrap" }}>Needs attention</div>
+                        )}
+                      </button>
+
+                      {/* Connector arrow */}
+                      {i < BUILD_NAV.length - 1 && (
+                        <div style={{ color: stepDone[i] ? C.green + "60" : C.border, fontSize:12, userSelect:"none", flexShrink:0, paddingBottom: isCurrent ? 14 : 0 }}>
+                          →
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Right side: progress summary + extras */}
+                <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12, paddingRight:4, flexShrink:0 }}>
+                  <div style={{ fontSize:11, color:C.muted }}>
+                    <span style={{ color: stepsComplete === 4 ? C.green : C.blue, fontWeight:600 }}>{stepsComplete}/4</span> steps done
                   </div>
-                );
-              })}
+                  {/* Quick access to extras */}
+                  <div style={{ display:"flex", gap:4 }}>
+                    <button onClick={() => setView("campaign")} title="AI Campaign Builder — generate all emails from one brief" style={{ fontSize:10, padding:"3px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
+                      ⚡ <span>Campaign</span>
+                    </button>
+                    <button onClick={() => setView("social")} title="Generate LinkedIn posts & social content" style={{ fontSize:10, padding:"3px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
+                      📢 <span>Social</span>
+                    </button>
+                    <button onClick={() => setView("forms")} title="Standalone form builder" style={{ fontSize:10, padding:"3px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
+                      📋 <span>Forms</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           );
         })()}
-
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
           {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
@@ -3605,13 +3607,15 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           <span style={{ fontSize:13, color:C.amber, fontWeight:500 }}>No event selected — select an event from the sidebar to save generated emails to your campaign.</span>
         </div>
       )}
-      <ViewHint id="edm" icon="✉️" title="How to build your first email"
-        steps={[
-          "Pick an email type from the left — start with Invitation for a new event",
-          "Hit Generate — AI writes a polished, on-brand email in under 10 seconds",
-          "Review the preview, tweak the subject line if needed, then Save to Campaign",
-          "Once all 5 types are drafted, head to Scheduling to set your send dates",
-        ]} />
+      {campaigns.length === 0 && (
+        <ViewHint id="edm" icon="✉️" title="How to build your first email"
+          steps={[
+            "Pick an email type from the left — start with Invitation for a new event",
+            "Hit Generate — AI writes a polished, on-brand email in under 10 seconds",
+            "Review the preview, tweak the subject line if needed, then Save to Campaign",
+            "Once all 5 types are drafted, head to Scheduling to set your send dates",
+          ]} />
+      )}
       {activeEvent && (
         <div style={{ padding:"7px 12px", background:C.blue+"08", borderRadius:7, border:`1px solid ${C.blue}18`, marginBottom:10, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
           <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>✉️ {activeEvent.name}</span>
