@@ -4496,8 +4496,41 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
     </div>
   );
 
+  // Ready-to-send checklist
+  const hasEmailDraft = campaigns.some(c => c.html_content);
+  const hasContacts = contactCount > 0;
+  const readyChecks = [
+    { label: "Emails drafted", done: hasEmailDraft, action: "Go to Step 1 — Emails", actionId: null },
+    { label: `Contacts added (${contactCount})`, done: hasContacts, action: "Upload contacts in Contacts tab", actionId: null },
+  ];
+  const allReady = readyChecks.every(c => c.done);
+
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+      {/* ── Ready-to-send gate ── */}
+      {!allReady && campaigns.length > 0 && (
+        <div style={{ marginBottom: 16, padding: "12px 16px", background: C.amber + "10", border: `1px solid ${C.amber}35`, borderRadius: 10, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 14 }}>⚡</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 12.5, fontWeight: 600, color: C.amber, marginBottom: 5 }}>Before you send — check these off</div>
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+              {readyChecks.map(c => (
+                <div key={c.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: c.done ? C.green : C.muted }}>
+                  <span style={{ fontSize: 13 }}>{c.done ? "✅" : "○"}</span>
+                  <span style={{ fontWeight: c.done ? 500 : 400 }}>{c.label}</span>
+                  {!c.done && <span style={{ fontSize: 11, color: C.amber }}>— {c.action}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      {allReady && campaigns.length > 0 && (
+        <div style={{ marginBottom: 16, padding: "10px 16px", background: C.green + "10", border: `1px solid ${C.green}30`, borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 14 }}>✅</span>
+          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.green }}>You're ready to send — set your dates below and hit Send</span>
+        </div>
+      )}
       <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
