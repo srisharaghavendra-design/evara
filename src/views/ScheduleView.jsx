@@ -25,6 +25,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   const [autoScheduling, setAutoScheduling] = useState(false);
   const [camSearch, setCamSearch] = useState("");
   const [contactCount, setContactCount] = useState(0);
+  const [lpPublished, setLpPublished] = useState(false);
+  const [formActive, setFormActive] = useState(false);
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
@@ -41,6 +43,11 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   const inlineFileRef = useRef(null);
   const [eventContactsList, setEventContactsList] = useState([]);
   const [contactsListLoading, setContactsListLoading] = useState(false);
+  const [contactTab, setContactTab] = useState("import"); // "import" | "pool"
+  const [contactPool, setContactPool] = useState([]);
+  const [poolSearch, setPoolSearch] = useState("");
+  const [poolLoading, setPoolLoading] = useState(false);
+  const [addingFromPool, setAddingFromPool] = useState(false);
 
   const saveSubject = async (camId, newSubject) => {
     if (!newSubject.trim()) return;
@@ -130,6 +137,34 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
     setContactsListLoading(false);
   };
 
+  const loadContactPool = async () => {
+    if (!activeEvent || !profile) return;
+    setPoolLoading(true);
+    // Load company contacts not already in this event
+    const { data: evContacts } = await supabase.from("event_contacts").select("contact_id").eq("event_id", activeEvent.id);
+    const usedIds = new Set((evContacts || []).map(ec => ec.contact_id));
+    const { data: allContacts } = await supabase.from("contacts")
+      .select("id,first_name,last_name,email,company_name")
+      .eq("company_id", profile.company_id)
+      .eq("unsubscribed", false)
+      .order("first_name");
+    setContactPool((allContacts || []).filter(c => !usedIds.has(c.id)));
+    setPoolLoading(false);
+  };
+
+  const addFromPool = async (contactIds) => {
+    if (!activeEvent || !contactIds.length) return;
+    setAddingFromPool(true);
+    for (const id of contactIds) {
+      await supabase.from("event_contacts").upsert({ event_id: activeEvent.id, contact_id: id, status: "pending" }, { onConflict: "event_id,contact_id" });
+    }
+    const { count } = await supabase.from("event_contacts").select("*", { count: "exact" }).eq("event_id", activeEvent.id);
+    setContactCount(count || 0);
+    await loadContactPool();
+    fire(`✅ ${contactIds.length} contact${contactIds.length !== 1 ? "s" : ""} added to this event`);
+    setAddingFromPool(false);
+  };
+
   const removeEventContact = async (ecId) => {
     await supabase.from("event_contacts").delete().eq("id", ecId);
     setEventContactsList(p => p.filter(ec => ec.id !== ecId));
@@ -212,6 +247,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
         setContactCount(counts.all);
         setSegmentCounts(counts);
       });
+    supabase.from("landing_pages").select("is_published").eq("event_id", activeEvent.id).maybeSingle()
+      .then(({ data }) => setLpPublished(!!data?.is_published));
+    supabase.from("forms").select("is_active").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
+      .then(({ data }) => setFormActive(!!data));
   }, [activeEvent, profile]);
 
   const openSendModal = async (cam) => {
@@ -287,8 +326,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   const hasEmailDraft = campaigns.some(c => c.html_content);
   const hasContacts = contactCount > 0;
   const readyChecks = [
-    { label: "Emails drafted", done: hasEmailDraft, action: "Go to Step 1 — Emails", actionId: null },
-    { label: `Contacts added (${contactCount})`, done: hasContacts, action: "Add contacts", actionId: "contacts", onClick: () => setShowInlineContacts(true) },
+    { label: "Emails drafted", done: hasEmailDraft, action: "Go to Emails view", actionId: null },
+    { label: lpPublished ? "Landing page live" : "Landing page not published", done: lpPublished, action: "Go to Landing Page", actionId: null },
+    { label: formActive ? "Form active" : "Form not active", done: formActive, action: "Go to Form", actionId: null },
+    { label: `Contacts added (${contactCount})`, done: hasContacts, action: "Add contacts below", actionId: "contacts", onClick: () => setShowInlineContacts(true) },
   ];
   const allReady = readyChecks.every(c => c.done);
 
@@ -331,6 +372,58 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
               <button onClick={() => setShowInlineContacts(false)} style={{ fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer" }}>✕ Close</button>
             )}
           </div>
+          {/* Tab switcher */}
+          <div style={{ display: "flex", gap: 4, marginBottom: 12, background: C.bg, borderRadius: 7, padding: 3, border: `1px solid ${C.border}` }}>
+            {[{ id: "import", label: "📎 Upload / Paste" }, { id: "pool", label: "👥 From my contacts" }].map(t => (
+              <button key={t.id} onClick={() => { setContactTab(t.id); if (t.id === "pool") loadContactPool(); }}
+                style={{ flex: 1, padding: "5px 10px", borderRadius: 5, border: "none", fontSize: 12, fontWeight: contactTab === t.id ? 600 : 400, background: contactTab === t.id ? C.blue : "transparent", color: contactTab === t.id ? "#fff" : C.muted, cursor: "pointer" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          {/* Pool tab */}
+          {contactTab === "pool" && (
+            <div>
+              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <input value={poolSearch} onChange={e => setPoolSearch(e.target.value)} placeholder="Search contacts…"
+                  style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "6px 10px", fontSize: 12, outline: "none" }} />
+                <button onClick={() => {
+                  const filtered = contactPool.filter(c =>
+                    `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(poolSearch.toLowerCase())
+                  );
+                  addFromPool(filtered.map(c => c.id));
+                }} disabled={addingFromPool || !contactPool.length}
+                  style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {addingFromPool ? "Adding…" : "Add all"}
+                </button>
+              </div>
+              {poolLoading ? (
+                <div style={{ fontSize: 12, color: C.muted, padding: 8, display: "flex", gap: 6 }}><Spin size={10} />Loading…</div>
+              ) : contactPool.length === 0 ? (
+                <div style={{ fontSize: 12, color: C.muted, padding: 8 }}>
+                  {contactPool.length === 0 ? "All your contacts are already added to this event — or upload new ones via the other tab." : "No contacts found."}
+                </div>
+              ) : (
+                <div style={{ maxHeight: 180, overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
+                  {contactPool
+                    .filter(c => `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(poolSearch.toLowerCase()))
+                    .map(c => (
+                      <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderBottom: `1px solid ${C.border}`, fontSize: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ color: C.text, fontWeight: 500 }}>{[c.first_name, c.last_name].filter(Boolean).join(" ") || "—"}</span>
+                          <span style={{ color: C.muted, marginLeft: 8, fontSize: 11 }}>{c.email}</span>
+                          {c.company_name && <span style={{ color: C.muted, marginLeft: 6, fontSize: 10 }}>· {c.company_name}</span>}
+                        </div>
+                        <button onClick={() => addFromPool([c.id])} disabled={addingFromPool}
+                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: `1px solid ${C.blue}40`, background: `${C.blue}12`, color: C.blue, cursor: "pointer", fontWeight: 500, flexShrink: 0 }}>
+                          + Add
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
           {/* ── Existing contacts list ── */}
           {showInlineContacts && (
             <div style={{ marginBottom: 12 }}>
@@ -368,7 +461,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
               )}
             </div>
           )}
-          <textarea
+          {contactTab === "import" && <textarea
             value={inlineImportText}
             onChange={e => setInlineImportText(e.target.value)}
             placeholder={"Paste emails or CSV rows here, one per line:\nemail@example.com\nJane Doe, jane@example.com\nJohn, Smith, john@example.com"}
@@ -394,7 +487,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
                 Manage all contacts →
               </button>
             )}
-          </div>
+          </div>}
         </div>
       )}
       {hasContacts && !showInlineContacts && (
@@ -819,6 +912,20 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
                   <button onClick={() => setPreviewCam(cam)}
                     style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.borderHi}`, background: "transparent", color: C.sec, cursor: "pointer" }}>
                     <Eye size={11} />Preview
+                  </button>
+                )}
+                {cam.html_content && (
+                  <button onClick={() => {
+                    const blob = new Blob([cam.html_content], { type: "text/html" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `${(cam.name || cam.email_type || "email").replace(/[^a-z0-9]/gi, "-").toLowerCase()}.html`;
+                    a.click();
+                    URL.revokeObjectURL(a.href);
+                    fire("📥 HTML downloaded — open in any browser or email client");
+                  }} title="Download HTML file"
+                    style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.borderHi}`, background: "transparent", color: C.sec, cursor: "pointer" }}>
+                    <Download size={11} />Download
                   </button>
                 )}
                 {cam.html_content && cam.status !== "sent" && (
