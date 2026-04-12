@@ -353,15 +353,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           <span style={{ fontSize:13, color:C.amber, fontWeight:500 }}>No event selected — select an event from the sidebar to save generated emails to your campaign.</span>
         </div>
       )}
-      {campaigns.length === 0 && (
-        <ViewHint id="edm" icon="✉️" title="How to build your first email"
-          steps={[
-            "Pick an email type from the left — start with Invitation for a new event",
-            "Hit Generate — AI writes a polished, on-brand email in under 10 seconds",
-            "Review the preview, tweak the subject line if needed, then Save to Campaign",
-            "Once all 5 types are drafted, head to Scheduling to set your send dates",
-          ]} />
-      )}
+
       {activeEvent && (
         <div style={{ padding:"7px 12px", background:C.blue+"08", borderRadius:7, border:`1px solid ${C.blue}18`, marginBottom:10, display:"flex", alignItems:"center", gap:14, flexWrap:"wrap" }}>
           <span style={{ fontSize:12, fontWeight:600, color:C.blue }}>✉️ {activeEvent.name}</span>
@@ -611,6 +603,23 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             </div>
           )}
 
+          {campaigns.length > 0 && (() => {
+            const sentCount = campaigns.filter(c => c.status === "sent").length;
+            const scheduledCount = campaigns.filter(c => c.status === "scheduled").length;
+            const draftCount = campaigns.filter(c => c.status === "draft").length;
+            return (
+              <div style={{ background:`${C.green}07`, border:`1px solid ${C.green}20`, borderRadius:10, padding:"12px 14px", marginBottom:12, display:"flex", alignItems:"center", gap:16, flexWrap:"wrap" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                  <div style={{ width:8, height:8, borderRadius:"50%", background:C.green }} />
+                  <span style={{ fontSize:12.5, fontWeight:600, color:C.green }}>{campaigns.length} email{campaigns.length!==1?"s":""} drafted</span>
+                </div>
+                {scheduledCount > 0 && <span style={{ fontSize:11.5, color:C.blue, background:`${C.blue}12`, padding:"2px 8px", borderRadius:4, fontWeight:500 }}>📅 {scheduledCount} scheduled</span>}
+                {sentCount > 0 && <span style={{ fontSize:11.5, color:C.green, background:`${C.green}12`, padding:"2px 8px", borderRadius:4, fontWeight:500 }}>✅ {sentCount} sent</span>}
+                {draftCount > 0 && <span style={{ fontSize:11.5, color:C.muted, background:C.raised, padding:"2px 8px", borderRadius:4 }}>✏️ {draftCount} draft{draftCount!==1?"s":""}</span>}
+                <span style={{ fontSize:11, color:C.muted, marginLeft:"auto" }}>Click any email below to preview</span>
+              </div>
+            );
+          })()}
           {campaigns.length > 0 && (
             <Sec label={`Saved drafts (${campaigns.length}) · ${campaigns.filter(c=>c.status==="scheduled").length} scheduled`}>
               {campaigns.map(cam => (

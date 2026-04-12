@@ -117,14 +117,38 @@ function FormsView({ supabase, profile, activeEvent, fire, onFormSaved }) {
     <div style={{ animation: "fadeUp .2s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 110px)" }}>
       <div style={{ marginBottom: 12, display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexShrink: 0 }}>
         <div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Registration Forms</h1>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>Build your form, save it, then share the link or embed it.</p>
+          <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>
+            {activeForm ? "Your Registration Form" : "Registration Forms"}
+          </h1>
+          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
+            {activeForm
+              ? <span>Editing <strong style={{color:C.text}}>{activeForm.name}</strong> · {fields.length} field{fields.length!==1?"s":""}</span>
+              : "Build your form, save it, then share the link or embed it."}
+          </p>
         </div>
         <div style={{ display:"flex", gap:8 }}>
+          {activeForm && (
+            <button onClick={() => { setActiveForm(null); setFields(DEFAULT_FIELDS); setFormName(`${activeEvent?.name || "Event"} — Registration`); }}
+              style={{ fontSize: 12.5, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+              + New form
+            </button>
+          )}
           <button onClick={saveForm} disabled={saving} style={{ fontSize: 13, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{saving ? <><Spin />Saving…</> : activeForm ? "Save changes →" : "Create form →"}</button>
         </div>
       </div>
 
+      {/* Form switcher — show when multiple forms exist */}
+      {forms.length > 1 && (
+        <div style={{ display:"flex", gap:6, marginBottom:10, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>Form:</span>
+          {forms.map(f => (
+            <button key={f.id} onClick={() => { setActiveForm(f); setFields(f.fields || DEFAULT_FIELDS); setFormName(f.name || ""); }}
+              style={{ fontSize:11.5, padding:"4px 10px", borderRadius:6, border:`1px solid ${activeForm?.id===f.id?C.blue:C.border}`, background:activeForm?.id===f.id?`${C.blue}12`:"transparent", color:activeForm?.id===f.id?C.blue:C.muted, cursor:"pointer", fontWeight:activeForm?.id===f.id?600:400 }}>
+              {f.name?.replace(`— ${activeEvent?.name}`, "").trim() || "Form"}
+            </button>
+          ))}
+        </div>
+      )}
       {/* Template quick-start */}
       {!activeForm && (
         <div style={{ display:"flex", gap:8, marginBottom:12, flexWrap:"wrap" }}>
