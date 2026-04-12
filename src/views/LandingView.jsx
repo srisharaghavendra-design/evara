@@ -80,6 +80,27 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         const url = `${window.location.origin}/page/${data.slug}`;
         fire(`🎉 Page published! Copied to clipboard.`);
         navigator.clipboard?.writeText(url);
+        // ── Auto-update all draft email CTAs to point to this landing page ──
+        supabase.from("email_campaigns")
+          .select("id,html_content")
+          .eq("event_id", activeEvent.id)
+          .neq("status", "sent")
+          .then(({ data: cams }) => {
+            if (!cams?.length) return;
+            const updates = cams
+              .filter(c => c.html_content?.includes("{{REGISTRATION_URL}}") || c.html_content?.includes('href="#"'))
+              .map(c => ({
+                id: c.id,
+                html_content: c.html_content
+                  .replace(/{{REGISTRATION_URL}}/g, url)
+                  .replace(/href="#"/g, `href="${url}"`)
+              }));
+            if (updates.length) {
+              Promise.all(updates.map(u =>
+                supabase.from("email_campaigns").update({ html_content: u.html_content }).eq("id", u.id)
+              )).then(() => fire(`✅ ${updates.length} email CTA${updates.length!==1?"s":""} auto-linked to landing page`));
+            }
+          });
       } else { fire("Draft saved ✓"); }
     }
     setSaving(false);

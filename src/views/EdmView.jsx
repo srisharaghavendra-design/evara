@@ -577,7 +577,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               setSendingTest(true);
               const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                 method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-                body: JSON.stringify({ contacts:[{ email:profile.email, first_name:profile.full_name?.split(" ")[0]||"Test" }], subject:`[PREVIEW] ${preview.subject}`, htmlContent:preview.html.replace(/{{REGISTRATION_URL}}/g,"#").replace(/{{UNSUBSCRIBE_URL}}/g,"#"), ...getSender(profile) })
+                body: JSON.stringify({ contacts:[{ email:profile.email, first_name:profile.full_name?.split(" ")[0]||"Test" }], subject:`[PREVIEW] ${preview.subject}`, htmlContent:preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g,"#"), ...getSender(profile) })
               });
               setSendingTest(false);
               const d = await res.json();
@@ -905,7 +905,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           {preview && <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
             <button onClick={() => {
               const win = window.open("", "_blank");
-              win.document.write(preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"));
+              win.document.write(preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"));
               win.document.close();
             }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
               🌐 Open in browser
@@ -918,7 +918,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
+                body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
               });
               setSendingTest(false);
               const d = await res.json();
@@ -933,7 +933,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                  body: JSON.stringify({ contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, "#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
+                  body: JSON.stringify({ contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
                 });
                 setSendingTest(false);
                 const d = await res.json();
