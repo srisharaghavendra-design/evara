@@ -39,6 +39,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   const [inlineImportText, setInlineImportText] = useState("");
   const [inlineImporting, setInlineImporting] = useState(false);
   const inlineFileRef = useRef(null);
+  const [eventContactsList, setEventContactsList] = useState([]);
+  const [contactsListLoading, setContactsListLoading] = useState(false);
 
   const saveSubject = async (camId, newSubject) => {
     if (!newSubject.trim()) return;
@@ -114,6 +116,24 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
     setInlineImportText("");
     setShowInlineContacts(false);
     fire(`✅ ${added} contacts imported`);
+    loadEventContacts(); // refresh list
+  };
+
+  const loadEventContacts = async () => {
+    if (!activeEvent) return;
+    setContactsListLoading(true);
+    const { data } = await supabase.from("event_contacts")
+      .select("id,status,contacts(id,first_name,last_name,email)")
+      .eq("event_id", activeEvent.id)
+      .order("created_at", { ascending: false });
+    setEventContactsList(data || []);
+    setContactsListLoading(false);
+  };
+
+  const removeEventContact = async (ecId) => {
+    await supabase.from("event_contacts").delete().eq("id", ecId);
+    setEventContactsList(p => p.filter(ec => ec.id !== ecId));
+    setContactCount(p => Math.max(0, p - 1));
   };
 
   const generateFollowUpSequence = async () => {
@@ -173,6 +193,11 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   };
 
   const [segmentCounts, setSegmentCounts] = useState({ all:0, confirmed:0, pending:0, declined:0, attended:0 });
+
+  // Load contact list whenever the panel opens
+  useEffect(() => {
+    if (showInlineContacts) loadEventContacts();
+  }, [showInlineContacts, activeEvent]);
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
@@ -306,6 +331,43 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
               <button onClick={() => setShowInlineContacts(false)} style={{ fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer" }}>✕ Close</button>
             )}
           </div>
+          {/* ── Existing contacts list ── */}
+          {showInlineContacts && (
+            <div style={{ marginBottom: 12 }}>
+              {contactsListLoading ? (
+                <div style={{ fontSize: 12, color: C.muted, padding: "8px 0", display: "flex", alignItems: "center", gap: 6 }}><Spin size={10} />Loading contacts…</div>
+              ) : eventContactsList.length === 0 ? (
+                <div style={{ fontSize: 12, color: C.muted, padding: "6px 0" }}>No contacts yet — import below.</div>
+              ) : (
+                <div style={{ maxHeight: 200, overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 10px", borderBottom: `1px solid ${C.border}`, background: C.raised }}>
+                    <span style={{ fontSize: 10.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                      {eventContactsList.length} contact{eventContactsList.length !== 1 ? "s" : ""}
+                    </span>
+                    <span style={{ fontSize: 10.5, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Status</span>
+                  </div>
+                  {eventContactsList.map(ec => {
+                    const c = ec.contacts;
+                    const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ") || "—";
+                    const statusColor = ec.status === "confirmed" ? C.green : ec.status === "declined" ? C.red : ec.status === "attended" ? C.teal : C.muted;
+                    return (
+                      <div key={ec.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderBottom: `1px solid ${C.border}`, fontSize: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ color: C.text, fontWeight: 500 }}>{name}</span>
+                          <span style={{ color: C.muted, marginLeft: 8, fontSize: 11 }}>{c?.email}</span>
+                        </div>
+                        <span style={{ fontSize: 10.5, color: statusColor, fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{ec.status}</span>
+                        <button onClick={() => removeEventContact(ec.id)}
+                          style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", flexShrink: 0 }}>
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           <textarea
             value={inlineImportText}
             onChange={e => setInlineImportText(e.target.value)}
