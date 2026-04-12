@@ -3862,6 +3862,22 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             </button>
           )}
 
+          {campaigns.length === 0 && activeEvent && (
+            <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}25`, borderRadius:10, padding:"16px 14px", marginTop:8 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                <div style={{ width:28, height:28, borderRadius:"50%", background:`${C.blue}15`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, animation:"pulse 2s infinite" }}>✨</div>
+                <div>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.blue }}>AI is drafting your emails…</div>
+                  <div style={{ fontSize:11, color:C.muted }}>This takes about 10–30 seconds. They'll appear in "Saved drafts" below.</div>
+                </div>
+              </div>
+              <div style={{ fontSize:11, color:C.muted, display:"flex", flexDirection:"column", gap:4 }}>
+                <div>💡 While you wait — select an email type and generate a custom one above</div>
+                <div>📋 Or go to <strong style={{color:C.text}}>Schedule</strong> to see and send your drafts once they appear</div>
+              </div>
+            </div>
+          )}
+
           {campaigns.length > 0 && (
             <Sec label={`Saved drafts (${campaigns.length}) · ${campaigns.filter(c=>c.status==="scheduled").length} scheduled`}>
               {campaigns.map(cam => (
