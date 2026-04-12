@@ -168,16 +168,19 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
     { id: "roi",        label: "ROI",           icon: BarChart2 },
   ];
   const BUILD_NAV = [
-    { id: "edm",        label: "Emails",        icon: Mail },
-    { id: "schedule",   label: "Schedule",      icon: Calendar },
-    { id: "campaign",   label: "Campaign",      icon: Megaphone },
-    { id: "social",     label: "Social",        icon: Radio },
-    { id: "landing",    label: "Landing Page",  icon: Globe },
-    { id: "forms",      label: "Forms",         icon: FileText },
+    { id: "edm",      label: "Emails",        icon: Mail,     step: 1, hint: "Draft your email sequence" },
+    { id: "landing",  label: "Landing Page",  icon: Globe,    step: 2, hint: "Build your event page" },
+    { id: "forms",    label: "Form",          icon: FileText, step: 3, hint: "Set up registration" },
+    { id: "schedule", label: "Schedule",      icon: Calendar, step: 4, hint: "Schedule & send" },
+  ];
+  const POWER_NAV = [
+    { id: "campaign", label: "Campaign",  icon: Megaphone },
+    { id: "social",   label: "Social",    icon: Radio },
   ];
   const NAV_GROUPS = [
-    { label: "Manage", items: NAV },
-    { label: "Build",  items: BUILD_NAV },
+    { label: "Manage",      items: NAV },
+    { label: "Build",       items: BUILD_NAV },
+    { label: "Power Tools", items: POWER_NAV },
     { label: "Event Day", items: [
       { id: "checkin",  label: "Check-in",  icon: QrCode },
       { id: "agenda",   label: "Agenda",    icon: ClipboardList },
@@ -1185,7 +1188,7 @@ function MainApp({ session }) {
             <span style={{ fontSize:12, color:C.muted, maxWidth:120, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{activeEvent.name}</span></>}
             <span style={{ fontSize:12, color:C.muted }}>/</span>
             {(() => {
-              const allNav = [...NAV, ...BUILD_NAV];
+              const allNav = [...NAV, ...BUILD_NAV, ...POWER_NAV];
               const label = allNav.find(n => n.id === view)?.label || (view==="settings"?"Settings":view==="calendar"?"Calendar":"Dashboard");
               document.title = `${label} · ${activeEvent?.name || "evara"}`;
               return <span style={{ fontSize:12.5, fontWeight:500, color:C.text }}>{label}</span>;
@@ -1205,7 +1208,7 @@ function MainApp({ session }) {
             {globalSearch.length > 0 && (() => {
               const q = globalSearch.toLowerCase();
               const matchedEvents = events.filter(e => e.name?.toLowerCase().includes(q)||e.location?.toLowerCase().includes(q)).slice(0,4);
-              const modules = [...NAV,...BUILD_NAV].filter(m=>m.label.toLowerCase().includes(q)).slice(0,4);
+              const modules = [...NAV,...BUILD_NAV,...POWER_NAV].filter(m=>m.label.toLowerCase().includes(q)).slice(0,4);
               if (!matchedEvents.length && !modules.length) return null;
               return (
                 <div style={{ position:"absolute", top:"100%", left:0, right:0, marginTop:4, background:C.card, border:`1px solid ${C.border}`, borderRadius:10, boxShadow:"0 8px 32px rgba(0,0,0,.5)", zIndex:300, overflow:"hidden" }}>
@@ -1279,8 +1282,8 @@ function MainApp({ session }) {
           // Step completion logic — driven by real data
           const step1Done = campaigns.some(c => c.html_content);
           const step2Done = lpPublished;
-          const step3Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
-          const step4Done = campaigns.some(c => c.status === "sent");
+          const step3Done = !!formShareLink;
+          const step4Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
           const stepDone = [step1Done, step2Done, step3Done, step4Done];
           const stepsComplete = stepDone.filter(Boolean).length;
           const pct = Math.round((stepsComplete / 4) * 100);
@@ -1330,7 +1333,7 @@ function MainApp({ session }) {
                           }}>
                             {isDone ? "✓" : item.step}
                           </div>
-                          <span style={{ fontSize:13 }}>{item.icon}</span>
+                          <item.icon size={13} strokeWidth={1.8} />
                           <span style={{ fontSize:12.5, fontWeight:isCurrent ? 600 : 400, color:labelColor, whiteSpace:"nowrap" }}>
                             {item.label}
                           </span>
