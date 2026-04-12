@@ -444,10 +444,18 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
   const [fromName, setFromName] = useState(profile?.companies?.from_name || profile?.full_name || "");
   const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
 
-  // Step 3 — First Event
+  // Step 3 — First Event (full brief)
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventType, setEventType] = useState("conference");
+  const [eventLocation, setEventLocation] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [eventTime, setEventTime] = useState("");
+  // Step 4 — AI generation state
+  const [createdEventId, setCreatedEventId] = useState(null);
+  const [draftsCreated, setDraftsCreated] = useState(0);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiDone, setAiDone] = useState(false);
 
   const INDUSTRIES = ["Technology","Finance & Banking","Healthcare","Real Estate","Education","Professional Services","Retail & E-commerce","Media & Entertainment","Not-for-profit","Government","Other"];
   const EVENT_TYPES = ["conference","seminar","networking","workshop","gala","product launch","webinar","training","awards","other"];
@@ -471,17 +479,48 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
       if (!eventName.trim()) { setStep(4); return; }
       setCreatingEvent(true);
       const shareToken = Math.random().toString(36).substring(2,14) + Date.now().toString(36);
-      await supabase.from("events").insert({
+      const { data: newEvent } = await supabase.from("events").insert({
         name: eventName.trim(),
         event_date: eventDate || null,
         event_type: eventType,
+        location: eventLocation || null,
+        description: eventDescription || null,
+        event_time: eventTime || null,
         company_id: profile.company_id,
         status: "draft",
         created_by: profile.id,
         share_token: shareToken,
-      });
+      }).select().single();
       setCreatingEvent(false);
+      setCreatedEventId(newEvent?.id || null);
       setStep(4);
+
+      // ── Trigger AI campaign generation in background ──
+      if (newEvent?.id) {
+        setAiGenerating(true);
+        try {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-campaign`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess?.access_token}`, "apikey": ANON_KEY },
+            body: JSON.stringify({
+              event_id: newEvent.id,
+              company_id: profile.company_id,
+              event_name: eventName.trim(),
+              event_date: eventDate || "",
+              event_time: eventTime || "",
+              location: eventLocation || "",
+              description: eventDescription || "",
+              event_type: eventType,
+              org_name: companyName || profile?.companies?.name || "",
+            })
+          });
+          const data = await res.json();
+          setDraftsCreated(data.drafts_created || 0);
+        } catch(e) { console.log("AI generation failed:", e.message); }
+        setAiGenerating(false);
+        setAiDone(true);
+      }
     } else if (step === 4) {
       setSaving(true);
       await supabase.from("companies").update({ onboarding_completed: true }).eq("id", profile.company_id);
@@ -499,7 +538,7 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
         });
       } catch(e) { console.log("Welcome email failed:", e.message); }
       setSaving(false);
-      onComplete();
+      onComplete(createdEventId);
     }
   };
 
@@ -616,85 +655,156 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
           </div>
         )}
 
-        {/* Step 3 — First Event */}
+        {/* Step 3 — First Event (full brief) */}
         {step === 3 && (
           <div key="s3" style={{ animation:"fadeUp .3s ease" }}>
             <div style={{ marginBottom:8 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 3</span>
+              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 3 of 4</span>
             </div>
-            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>Create your first event 🎪</h1>
-            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.5 }}>Add your upcoming event. You can always edit details or skip this now.</p>
+            <h1 style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.5px", marginBottom:6 }}>Tell us about your event 🎪</h1>
+            <p style={{ fontSize:14, color:C.sec, marginBottom:24, lineHeight:1.5 }}>The more you share, the better AI can build your emails, landing page and form — all automatically.</p>
 
-            <div style={{ marginBottom:18 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Event name</label>
-              <input
-                value={eventName}
-                onChange={e => setEventName(e.target.value)}
-                placeholder="Annual Client Gala 2025"
-                autoFocus
-                style={{ width:"100%", background:C.card, border:`1.5px solid ${eventName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"13px 16px", fontSize:15, outline:"none", transition:"border .2s" }}
-              />
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Event name *</label>
+              <input value={eventName} onChange={e => setEventName(e.target.value)} placeholder="Annual Leadership Summit 2025" autoFocus
+                style={{ width:"100%", background:C.card, border:`1.5px solid ${eventName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"12px 16px", fontSize:15, outline:"none", transition:"border .2s" }} />
             </div>
 
-            <div style={{ display:"flex", gap:12, marginBottom:18 }}>
+            <div style={{ display:"flex", gap:10, marginBottom:14 }}>
               <div style={{ flex:1 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Event date</label>
-                <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:eventDate ? C.text : C.muted, padding:"12px 14px", fontSize:14, outline:"none" }} />
+                <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Date</label>
+                <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
+                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:eventDate ? C.text : C.muted, padding:"11px 14px", fontSize:13, outline:"none" }} />
               </div>
               <div style={{ flex:1 }}>
-                <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Event type</label>
-                <select value={eventType} onChange={e => setEventType(e.target.value)} style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"12px 14px", fontSize:14, outline:"none", appearance:"none" }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Time</label>
+                <input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)}
+                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:eventTime ? C.text : C.muted, padding:"11px 14px", fontSize:13, outline:"none" }} />
+              </div>
+              <div style={{ flex:1 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Type</label>
+                <select value={eventType} onChange={e => setEventType(e.target.value)}
+                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 14px", fontSize:13, outline:"none", appearance:"none" }}>
                   {EVENT_TYPES.map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
                 </select>
               </div>
             </div>
 
-            <div style={{ display:"flex", gap:10, marginTop:24 }}>
-              <button onClick={() => setStep(2)} style={{ padding:"14px 20px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sec, fontSize:15, fontWeight:500 }}>← Back</button>
-              <button onClick={handleNext} disabled={creatingEvent} style={{ flex:1, padding:"14px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:15, fontWeight:600, opacity:creatingEvent?0.7:1 }}>
-                {creatingEvent ? "Creating…" : eventName.trim() ? "Create Event →" : "Skip for now →"}
+            <div style={{ marginBottom:14 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Venue / Location</label>
+              <input value={eventLocation} onChange={e => setEventLocation(e.target.value)} placeholder="Grand Hyatt, Sydney — or Online via Zoom"
+                style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 16px", fontSize:13, outline:"none" }} />
+            </div>
+
+            <div style={{ marginBottom:20 }}>
+              <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>
+                What's this event about? <span style={{ fontSize:10, fontWeight:400, color:C.muted, textTransform:"none", letterSpacing:0 }}>(AI uses this to write your emails)</span>
+              </label>
+              <textarea value={eventDescription} onChange={e => setEventDescription(e.target.value)}
+                placeholder="e.g. An exclusive leadership summit bringing together 200 senior executives to discuss the future of finance and technology. Keynotes from industry leaders, curated networking, and a gala dinner."
+                rows={3}
+                style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 16px", fontSize:13, outline:"none", resize:"vertical", lineHeight:1.5 }} />
+            </div>
+
+            {/* AI preview of what will be generated */}
+            {eventName.trim() && (
+              <div style={{ marginBottom:18, padding:"10px 14px", background:C.blue+"08", border:`1px solid ${C.blue}20`, borderRadius:9 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:C.blue, marginBottom:6 }}>✨ AI will automatically generate for {eventName}:</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  {["Save the Date","Invitation","Reminder","Day-of Details","Confirmation","BYO","Thank You"].map(t => (
+                    <span key={t} style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.blue+"15", color:C.blue }}>{t}</span>
+                  ))}
+                  <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>Landing Page</span>
+                  <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>Form fields</span>
+                  <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>LinkedIn post</span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button onClick={() => setStep(2)} style={{ padding:"13px 18px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sec, fontSize:14, fontWeight:500 }}>← Back</button>
+              <button onClick={handleNext} disabled={creatingEvent} style={{ flex:1, padding:"13px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:14, fontWeight:600, opacity:creatingEvent?0.7:1 }}>
+                {creatingEvent ? "Creating event…" : eventName.trim() ? "Create & generate campaign ✨" : "Skip for now →"}
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 4 — Done */}
+        {/* Step 4 — AI generating + done */}
         {step === 4 && (
-          <div key="s4" style={{ animation:"fadeUp .3s ease", textAlign:"center", position:"relative", overflow:"hidden" }}>
-            {/* CSS confetti */}
-            <style>{`@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(120px) rotate(720deg);opacity:0}}
-            .confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confettiFall 1.8s ease forwards;pointer-events:none;}`}</style>
-            {["#0A84FF","#30D158","#FF9F0A","#BF5AF2","#FF453A","#5AC8FA"].map((col,i) => (
-              Array.from({length:3}).map((_,j) => (
-                <div key={`${i}-${j}`} className="confetti-piece" style={{ background:col, left:`${10+i*15+j*5}%`, top:0, animationDelay:`${i*0.1+j*0.15}s`, animationDuration:`${1.5+i*0.1}s` }} />
-              ))
-            ))}
-            <div style={{ width:72, height:72, borderRadius:20, background:`${C.green}20`, border:`2px solid ${C.green}40`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:32 }}>🎉</div>
-            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:10 }}>You're all set!</h1>
-            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.6 }}>
-              {companyName} is live on evara. Here's what you can do first:
-            </p>
-
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:32, textAlign:"left" }}>
-              {[
-                { icon:"✉️", title:"Build an eDM", desc:"AI writes your email from a sentence", view:"edm" },
-                { icon:"👥", title:"Import contacts", desc:"Upload your guest list via CSV", view:"contacts" },
-                { icon:"📋", title:"Create a form", desc:"RSVP form live in 60 seconds", view:"forms" },
-                { icon:"📊", title:"View analytics", desc:"Track opens, clicks & registrations", view:"analytics" },
-              ].map(item => (
-                <div key={item.view} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:16, transition:"all .15s" }}
-                  onMouseEnter={e=>e.currentTarget.style.borderColor=C.blue+"60"}
-                  onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
-                  <div style={{ fontSize:22, marginBottom:8 }}>{item.icon}</div>
-                  <div style={{ fontSize:14, fontWeight:600, marginBottom:4 }}>{item.title}</div>
-                  <div style={{ fontSize:12, color:C.muted, lineHeight:1.4 }}>{item.desc}</div>
+          <div key="s4" style={{ animation:"fadeUp .3s ease", textAlign:"center" }}>
+            {aiGenerating ? (
+              /* ── AI is working ── */
+              <div>
+                <div style={{ width:72, height:72, borderRadius:20, background:`${C.blue}15`, border:`2px solid ${C.blue}30`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 28px", fontSize:32 }}>✨</div>
+                <h1 style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.5px", marginBottom:10 }}>AI is building your campaign…</h1>
+                <p style={{ fontSize:14, color:C.sec, marginBottom:32, lineHeight:1.6 }}>Drafting all 7 emails, landing page copy, form fields and a LinkedIn post for <strong>{eventName}</strong>. This takes about 15 seconds.</p>
+                <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:32 }}>
+                  {["Save the Date","Invitation","Reminder","Day-of Details","Confirmation","BYO","Thank You"].map((t, i) => (
+                    <div key={t} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 14px", background:C.card, border:`1px solid ${C.border}`, borderRadius:8 }}>
+                      <div style={{ width:16, height:16, borderRadius:"50%", border:`2px solid ${C.blue}`, borderTopColor:"transparent", animation:"spin .7s linear infinite", flexShrink:0, animationDelay:`${i*0.1}s` }} />
+                      <span style={{ fontSize:13, color:C.sec }}>Drafting {t}…</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              /* ── Done ── */
+              <div>
+                <style>{`@keyframes confettiFall{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(140px) rotate(720deg);opacity:0}}.confetti-piece{position:absolute;width:8px;height:8px;border-radius:2px;animation:confettiFall 2s ease forwards;pointer-events:none;}`}</style>
+                <div style={{ position:"relative" }}>
+                  {aiDone && ["#0A84FF","#30D158","#FF9F0A","#BF5AF2","#FF453A","#5AC8FA"].map((col,i) => (
+                    Array.from({length:3}).map((_,j) => (
+                      <div key={`${i}-${j}`} className="confetti-piece" style={{ background:col, left:`${8+i*14+j*4}%`, top:0, animationDelay:`${i*0.1+j*0.12}s` }} />
+                    ))
+                  ))}
+                  <div style={{ width:72, height:72, borderRadius:20, background:`${C.green}18`, border:`2px solid ${C.green}35`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 24px", fontSize:32 }}>
+                    {aiDone ? "🎉" : "✅"}
+                  </div>
+                </div>
 
-            <button onClick={handleNext} disabled={saving} style={{ width:"100%", padding:"15px", borderRadius:10, border:"none", background:C.blue, color:"#fff", fontSize:15, fontWeight:600, boxShadow:`0 0 24px ${C.blue}40` }}>
-              {saving ? "Loading…" : "Enter evara →"}
-            </button>
+                <h1 style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>
+                  {aiDone ? `${draftsCreated || 7} emails ready for ${eventName}!` : "You're all set!"}
+                </h1>
+                <p style={{ fontSize:14, color:C.sec, marginBottom:28, lineHeight:1.6 }}>
+                  {aiDone
+                    ? "AI has drafted your full campaign. Review each email, make edits, then set your send schedule."
+                    : `${companyName} is live on evara. Start by building your first email campaign.`}
+                </p>
+
+                {/* What was generated */}
+                {aiDone && (
+                  <div style={{ marginBottom:24, padding:"12px 16px", background:C.card, border:`1px solid ${C.border}`, borderRadius:12, textAlign:"left" }}>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>Generated for {eventName}</div>
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                      {["Save the Date","Invitation","Reminder","Confirmation","BYO","Day-of Details","Thank You"].map(t => (
+                        <span key={t} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, background:C.green+"12", color:C.green, border:`1px solid ${C.green}25` }}>✓ {t}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Next steps */}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8, marginBottom:28, textAlign:"left" }}>
+                  {[
+                    { icon:"✉️", step:"Step 1", title:"Review emails", desc:"Edit, preview, approve" },
+                    { icon:"🌐", step:"Step 2", title:"Publish page", desc:"Your event landing page" },
+                    { icon:"📅", step:"Step 3", title:"Schedule sends", desc:"Set dates, add contacts" },
+                  ].map(item => (
+                    <div key={item.step} style={{ background:C.raised, border:`1px solid ${C.border}`, borderRadius:10, padding:"12px 14px" }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:C.blue, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:4 }}>{item.step}</div>
+                      <div style={{ fontSize:18, marginBottom:6 }}>{item.icon}</div>
+                      <div style={{ fontSize:12.5, fontWeight:600, color:C.text, marginBottom:3 }}>{item.title}</div>
+                      <div style={{ fontSize:11, color:C.muted, lineHeight:1.4 }}>{item.desc}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={handleNext} disabled={saving || aiGenerating} style={{ width:"100%", padding:"15px", borderRadius:10, border:"none", background: aiGenerating ? C.border : C.blue, color:"#fff", fontSize:15, fontWeight:600, boxShadow: aiGenerating ? "none" : `0 0 28px ${C.blue}40`, transition:"all .2s" }}>
+                  {saving ? "Loading…" : aiDone ? `Review your emails →` : "Enter evara →"}
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -718,6 +828,7 @@ function AuthScreen() {
   const [email, setEmail] = useState(""); const [password, setPassword] = useState("");
   const [name, setName] = useState(""); const [company, setCompany] = useState("");
   const [loading, setLoading] = useState(false); const [error, setError] = useState(null); const [msg, setMsg] = useState(null);
+  const [confirmed, setConfirmed] = useState(false); // show post-signup confirmation screen
   const submit = async e => {
     e.preventDefault(); setLoading(true); setError(null);
     // Block personal email domains on signup
@@ -727,9 +838,44 @@ function AuthScreen() {
     }
     try {
       if (mode === "login") { const { error: err } = await supabase.auth.signInWithPassword({ email, password }); if (err) throw err; }
-      else { const { error: err } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name, company_name: company } } }); if (err) throw err; setMsg("Check your email to confirm your account!"); }
+      else { const { error: err } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name, company_name: company } } }); if (err) throw err; setConfirmed(true); }
     } catch (err) { setError(err.message); } finally { setLoading(false); }
   };
+  // Post-signup confirmation screen
+  if (confirmed) {
+    return (
+      <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:24 }}>
+        <div style={{ maxWidth:460, width:"100%", textAlign:"center", animation:"fadeUp .35s ease" }}>
+          <div style={{ width:72, height:72, borderRadius:20, background:`${C.blue}15`, border:`2px solid ${C.blue}30`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 28px", fontSize:36 }}>📧</div>
+          <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:10 }}>Check your inbox</h1>
+          <p style={{ fontSize:15, color:C.sec, lineHeight:1.7, marginBottom:8 }}>
+            We sent a confirmation link to <strong style={{ color:C.text }}>{email}</strong>
+          </p>
+          <p style={{ fontSize:14, color:C.muted, lineHeight:1.6, marginBottom:36 }}>
+            Click the link in that email to activate your account. It may take a minute or two to arrive. Check your spam folder if you don't see it.
+          </p>
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"20px 24px", marginBottom:28, textAlign:"left" }}>
+            <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:14 }}>What happens next</div>
+            {[
+              { n:"1", text:"Click the confirmation link in your email" },
+              { n:"2", text:"You'll land back here — log in automatically" },
+              { n:"3", text:"Tell us about your first event" },
+              { n:"4", text:"AI builds your full campaign in 15 seconds" },
+            ].map(s => (
+              <div key={s.n} style={{ display:"flex", alignItems:"flex-start", gap:12, marginBottom:12 }}>
+                <div style={{ width:22, height:22, borderRadius:"50%", background:C.blue+"18", border:`1.5px solid ${C.blue}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:C.blue, flexShrink:0, marginTop:1 }}>{s.n}</div>
+                <span style={{ fontSize:13.5, color:C.sec, lineHeight:1.5 }}>{s.text}</span>
+              </div>
+            ))}
+          </div>
+          <button onClick={() => { setConfirmed(false); setMode("login"); }} style={{ width:"100%", padding:"13px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:14, cursor:"pointer" }}>
+            Already confirmed? Sign in →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="auth-root" style={{ height: "100vh", background: C.bg, display: "flex", fontFamily: "Outfit,sans-serif", color: C.text }}>
       <style>{`
@@ -1160,11 +1306,16 @@ function MainApp({ session }) {
 
   // Show onboarding for new users
   if (showOnboarding && profile) {
-    return <OnboardingFlow profile={profile} supabase={supabase} onComplete={() => {
+    return <OnboardingFlow profile={profile} supabase={supabase} onComplete={(eventId) => {
       setShowOnboarding(false);
-      // Reload events after onboarding (user may have created one)
+      // Reload events after onboarding, select the created event, land on EdmView
       supabase.from("events").select("*").eq("company_id", profile.company_id).order("event_date", { ascending: true })
-        .then(({ data: evts }) => { setEvents(evts || []); if (evts?.length) setActiveEvent(evts[0]); });
+        .then(({ data: evts }) => {
+          setEvents(evts || []);
+          const target = eventId ? evts?.find(e => e.id === eventId) : evts?.[0];
+          if (target) setActiveEvent(target);
+          setView("edm"); // ← Land them directly in their emails
+        });
       // Reload profile with updated company
       supabase.from("profiles").select("*,companies(*)").eq("id", session.user.id).single()
         .then(({ data: prof }) => { if (prof) setProfile(prof); });
