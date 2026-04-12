@@ -2695,8 +2695,12 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
                 <span style={{ fontSize:10.5, fontWeight:700, color:health.color, background:`${health.color}15`, padding:"1px 8px", borderRadius:4 }}>{health.label}</span>
               </div>
               <div style={{ display:"flex", gap:12, flexWrap:"wrap" }}>
-                {reasons.length===0
+                {reasons.length===0 && score >= 80
                   ? <span style={{ fontSize:11, color:C.green }}>● Campaign is firing on all cylinders</span>
+                  : reasons.length===0 && score >= 60
+                  ? <span style={{ fontSize:11, color:C.blue }}>● Looking good — keep building momentum</span>
+                  : reasons.length===0
+                  ? <span style={{ fontSize:11, color:C.amber }}>● Add more details to improve your score</span>
                   : reasons.slice(0,3).map((r,i) => <span key={i} style={{ fontSize:11, color:r.color }}>● {r.text}</span>)
                 }
               </div>
@@ -4624,10 +4628,14 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             const extra = campaigns.filter(c => !ORDER.includes(c.email_type));
             const all = [...sorted, ...extra];
             const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date) : null;
+            const missingTypes = (() => {
+              const types = new Set(campaigns.map(c => c.email_type));
+              return ["save_the_date","invitation","reminder","confirmation","thank_you","byo"].filter(t => !types.has(t));
+            })();
             return (
-              <>
+              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
               {/* Best send time tip */}
-              <div style={{ background:C.raised, borderRadius:9, border:`1px solid ${C.border}`, padding:"10px 14px", marginBottom:10, display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ background:C.raised, borderRadius:9, border:`1px solid ${C.border}`, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
                 <span style={{ fontSize:16 }}>⏰</span>
                 <div style={{ flex:1 }}>
                   <span style={{ fontSize:12, fontWeight:600, color:C.text }}>Best send times for B2B events: </span>
@@ -4635,6 +4643,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                 </div>
                 <span style={{ fontSize:10, padding:"2px 7px", background:`${C.green}15`, color:C.green, borderRadius:3, fontWeight:600, flexShrink:0 }}>Auto-applied</span>
               </div>
+              {/* Sequence strip */}
               <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 20px", marginBottom:4, overflowX:"auto" }}>
                 <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:14 }}>Email Sequence — {all.length} email{all.length!==1?"s":""}</div>
                 <div style={{ display:"flex", alignItems:"flex-start", gap:0, minWidth: all.length * 110 }}>
@@ -4648,7 +4657,6 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     return (
                       <div key={cam.id} style={{ display:"flex", alignItems:"flex-start", flex:1 }}>
                         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:6 }}>
-                          {/* Node */}
                           <div style={{ width:40, height:40, borderRadius:"50%", background:statusBg, border:`2px solid ${statusColor}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, cursor:cam.html_content?"pointer":"default", transition:"transform .15s" }}
                             onClick={() => cam.html_content && setPreviewCam(cam)}
                             title={cam.name}
@@ -4656,7 +4664,6 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                             onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}>
                             {cam.status==="sent" ? "✓" : icon}
                           </div>
-                          {/* Label */}
                           <div style={{ textAlign:"center", width:"100%" }}>
                             <div style={{ fontSize:10.5, fontWeight:600, color:cam.status==="sent"?C.green:cam.status==="scheduled"?C.blue:C.sec, lineHeight:1.2 }}>
                               {cam.email_type?.replace(/_/g," ").replace("save the date","STD").replace("day of details","Day-of").replace("thank you","TY").replace("confirmation","Confirm").replace("invitation","Invite") || cam.name?.split("—")[0]?.trim()?.slice(0,10)}
@@ -4670,7 +4677,6 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                             <div style={{ fontSize:9, color:statusColor, marginTop:1, fontWeight:600, textTransform:"uppercase" }}>{cam.status}</div>
                           </div>
                         </div>
-                        {/* Connector line */}
                         {!isLast && (
                           <div style={{ display:"flex", alignItems:"center", paddingTop:18, flexShrink:0 }}>
                             <div style={{ width:20, height:2, background: cam.status==="sent"?C.green+"60":C.border, borderRadius:1 }} />
@@ -4681,7 +4687,6 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     );
                   })}
                 </div>
-                {/* Summary row */}
                 <div style={{ display:"flex", gap:16, marginTop:14, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
                   {[
                     { label:"Sent", val:campaigns.filter(c=>c.status==="sent").length, color:C.green },
@@ -4696,17 +4701,12 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                   ))}
                 </div>
               </div>
-            </>
-            );
-          })()}
-
-          {campaigns.length > 0 && (() => {
-            const types = new Set(campaigns.map(c => c.email_type));
-            const missing = ["save_the_date","invitation","reminder","confirmation","thank_you","byo"].filter(t => !types.has(t));
-            if (!missing.length) return null;
-            return (
-              <div style={{ fontSize: 11, color: C.amber, marginTop: 4 }}>
-                💡 Missing email types: {missing.map(t => t.replace(/_/g," ")).join(", ")} — click + New campaign to add
+              {/* Missing types nudge */}
+              {missingTypes.length > 0 && (
+                <div style={{ fontSize: 11, color: C.amber }}>
+                  💡 Missing email types: {missingTypes.map(t => t.replace(/_/g," ")).join(", ")} — click + New campaign to add
+                </div>
+              )}
               </div>
             );
           })()}
