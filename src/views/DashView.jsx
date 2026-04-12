@@ -423,7 +423,8 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         );
       })()}
 
-      {/* ── STORY BAR ── */}
+      {/* ── STORY BAR — only once campaign is live ── */}
+      {campaigns.filter(c => c.status === "sent").length > 0 && (
       <StoryBar
         event={activeEvent}
         stats={{
@@ -440,6 +441,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           if (key === "thankyou") setView("schedule");
         }}
       />
+      )}
 
       {/* Post-event mode banner */}
       {isPostEvent && (
