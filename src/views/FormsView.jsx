@@ -142,10 +142,20 @@ function FormsView({ supabase, profile, activeEvent, fire, onFormSaved }) {
         <div style={{ display:"flex", gap:6, marginBottom:10, alignItems:"center", flexWrap:"wrap" }}>
           <span style={{ fontSize:11, color:C.muted, flexShrink:0 }}>Form:</span>
           {forms.map(f => (
-            <button key={f.id} onClick={() => { setActiveForm(f); setFields(f.fields || DEFAULT_FIELDS); setFormName(f.name || ""); }}
-              style={{ fontSize:11.5, padding:"4px 10px", borderRadius:6, border:`1px solid ${activeForm?.id===f.id?C.blue:C.border}`, background:activeForm?.id===f.id?`${C.blue}12`:"transparent", color:activeForm?.id===f.id?C.blue:C.muted, cursor:"pointer", fontWeight:activeForm?.id===f.id?600:400 }}>
-              {f.name?.replace(`— ${activeEvent?.name}`, "").trim() || "Form"}
-            </button>
+            <div key={f.id} style={{ display:"flex", alignItems:"center", gap:2 }}>
+              <button onClick={() => { setActiveForm(f); setFields(f.fields || DEFAULT_FIELDS); setFormName(f.name || ""); }}
+                style={{ fontSize:11.5, padding:"4px 10px", borderRadius:6, border:`1px solid ${activeForm?.id===f.id?C.blue:C.border}`, background:activeForm?.id===f.id?`${C.blue}12`:"transparent", color:activeForm?.id===f.id?C.blue:C.muted, cursor:"pointer", fontWeight:activeForm?.id===f.id?600:400 }}>
+                {f.name?.replace(`— ${activeEvent?.name}`, "").trim() || "Form"}
+              </button>
+              <button onClick={async e => {
+                e.stopPropagation();
+                if (!window.confirm("Delete this form? This cannot be undone.")) return;
+                await supabase.from("forms").delete().eq("id", f.id);
+                setForms(p => p.filter(x => x.id !== f.id));
+                if (activeForm?.id === f.id) { setActiveForm(null); setFields(DEFAULT_FIELDS); setFormName(""); }
+                fire("🗑 Form deleted");
+              }} style={{ fontSize:10, padding:"1px 5px", borderRadius:4, border:`1px solid ${C.red}25`, background:"transparent", color:C.red, cursor:"pointer", lineHeight:1.2 }}>×</button>
+            </div>
           ))}
         </div>
       )}
