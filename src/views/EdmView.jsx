@@ -668,6 +668,18 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                           ✨ Regen
                         </button>
                       )}
+                      {cam.status !== "sent" && (
+                        <button onClick={async e => {
+                          e.stopPropagation();
+                          if (!window.confirm(`Delete this "${cam.email_type}" email? This cannot be undone.`)) return;
+                          await supabase.from("email_campaigns").delete().eq("id", cam.id);
+                          setCampaigns(p => p.filter(c => c.id !== cam.id));
+                          if (preview?.campaign_id === cam.id) setPreview(null);
+                          fire("🗑 Email deleted");
+                        }} style={{ fontSize:10, padding:"2px 7px", borderRadius:4, border:`1px solid ${C.red}30`, background:`${C.red}08`, color:C.red, cursor:"pointer" }}>
+                          🗑
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
