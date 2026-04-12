@@ -793,7 +793,19 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
       })()}
 
       {/* ─── METRICS CARDS GRID ─── */}
-      {activeEvent && (
+      {activeEvent && campaigns.filter(c => c.status === "sent").length === 0 && campaigns.length > 0 && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "20px 20px", marginBottom: 16, display: "flex", alignItems: "center", gap: 14 }}>
+          <div style={{ fontSize: 28 }}>📊</div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>No emails sent yet</div>
+            <div style={{ fontSize: 12, color: C.muted }}>Send your first campaign to see open rates, RSVPs, and attendance metrics here.</div>
+          </div>
+          <button onClick={() => setView("schedule")} style={{ marginLeft: "auto", fontSize: 12, padding: "7px 14px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>
+            Schedule & Send →
+          </button>
+        </div>
+      )}
+      {activeEvent && campaigns.filter(c => c.status === "sent").length > 0 && (
         <div className="metrics-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
             { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule"), pct: null },
