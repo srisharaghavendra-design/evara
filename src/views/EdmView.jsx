@@ -166,7 +166,16 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
-      .then(({ data: d }) => setCampaigns(d || []));
+      .then(({ data: d }) => {
+        const list = d || [];
+        setCampaigns(list);
+        // Auto-load first draft into preview on mount
+        if (!preview && list.length > 0) {
+          const first = list[0];
+          setPreview({ subject: first.subject, html: first.html_content, plain_text: first.plain_text || "", campaign_id: first.id });
+          setEType(first.email_type || "invitation");
+        }
+      });
   }, [activeEvent, profile]);
 
   // Upload image to Supabase Storage
@@ -699,6 +708,28 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             })()}
             <span style={{ fontSize: 10, color: C.muted }}>⌘S to save</span>
           </div>
+          {/* ── Campaign email type sub-tabs ── */}
+          {campaigns.length > 0 && (
+            <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+              {campaigns.map((cam) => {
+                const isActive = preview?.campaign_id === cam.id;
+                const typeLabel = {
+                  save_the_date: "📅 Save the Date", invitation: "✉️ Invite",
+                  reminder: "⏰ Reminder", reminder_week: "⏰ Reminder", reminder_day: "⏰ Day Before",
+                  confirmation: "✅ Confirm", byo: "📋 BYO", thank_you: "🙏 Thank You",
+                }[cam.email_type] || cam.email_type;
+                return (
+                  <button key={cam.id}
+                    onClick={() => { setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text || "", campaign_id: cam.id }); setEType(cam.email_type || eType); }}
+                    style={{ fontSize: 11.5, padding: "5px 11px", borderRadius: 7, border: `1px solid ${isActive ? C.blue : C.border}`, background: isActive ? `${C.blue}18` : C.card, color: isActive ? C.blue : C.sec, cursor: "pointer", fontWeight: isActive ? 600 : 400, transition: "all .12s", whiteSpace: "nowrap" }}>
+                    {typeLabel}
+                    {cam.status === "sent" && <span style={{ marginLeft: 4, fontSize: 9, color: C.green }}>✓ sent</span>}
+                    {cam.status === "scheduled" && <span style={{ marginLeft: 4, fontSize: 9, color: C.blue }}>⏱</span>}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
             {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
             {gen && (() => {
@@ -764,45 +795,8 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   )}
                 </div>
                 <div style={{ background: "#f2f2f2", borderRadius: 8, overflow: "hidden" }}>
-                  {/* Gmail-style inbox chrome */}
-                  <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "10px 14px" }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: "50%", background: profile?.companies?.brand_color || "#1a73e8", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#fff", fontWeight: 700, flexShrink: 0 }}>
-                        {(profile?.companies?.from_name || profile?.companies?.name || "E").charAt(0).toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: "#111" }}>{profile?.companies?.from_name || profile?.companies?.name || "Events Team"}</span>
-                          <span style={{ fontSize: 10.5, color: "#aaa" }}>{new Date().toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>to: Guest &lt;guest@example.com&gt; · via hello@evarahq.com</div>
-                        {/* Subject line - editable */}
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#f8f8f8", borderRadius: 6, padding: "6px 10px", border: "1px solid #E5E5E7" }}>
-                          <span style={{ fontSize: 10, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", flexShrink: 0 }}>Subject</span>
-                          <input
-                            value={preview.subject || ""}
-                            onChange={e => setPreview(p => ({ ...p, subject: e.target.value }))}
-                            style={{ flex: 1, fontSize: 13, fontWeight: 500, color: "#111", border: "none", outline: "none", background: "transparent", fontFamily: "Arial,sans-serif" }}
-                          />
-                          <span style={{ fontSize: 10, color: preview.subject?.length > 60 ? "#FF453A" : preview.subject?.length > 40 ? "#FF9F0A" : "#30D158", flexShrink: 0, fontWeight: 600 }}>
-                            {preview.subject?.length || 0}/60
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Toolbar: preview mode + spam score + plain text */}
+                  {/* Toolbar: device toggle + spam score */}
                   <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    {/* View toggle */}
-                    <div style={{ display: "flex", gap: 3, background: "#f5f5f5", borderRadius: 6, padding: 2 }}>
-                      {[{id:"html",label:"📧 HTML"},{id:"edit",label:"✏️ Edit"},{id:"text",label:"📄 Plain text"}].map(t => (
-                        <button key={t.id} onClick={() => setPreviewTab(t.id)}
-                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: "none", background: (previewTab||"html")===t.id ? "#fff" : "transparent", color: (previewTab||"html")===t.id ? "#111" : "#888", cursor: "pointer", fontWeight: (previewTab||"html")===t.id ? 600 : 400, boxShadow: (previewTab||"html")===t.id ? "0 1px 3px rgba(0,0,0,.1)" : "none", transition: "all .12s" }}>
-                          {t.label}
-                        </button>
-                      ))}
-                    </div>
                     {/* Device toggle */}
                     <div style={{ display: "flex", gap: 3 }}>
                       {[{label:"🖥",w:"100%"},{label:"📱",w:"375px"}].map(v => (
