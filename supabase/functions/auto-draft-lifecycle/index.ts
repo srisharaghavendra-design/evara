@@ -53,29 +53,16 @@ serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Load brand voice for better quality
     const { data: bv } = await supabase.from("brand_voice").select("*").eq("company_id", companyId).maybeSingle();
 
-    // Offset days per email type relative to event date
     const SEND_OFFSETS: Record<string, number> = {
       save_the_date: -42, invitation: -21, reminder: -7, day_of_details: -1, thank_you: 1
     };
 
-    // Fetch event details
-    const { data: event, error: eventErr } = await supabase
-      .from("events")
-      .select("*")
-      .eq("id", eventId)
-      .single();
-
+    const { data: event, error: eventErr } = await supabase.from("events").select("*").eq("id", eventId).single();
     if (eventErr || !event) throw new Error("Event not found");
 
-    // Fetch company/org name + brand assets
-    const { data: company } = await supabase
-      .from("companies")
-      .select("name, logo_url, brand_color")
-      .eq("id", companyId)
-      .single();
+    const { data: company } = await supabase.from("companies").select("name, logo_url, brand_color").eq("id", companyId).single();
 
     const orgName = company?.name || "Our Organisation";
     const logoUrl = company?.logo_url || "";
@@ -87,17 +74,18 @@ serve(async (req) => {
     const eventContext = `
 Event Name: ${event.name}
 Date: ${eventDate}
+Time: ${event.event_time || "TBC"}
 Location: ${event.location || "TBC"}
 Description: ${event.description || ""}
+Event Type: ${event.event_type || ""}
 Organiser: ${orgName}
 ${bv?.tone_adjectives?.length ? `Tone: ${bv.tone_adjectives.join(", ")}` : ""}
 ${bv?.audience ? `Audience: ${bv.audience}` : ""}
-${bv?.avoid_phrases?.length ? `Avoid phrases: ${bv.avoid_phrases.join(", ")}` : ""}
-${bv?.preferred_cta ? `Preferred CTA style: ${bv.preferred_cta}` : ""}
 `.trim();
 
-    console.log(`Auto-drafting ${EMAIL_SEQUENCE.length} emails for event: ${event.name}`);
+    console.log(`Auto-drafting for event: ${event.name}`);
 
+    // ── 1. EMAIL SEQUENCE ────────────────────────────────────────────
     const drafts = [];
 
     for (const emailType of EMAIL_SEQUENCE) {
@@ -128,25 +116,22 @@ Respond ONLY with a JSON object (no markdown, no explanation):
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
-            max_tokens: 1000,
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 900,
             messages: [{ role: "user", content: prompt }],
           }),
         });
 
         const aiData = await aiRes.json();
         const rawText = aiData.content?.[0]?.text || "{}";
-
         let content;
         try {
-          const cleaned = rawText.replace(/```json|```/g, "").trim();
-          content = JSON.parse(cleaned);
+          content = JSON.parse(rawText.replace(/```json|```/g, "").trim());
         } catch {
           console.error("JSON parse failed for", emailType.type);
           continue;
         }
 
-        // Build clean HTML email body (simplified table-based)
         const htmlBody = buildHtml(content, event, orgName, logoUrl, brandColor);
         const plainText = [
           content.greeting,
@@ -156,7 +141,6 @@ Respond ONLY with a JSON object (no markdown, no explanation):
           content.ps_line ? `\n${content.ps_line}` : "",
         ].join("\n");
 
-        // Calculate send date from event date + offset
         let sendAt: string | null = null;
         const offsetDays = SEND_OFFSETS[emailType.type];
         if (event.event_date && offsetDays !== undefined) {
@@ -166,7 +150,6 @@ Respond ONLY with a JSON object (no markdown, no explanation):
         }
         const isScheduled = sendAt && new Date(sendAt) > new Date();
 
-        // Save draft to DB
         const { data: saved } = await supabase.from("email_campaigns").insert({
           event_id: eventId,
           company_id: companyId,
@@ -183,18 +166,136 @@ Respond ONLY with a JSON object (no markdown, no explanation):
 
         if (saved) {
           drafts.push({ type: emailType.type, label: emailType.label, id: saved.id, subject: content.subject, timing: emailType.timing });
-          console.log(`✅ Drafted: ${emailType.label}`);
+          console.log(`✅ Email drafted: ${emailType.label}`);
         }
       } catch (e) {
         console.error(`Failed to draft ${emailType.type}:`, e.message);
       }
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
+    // ── 2. LANDING PAGE ──────────────────────────────────────────────
+    let landingCreated = false;
+    try {
+      const { data: existingLp } = await supabase.from("landing_pages").select("id").eq("event_id", eventId).maybeSingle();
+
+      if (!existingLp) {
+        const lpPrompt = `You are an event landing page copywriter.
+
+Write compelling copy for an event landing page.
+
+Event details:
+${eventContext}
+
+Respond ONLY with a JSON object (no markdown):
+{
+  "title": "page title (same as or close to event name)",
+  "tagline": "short punchy tagline under 10 words",
+  "headline": "hero headline — bold, exciting, under 12 words",
+  "subheadline": "supporting sentence under 20 words",
+  "about_text": "2-3 sentence description of the event and why people should attend",
+  "cta_text": "Register Now"
+}`;
+
+        const lpRes = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 400,
+            messages: [{ role: "user", content: lpPrompt }],
+          }),
+        });
+
+        const lpData = await lpRes.json();
+        const lpText = lpData.content?.[0]?.text || "{}";
+        let lpContent: any = {};
+        try {
+          lpContent = JSON.parse(lpText.replace(/```json|```/g, "").trim());
+        } catch {
+          console.error("Landing page JSON parse failed");
+        }
+
+        const slug = (event.name || "event")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "")
+          + "-" + Date.now().toString(36);
+
+        await supabase.from("landing_pages").insert({
+          event_id: eventId,
+          company_id: companyId,
+          title: lpContent.title || event.name,
+          tagline: lpContent.tagline || "",
+          headline: lpContent.headline || event.name,
+          subheadline: lpContent.subheadline || "",
+          about_text: lpContent.about_text || event.description || "",
+          cta_text: lpContent.cta_text || "Register Now",
+          brand_color: brandColor || "#0A84FF",
+          template: "corporate",
+          slug,
+          location_text: event.location || "",
+          organiser: orgName,
+          blocks: { hero: true, countdown: true, details: true, speakers: false, rsvp: true, sponsors: false },
+          is_published: false,
+          reg_url: "",
+        });
+
+        landingCreated = true;
+        console.log("✅ Landing page draft created");
+      }
+    } catch (e) {
+      console.error("Landing page creation failed:", e.message);
+    }
+
+    // ── 3. REGISTRATION FORM ─────────────────────────────────────────
+    let formCreated = false;
+    try {
+      const { data: existingForm } = await supabase.from("forms").select("id").eq("event_id", eventId).limit(1).maybeSingle();
+
+      if (!existingForm) {
+        const eventType = (event.event_type || "").toLowerCase();
+        const isDining = ["gala", "dinner", "lunch", "breakfast"].some(t => eventType.includes(t));
+
+        const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
+
+        const fields = [
+          { id: 1, type: "text",   label: "First Name",           required: true,  options: [] },
+          { id: 2, type: "text",   label: "Last Name",            required: true,  options: [] },
+          { id: 3, type: "email",  label: "Email Address",        required: true,  options: [] },
+          { id: 4, type: "text",   label: "Company / Organisation", required: false, options: [] },
+          { id: 5, type: "text",   label: "Job Title",            required: false, options: [] },
+          { id: 6, type: "text",   label: "Phone Number",         required: false, options: [] },
+          ...(isDining ? [{ id: 7, type: "text", label: "Dietary Requirements", required: false, options: [] }] : []),
+        ];
+
+        await supabase.from("forms").insert({
+          event_id: eventId,
+          company_id: companyId,
+          name: `Registration — ${event.name}`,
+          fields,
+          form_type: "registration",
+          is_active: true,
+          share_token: shareToken,
+        });
+
+        formCreated = true;
+        console.log("✅ Registration form created");
+      }
+    } catch (e) {
+      console.error("Form creation failed:", e.message);
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
       event_name: event.name,
       drafts_created: drafts.length,
-      drafts 
+      landing_page_created: landingCreated,
+      form_created: formCreated,
+      drafts,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -221,7 +322,6 @@ function buildHtml(content: any, event: any, orgName: string, logoUrl = "", bran
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4">
 <tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
-  <!-- Header -->
   <tr><td bgcolor="${headerBg}" style="padding:32px;text-align:center;border-radius:12px 12px 0 0;">
     ${logoUrl
       ? `<img src="${logoUrl}" alt="${orgName}" style="display:block;max-height:48px;max-width:160px;object-fit:contain;margin:0 auto 16px;">`
@@ -230,24 +330,19 @@ function buildHtml(content: any, event: any, orgName: string, logoUrl = "", bran
     <h1 style="margin:0;font-family:Arial,sans-serif;font-size:28px;font-weight:700;color:#ffffff;line-height:1.3;">${content.headline || event.name}</h1>
     ${content.subheadline ? `<p style="margin:12px 0 0;font-family:Arial,sans-serif;font-size:16px;color:rgba(255,255,255,0.75);">${content.subheadline}</p>` : ""}
   </td></tr>
-  <!-- Event Details Bar -->
   <tr><td bgcolor="${accentColor}" style="padding:14px 32px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-    <tr>
-      <td style="font-family:Arial,sans-serif;font-size:13px;color:#ffffff;">
-        📅 ${event.event_date ? new Date(event.event_date).toLocaleDateString("en-AU", { day:"numeric",month:"long",year:"numeric" }) : "Date TBC"}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        📍 ${event.location || "Venue TBC"}
-      </td>
-    </tr>
+    <tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#ffffff;">
+      📅 ${event.event_date ? new Date(event.event_date).toLocaleDateString("en-AU", { day:"numeric",month:"long",year:"numeric" }) : "Date TBC"}
+      &nbsp;&nbsp;|&nbsp;&nbsp;
+      📍 ${event.location || "Venue TBC"}
+    </td></tr>
     </table>
   </td></tr>
-  <!-- Body -->
   <tr><td bgcolor="#ffffff" style="padding:32px;border-radius:0 0 12px 12px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
       <tr><td style="padding:0 0 20px 0;font-family:Arial,sans-serif;font-size:15px;color:#333;">${content.greeting || "Dear [First Name],"}</td></tr>
       ${paragraphs}
-      <!-- CTA -->
       <tr><td style="padding:24px 0;" align="center">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0">
         <tr><td bgcolor="${accentColor}" style="border-radius:8px;">
@@ -257,7 +352,6 @@ function buildHtml(content: any, event: any, orgName: string, logoUrl = "", bran
       </td></tr>
       ${content.ps_line ? `<tr><td style="font-family:Arial,sans-serif;font-size:13px;color:#888;font-style:italic;padding-top:16px;">${content.ps_line}</td></tr>` : ""}
     </table>
-    <!-- Footer -->
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #eee;margin-top:32px;">
     <tr><td style="padding-top:20px;font-family:Arial,sans-serif;font-size:11px;color:#aaa;text-align:center;">
       Sent by ${orgName} via evara &nbsp;·&nbsp; <a href="{{UNSUBSCRIBE_URL}}" style="color:#aaa;">Unsubscribe</a>

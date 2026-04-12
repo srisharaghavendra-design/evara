@@ -935,7 +935,7 @@ function MainApp({ session }) {
       }
       
       // 🤖 AI-first: auto-draft the full email lifecycle in the background
-      fire("✅ Event created! AI is drafting your email sequence…");
+      fire("✅ Event created! AI is drafting emails, landing page & form…");
       setView("edm"); // ← take them straight to Emails
       const { data: { session: sess } } = await supabase.auth.getSession();
       fetch(`${SUPABASE_URL}/functions/v1/auto-draft-lifecycle`, {
@@ -944,7 +944,10 @@ function MainApp({ session }) {
         body: JSON.stringify({ eventId: data.id, companyId: profile.company_id })
       }).then(r => r.json()).then(res => {
         if (res.success && res.drafts_created > 0) {
-          fire(`🤖 ${res.drafts_created} emails drafted! Review them below, then go to Schedule to send.`);
+          const parts = [`🤖 ${res.drafts_created} emails`];
+          if (res.landing_page_created) parts.push("landing page");
+          if (res.form_created) parts.push("registration form");
+          fire(`✨ AI built your ${parts.join(", ")} — review and publish when ready.`);
           setCampaignsVersion(v => v + 1);
         }
       }).catch(() => {});
@@ -1592,7 +1595,7 @@ function MainApp({ session }) {
 
               <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}20`, borderRadius:9, padding:"10px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
                 <Sparkles size={14} color={C.blue} />
-                <span style={{ fontSize:12, color:C.blue, lineHeight:1.5 }}><strong>AI will auto-draft</strong> 5 emails — Save the Date, Invitation, Reminder, Day-of & Thank You — using this brief as context. Ready in seconds.</span>
+                <span style={{ fontSize:12, color:C.blue, lineHeight:1.5 }}><strong>AI will auto-draft</strong> 5 emails, a landing page and a registration form using this brief. Ready in seconds.</span>
               </div>
 
               <div style={{ display:"flex", gap:10 }}>
