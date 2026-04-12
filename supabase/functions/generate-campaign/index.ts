@@ -64,7 +64,7 @@ Rules: subjects<55 chars, body 2-3 sentences, plain text only`;
         const e = htmlEmails[s.type]; if (!e) continue;
         let sendAt = null;
         if (edObj) { const d = new Date(edObj); d.setDate(d.getDate() + s.offset); if (d > new Date()) sendAt = d.toISOString(); }
-        const { data: cam } = await sb.from("email_campaigns").insert({ event_id: eventId, company_id: companyId, name: `${s.label} - ${eventName}`, email_type: s.type.includes("reminder") ? "reminder" : s.type, subject: e.subject, html_content: e.html, plain_text: e.plain_text, scheduled_at: sendAt, status: sendAt ? "scheduled" : "draft", segment: "all" }).select("id").single();
+        const { data: cam } = await sb.from("email_campaigns").insert({ event_id: eventId, company_id: companyId, name: `${s.label} - ${eventName}`, email_type: s.type.includes("reminder") ? "reminder" : s.type, subject: e.subject, html_content: e.html, plain_text: e.plain_text, scheduled_at: sendAt, status: "draft", segment: "all" }).select("id").single();
         if (cam) savedIds[s.type] = cam.id;
       }
       const lp = data.landing_page;
