@@ -120,6 +120,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [subjectAlts, setSubjectAlts] = useState([]);
   const [loadingAlts, setLoadingAlts] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
+  const initialLoadDone = useRef(false);
   const [formLink, setFormLink] = useState("");
   const [landingUrl, setLandingUrl] = useState("");
   const [ctaTarget, setCtaTarget] = useState("landing"); // "landing" | "form"
@@ -169,11 +170,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
       .then(({ data: d }) => {
         const list = d || [];
         setCampaigns(list);
-        // Auto-load first draft into preview on mount
-        if (!preview && list.length > 0) {
+        // Always auto-load first campaign on first mount (ref prevents overriding user selection)
+        if (!initialLoadDone.current && list.length > 0) {
+          initialLoadDone.current = true;
           const first = list[0];
-          setPreview({ subject: first.subject, html: first.html_content, plain_text: first.plain_text || "", campaign_id: first.id });
-          setEType(first.email_type || "invitation");
+          if (first.html_content) {
+            setPreview({ subject: first.subject, html: first.html_content, plain_text: first.plain_text || "", campaign_id: first.id });
+            setEType(first.email_type || "invitation");
+          }
         }
       });
   }, [activeEvent, profile]);
@@ -395,6 +399,30 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>
         );
       })()}
+      {/* ── YOUR CAMPAIGNS — primary nav when campaigns exist ── */}
+      {campaigns.length > 0 && (
+        <div style={{ marginBottom: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Your emails</span>
+            <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "2px 7px", borderRadius: 10 }}>{campaigns.length} drafted</span>
+            <span style={{ fontSize: 10.5, color: C.muted, marginLeft: "auto" }}>Click to preview · Edit below</span>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {campaigns.map(cam => {
+              const isActive = preview?.campaign_id === cam.id;
+              const label = { save_the_date: "📅 Save the Date", invitation: "✉️ Invitation", reminder: "⏰ Reminder", reminder_week: "⏰ Reminder", reminder_day: "🌅 Day Before", confirmation: "✅ Confirmation", byo: "🎒 BYO Details", thank_you: "🙏 Thank You" }[cam.email_type] || cam.email_type;
+              const statusCol = cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : C.muted;
+              return (
+                <button key={cam.id} onClick={() => { setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text || "", campaign_id: cam.id }); setEType(cam.email_type || eType); }}
+                  style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${isActive ? C.blue : C.border}`, background: isActive ? `${C.blue}15` : C.bg, color: isActive ? C.blue : C.text, cursor: "pointer", fontWeight: isActive ? 600 : 400, display: "flex", alignItems: "center", gap: 5, transition: "all .12s" }}>
+                  {label}
+                  <span style={{ fontSize: 9, color: statusCol, fontWeight: 600 }}>● {cam.status}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
       <div className="edm-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, minHeight: "70vh" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, overflow: "auto" }}>
           <Sec label="Email type">
@@ -851,7 +879,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   {/* Email body */}
                   <div style={{ overflowX: "auto", background: "#f0f0f0", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "20px" : "0" }}>
                     {(previewTab || "html") === "html" ? (
-                      <iframe srcDoc={preview.html}
+                      <iframe srcDoc={preview.html.replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
                         style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 520, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
