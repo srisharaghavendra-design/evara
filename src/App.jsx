@@ -725,6 +725,7 @@ function MainApp({ session }) {
   const [campaignsVersion, setCampaignsVersion] = useState(0); // bump to force reload
   const [contactsVersion, setContactsVersion] = useState(0); // bump to force guest list reload
   const [formShareLink, setRootFormShareLink] = useState(""); // active event's registration form link
+  const [lpPublished, setLpPublished] = useState(false); // landing page published status
 
   // Smart notifications — check events on load
   useEffect(() => {
@@ -845,13 +846,15 @@ function MainApp({ session }) {
 
   // Load metrics for header strip whenever active event changes
   useEffect(() => {
-    if (!activeEvent?.id) { setMetrics(null); setCampaigns([]); setRootFormShareLink(""); return; }
+    if (!activeEvent?.id) { setMetrics(null); setCampaigns([]); setRootFormShareLink(""); setLpPublished(false); return; }
     supabase.from("event_summary").select("*").eq("event_id", activeEvent.id).maybeSingle()
       .then(({ data }) => setMetrics(data));
     supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
       .then(({ data }) => setCampaigns(data || []));
     supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
       .then(({ data }) => setRootFormShareLink(data?.share_token ? `${window.location.origin}/form/${data.share_token}` : ""));
+    supabase.from("landing_pages").select("is_published").eq("event_id", activeEvent.id).eq("is_published", true).limit(1).maybeSingle()
+      .then(({ data }) => setLpPublished(!!data));
   }, [activeEvent?.id]);
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
 
@@ -1275,7 +1278,7 @@ function MainApp({ session }) {
         {activeEvent && (() => {
           // Step completion logic — driven by real data
           const step1Done = campaigns.some(c => c.html_content);
-          const step2Done = !!formShareLink;
+          const step2Done = lpPublished;
           const step3Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
           const step4Done = campaigns.some(c => c.status === "sent");
           const stepDone = [step1Done, step2Done, step3Done, step4Done];
@@ -1679,3 +1682,61 @@ function MainApp({ session }) {
 }
 
 // ─── EMAIL ACTIVITY TIMELINE ─────────────────────────────────
+function App() {
+  const path = window.location.pathname;
+
+  // /form/:token
+  if (path.startsWith("/form/")) {
+    const token = path.split("/form/")[1]?.split("/")[0];
+    if (token) return <PublicFormPage token={token} />;
+  }
+
+  // /page/:slug
+  if (path.startsWith("/page/")) {
+    const slug = path.split("/page/")[1]?.split("/")[0];
+    if (slug) return <PublicLandingPage slug={slug} />;
+  }
+
+  // /unsubscribe
+  if (path.startsWith("/unsubscribe")) return <UnsubscribePage />;
+
+  // /checkin/:eventId
+  if (path.startsWith("/checkin/")) {
+    const eventId = path.split("/checkin/")[1]?.split("/")[0];
+    if (eventId) return <PublicCheckInPage eventId={eventId} />;
+  }
+
+  // /dashboard/:token
+  if (path.startsWith("/dashboard/")) {
+    const token = path.split("/dashboard/")[1]?.split("/")[0];
+    if (token) return <PublicDashboardPage token={token} />;
+  }
+
+  // /pricing
+  if (path === "/pricing") return <PricingPage />;
+
+  // Authenticated app
+  return <AuthedApp />;
+}
+
+function AuthedApp() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) return <Splash />;
+  if (!session) return <AuthScreen />;
+  return <MainApp session={session} />;
+}
+
+export default App;
