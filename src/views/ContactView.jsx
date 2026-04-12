@@ -28,6 +28,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
   const [csvHeaders, setCsvHeaders] = useState([]);
   const [columnMap, setColumnMap] = useState({});
   const [addToEvent, setAddToEvent] = useState(false);
+  const [includePersonal, setIncludePersonal] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const importFileRef = useRef(null);
   const [showDuplicates, setShowDuplicates] = useState(false);
@@ -138,7 +139,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
     if (contactSort === "score") return (scores[b.id]?.score||0) - (scores[a.id]?.score||0);
     return new Date(b.created_at) - new Date(a.created_at);
   });
-  const resetImport = () => { setShowImport(false); setImportText(""); setImportPreview(null); setImportStep("input"); setCsvHeaders([]); setColumnMap({}); setAddToEvent(false); setDragOver(false); };
+  const resetImport = () => { setShowImport(false); setImportText(""); setImportPreview(null); setImportStep("input"); setCsvHeaders([]); setColumnMap({}); setAddToEvent(false); setIncludePersonal(false); setDragOver(false); };
 
   // Parse a single CSV line, handling quoted fields and multiple delimiters
   const parseCSVLine = (line) => {
@@ -758,6 +759,16 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                   {importText.trim() ? `${parseImportText(importText).length} contacts detected` : "Paste data above or drop a file to continue"}
                 </div>
 
+                {activeEvent && (
+                  <label style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:C.raised, borderRadius:8, border:`1px solid ${addToEvent?C.blue:C.border}`, marginBottom:12, cursor:"pointer", transition:"border-color .15s" }}>
+                    <input type="checkbox" checked={addToEvent} onChange={e => setAddToEvent(e.target.checked)}
+                      style={{ width:15, height:15, accentColor:C.blue, cursor:"pointer" }} />
+                    <div>
+                      <div style={{ fontSize:12.5, fontWeight:600, color:C.text }}>Add to "{activeEvent.name}"</div>
+                      <div style={{ fontSize:11, color:C.muted }}>Contacts appear in this event's guest list immediately</div>
+                    </div>
+                  </label>
+                )}
                 <div style={{ display:"flex", gap:9 }}>
                   <button onClick={resetImport} style={{ flex:1, padding:11, background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>Cancel</button>
                   <button onClick={handleImportProceed} disabled={!importText.trim()}
@@ -785,18 +796,18 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                     { key:"job_title",    label:"💼 Job Title",   required:false },
                     { key:"phone",        label:"📞 Phone",       required:false },
                   ].map(f => (
-                    <>
-                      <div key={f.key+"label"} style={{ fontSize:12.5, color:C.text, fontWeight: f.required ? 600 : 400 }}>
+                    <React.Fragment key={f.key}>
+                      <div style={{ fontSize:12.5, color:C.text, fontWeight: f.required ? 600 : 400 }}>
                         {f.label}{f.required && <span style={{ color:C.red, marginLeft:3 }}>*</span>}
                       </div>
-                      <div key={f.key+"arrow"} style={{ textAlign:"center", color:C.muted, fontSize:16 }}>→</div>
-                      <select key={f.key+"sel"} value={columnMap[f.key] !== null && columnMap[f.key] !== undefined ? columnMap[f.key] : ""}
+                      <div style={{ textAlign:"center", color:C.muted, fontSize:16 }}>→</div>
+                      <select value={columnMap[f.key] !== null && columnMap[f.key] !== undefined ? columnMap[f.key] : ""}
                         onChange={e => setColumnMap(m => ({ ...m, [f.key]: e.target.value === "" ? null : Number(e.target.value) }))}
                         style={{ fontSize:12, padding:"6px 10px", borderRadius:7, border:`1px solid ${columnMap[f.key] !== null && columnMap[f.key] !== undefined && columnMap[f.key] !== "" ? C.blue : C.border}`, background:C.raised, color: columnMap[f.key] !== null && columnMap[f.key] !== undefined && columnMap[f.key] !== "" ? C.text : C.muted, outline:"none" }}>
                         <option value="">— skip this field —</option>
                         {csvHeaders.map((h, i) => <option key={i} value={i}>{h || `Column ${i+1}`}</option>)}
                       </select>
-                    </>
+                    </React.Fragment>
                   ))}
                 </div>
 
@@ -839,7 +850,7 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
               <>
                 <div style={{ display:"flex", gap:10, marginBottom:12, flexWrap:"wrap" }}>
                   {[
-                    { label:"Ready to import", val: importPreview.filter(r=>!r._personal).length, col:C.green },
+                    { label:"Ready to import", val: importPreview.filter(r=>!r._personal||includePersonal).length, col:C.green },
                     { label:"Personal emails", val: importPreview.filter(r=>r._personal).length, col:C.amber },
                     { label:"Total detected", val: importPreview.length, col:C.text },
                   ].map(s => (
@@ -876,26 +887,21 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                 </div>
 
                 {importPreview.filter(r=>r._personal).length > 0 && (
-                  <div style={{ padding:"8px 12px", background:`${C.amber}10`, borderRadius:7, border:`1px solid ${C.amber}30`, marginBottom:10, fontSize:11.5, color:C.amber }}>
-                    ⚠️ {importPreview.filter(r=>r._personal).length} personal email addresses (Gmail, Yahoo, etc.) will be skipped. Only business emails will be imported.
-                  </div>
-                )}
-
-                {activeEvent && (
-                  <label style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", background:C.raised, borderRadius:8, border:`1px solid ${addToEvent?C.blue:C.border}`, marginBottom:12, cursor:"pointer", transition:"border-color .15s" }}>
-                    <input type="checkbox" checked={addToEvent} onChange={e => setAddToEvent(e.target.checked)}
-                      style={{ width:15, height:15, accentColor:C.blue, cursor:"pointer" }} />
-                    <div>
-                      <div style={{ fontSize:12.5, fontWeight:600, color:C.text }}>Also add to "{activeEvent.name}"</div>
-                      <div style={{ fontSize:11, color:C.muted }}>Contacts will appear in this event's guest list immediately</div>
-                    </div>
+                  <label style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", background:`${C.amber}10`, borderRadius:7, border:`1px solid ${C.amber}30`, marginBottom:10, cursor:"pointer" }}>
+                    <input type="checkbox" checked={includePersonal} onChange={e => setIncludePersonal(e.target.checked)}
+                      style={{ width:14, height:14, accentColor:C.amber, cursor:"pointer", flexShrink:0 }} />
+                    <span style={{ fontSize:11.5, color:C.amber }}>
+                      {importPreview.filter(r=>r._personal).length} personal emails (Gmail, Yahoo…) detected — check to include them anyway
+                    </span>
                   </label>
                 )}
+
+
 
                 <div style={{ display:"flex", gap:9 }}>
                   <button onClick={() => { setImportStep(csvHeaders.length ? "map" : "input"); }} style={{ padding:"10px 20px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, cursor:"pointer" }}>← Back</button>
                   <button onClick={async () => {
-                    const rows = importPreview.filter(r => !r._personal);
+                    const rows = importPreview.filter(r => !r._personal || includePersonal);
                     if (!rows.length || !profile) return;
                     setImporting(true);
                     const toInsert = rows.map(r => { const {_personal,...rest}=r; return { ...rest, company_id:profile.company_id }; });
@@ -913,9 +919,9 @@ function ContactView({ supabase, profile, activeEvent, fire, globalSearch = "", 
                     if (addToEvent && newOnes.length) onContactsChanged?.();
                     resetImport();
                     setImporting(false);
-                  }} disabled={importing || !importPreview.filter(r=>!r._personal).length}
+                  }} disabled={importing || !importPreview.filter(r=>!r._personal||includePersonal).length}
                     style={{ flex:1, padding:11, background:C.blue, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
-                    {importing ? "Importing…" : `Import ${importPreview.filter(r=>!r._personal).length} Contact${importPreview.filter(r=>!r._personal).length!==1?"s":""}${addToEvent&&activeEvent?" + Add to Event":""} →`}
+                    {importing ? "Importing…" : `Import ${importPreview.filter(r=>!r._personal||includePersonal).length} Contact${importPreview.filter(r=>!r._personal||includePersonal).length!==1?"s":""}${addToEvent&&activeEvent?" + Add to Event":""} →`}
                   </button>
                 </div>
               </>
