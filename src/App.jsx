@@ -1136,6 +1136,18 @@ function MainApp({ session }) {
                   ↩ Unarchive event
                 </button>
               )}
+              {activeEvent?.status === "archived" && (
+                <button onClick={async () => {
+                  if (!window.confirm(`Permanently delete "${activeEvent.name}"? All campaigns, contacts, and forms will be removed. This cannot be undone.`)) return;
+                  await supabase.from("events").delete().eq("id", activeEvent.id);
+                  const remaining = events.filter(e => e.id !== activeEvent.id);
+                  setEvents(remaining);
+                  setActiveEvent(remaining[0] || null);
+                  fire("🗑 Event deleted");
+                }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.red}30`, borderRadius: 6, color: C.red, fontSize: 11, cursor: "pointer", textAlign: "center", marginTop: 4 }}>
+                  🗑 Delete event
+                </button>
+              )}
             </div>
           ) : (
             <button onClick={() => setShowNewEvent(true)} style={{ width: "100%", padding: "8px 11px", background: `${C.blue}12`, border: `1px dashed ${C.blue}40`, borderRadius: 8, color: C.blue, fontSize: 12, textAlign: "left", cursor: "pointer" }}>
@@ -1797,3 +1809,4 @@ function AuthedApp() {
 }
 
 export default App;
+
