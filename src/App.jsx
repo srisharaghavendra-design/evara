@@ -3417,6 +3417,17 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         }));
       supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
         .then(({ data }) => { if (data?.share_token) setFormLink(`${window.location.origin}/form/${data.share_token}`); });
+      supabase.from("landing_pages").select("slug,is_published").eq("event_id", activeEvent.id).maybeSingle()
+        .then(({ data }) => {
+          if (data?.slug && data?.is_published) {
+            const lUrl = `${window.location.origin}/page/${data.slug}`;
+            setLandingUrl(lUrl);
+            setCtaTarget("landing");
+          } else {
+            setLandingUrl("");
+            setCtaTarget("form");
+          }
+        });
     }
   }, [activeEvent]);
 
@@ -3463,7 +3474,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           tone: info.tone || "professional and exciting",
           orgName: info.orgName || profile?.companies?.name || "",
           eventId: activeEvent?.id, companyId: profile?.company_id,
-          registrationUrl: formLink || null,
+          registrationUrl: (ctaTarget === "landing" && landingUrl) ? landingUrl : (formLink || null),
           headerImageUrl: images.header || null,
           bodyImageUrl: images.body || null,
           footerImageUrl: images.footer || null,
@@ -3488,7 +3499,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           greeting: c.greeting || "Dear {{FIRST_NAME}},",
           bodyParagraphs: c.body_paragraphs || [],
           ctaText: c.cta_text || "Register Now",
-          ctaUrl: formLink || "",
+          ctaUrl: (ctaTarget === "landing" && landingUrl) ? landingUrl : (formLink || ""),
           eventDate: info.eventDate,
           eventTime: info.eventTime,
           location: info.location,
@@ -3517,7 +3528,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             greeting: "Dear {{FIRST_NAME}},",
             bodyParagraphs: paras.length ? paras : [info.description || `We'd like to invite you to ${info.eventName}.`],
             ctaText: "Register Now",
-            ctaUrl: formLink || "",
+            ctaUrl: (ctaTarget === "landing" && landingUrl) ? landingUrl : (formLink || ""),
             eventDate: info.eventDate,
             eventTime: info.eventTime,
             location: info.location,
@@ -3526,14 +3537,17 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             bodyImageUrl: images.body,
             footerImageUrl: images.footer,
           });
-        } else if (formLink && !finalHtml.includes(formLink)) {
-          // No images — just inject the CTA link
+        } else {
+          // No images — inject the CTA link based on current ctaTarget
+          const activeCta = (ctaTarget === "landing" && landingUrl) ? landingUrl : formLink;
+          if (activeCta && !finalHtml.includes(activeCta)) {
           const ctaInject = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:24px 0;text-align:center;">
             <tr><td align="center">
-              <a href="${formLink}" style="display:inline-block;padding:14px 40px;background:#0A84FF;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:6px;font-family:Arial,Helvetica,sans-serif;">Register Now →</a>
+              <a href="${activeCta}" style="display:inline-block;padding:14px 40px;background:#0A84FF;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:6px;font-family:Arial,Helvetica,sans-serif;">Register Now →</a>
             </td></tr>
           </table>`;
           finalHtml = finalHtml.replace(/<\/body>/i, ctaInject + "</body>");
+          }
         }
       }
 
@@ -3623,6 +3637,31 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           {activeEvent.location && <span style={{ fontSize:11, color:C.muted }}>📍 {activeEvent.location}</span>}
         </div>
       )}
+      {/* ── CTA Chain selector ── */}
+      {activeEvent && (formLink || landingUrl) && (() => {
+        const activeCta = ctaTarget === "landing" && landingUrl ? landingUrl : formLink;
+        const chainComplete = landingUrl && formLink;
+        return (
+          <div style={{ marginBottom:10, padding:"10px 14px", background:C.card, border:`1px solid ${C.border}`, borderRadius:9, display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+            <span style={{ fontSize:11, fontWeight:700, color:C.muted, letterSpacing:"0.8px", textTransform:"uppercase", whiteSpace:"nowrap" }}>Email CTA links to</span>
+            <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+              <button onClick={() => setCtaTarget("landing")} style={{ fontSize:11.5, padding:"4px 10px", borderRadius:6, border:`1px solid ${ctaTarget==="landing"?C.blue:C.border}`, background:ctaTarget==="landing"?C.blue+"15":"transparent", color:ctaTarget==="landing"?C.blue:C.muted, cursor:"pointer", fontWeight:ctaTarget==="landing"?600:400, display:"flex", alignItems:"center", gap:4 }}>
+                🌐 Landing Page {landingUrl ? <span style={{fontSize:9,color:C.green}}>✓ live</span> : <span style={{fontSize:9,color:C.amber}}>not yet live</span>}
+              </button>
+              <span style={{ fontSize:11, color:C.border }}>→</span>
+              <button onClick={() => setCtaTarget("form")} style={{ fontSize:11.5, padding:"4px 10px", borderRadius:6, border:`1px solid ${ctaTarget==="form"?C.blue:C.border}`, background:ctaTarget==="form"?C.blue+"15":"transparent", color:ctaTarget==="form"?C.blue:C.muted, cursor:"pointer", fontWeight:ctaTarget==="form"?600:400, display:"flex", alignItems:"center", gap:4 }}>
+                📋 Form directly {formLink ? <span style={{fontSize:9,color:C.green}}>✓</span> : <span style={{fontSize:9,color:C.amber}}>not yet created</span>}
+              </button>
+            </div>
+            {chainComplete && ctaTarget === "landing" && (
+              <span style={{ fontSize:10.5, color:C.green, marginLeft:"auto" }}>✅ Full chain: Email → Landing Page → Form</span>
+            )}
+            {!landingUrl && ctaTarget === "landing" && (
+              <span style={{ fontSize:10.5, color:C.amber, marginLeft:"auto" }}>Publish your Landing Page first (Step 2) to enable this</span>
+            )}
+          </div>
+        );
+      })()}
       <div className="edm-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, minHeight: "70vh" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, overflow: "auto" }}>
           <Sec label="Email type">
