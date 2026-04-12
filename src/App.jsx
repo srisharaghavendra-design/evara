@@ -4000,7 +4000,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {/* View toggle */}
                     <div style={{ display: "flex", gap: 3, background: "#f5f5f5", borderRadius: 6, padding: 2 }}>
-                      {[{id:"html",label:"📧 HTML"},{id:"text",label:"📄 Plain text"}].map(t => (
+                      {[{id:"html",label:"📧 HTML"},{id:"edit",label:"✏️ Edit"},{id:"text",label:"📄 Plain text"}].map(t => (
                         <button key={t.id} onClick={() => setPreviewTab(t.id)}
                           style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: "none", background: (previewTab||"html")===t.id ? "#fff" : "transparent", color: (previewTab||"html")===t.id ? "#111" : "#888", cursor: "pointer", fontWeight: (previewTab||"html")===t.id ? 600 : 400, boxShadow: (previewTab||"html")===t.id ? "0 1px 3px rgba(0,0,0,.1)" : "none", transition: "all .12s" }}>
                           {t.label}
@@ -4064,6 +4064,50 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                       <iframe srcDoc={preview.html}
                         style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 520, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
                         title="Email Preview" sandbox="allow-same-origin" />
+                    ) : previewTab === "edit" ? (
+                      <div style={{ width: "100%", background: "#fff", padding: "24px" }}>
+                        <div style={{ fontSize: 11, color: "#888", marginBottom: 12, display:"flex", alignItems:"center", gap:8 }}>
+                          ✏️ Edit email content below — click Save to update the email
+                        </div>
+                        {/* Subject */}
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#666", marginBottom: 4, textTransform:"uppercase", letterSpacing:"0.5px" }}>Subject Line</div>
+                          <input value={preview.subject || ""} onChange={e => setPreview(p => ({...p, subject: e.target.value}))}
+                            style={{ width:"100%", padding:"8px 12px", border:"1px solid #e0e0e0", borderRadius:6, fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }} />
+                        </div>
+                        {/* Body text */}
+                        <div style={{ marginBottom: 12 }}>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "#666", marginBottom: 4, textTransform:"uppercase", letterSpacing:"0.5px" }}>Email Body</div>
+                          <textarea
+                            value={preview.plain_text || preview.html?.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,"").replace(/<[^>]+>/g," ").replace(/\s{3,}/g,"\n\n").trim() || ""}
+                            onChange={e => setPreview(p => ({...p, plain_text: e.target.value}))}
+                            rows={16}
+                            style={{ width:"100%", padding:"10px 12px", border:"1px solid #e0e0e0", borderRadius:6, fontSize:13, fontFamily:"inherit", outline:"none", resize:"vertical", lineHeight:1.7, boxSizing:"border-box" }} />
+                        </div>
+                        <div style={{ display:"flex", gap:8 }}>
+                          <button onClick={async () => {
+                            // Rebuild HTML with edited plain text injected into existing template
+                            const newHtml = preview.html
+                              // Replace body paragraphs — find the white body section and inject edited text
+                              .replace(
+                                /(<td[^>]*bgcolor="#ffffff"[^>]*>[\s\S]*?<table[^>]*>)([\s\S]*?)(<\/table>\s*<\/td>)/,
+                                (match, open, body, close) => {
+                                  const paras = (preview.plain_text || "").split(/\n\n+/).filter(p => p.trim());
+                                  const newBody = paras.map(p => `<tr><td style="padding:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.7;color:#333333;">${p.replace(/\n/g,"<br>")}</td></tr>`).join("");
+                                  return open + newBody + close;
+                                }
+                              );
+                            setPreview(p => ({...p, html: newHtml || p.html}));
+                            setPreviewTab("html");
+                            fire("✅ Email updated! Switch to HTML tab to see changes.");
+                          }} style={{ padding:"8px 18px", background:C.blue, border:"none", borderRadius:7, color:"#fff", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+                            Save & Preview →
+                          </button>
+                          <button onClick={() => setPreviewTab("html")} style={{ padding:"8px 14px", background:"transparent", border:`1px solid ${C.border}`, borderRadius:7, color:C.muted, fontSize:13, cursor:"pointer" }}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <div style={{ width: "100%", background: "#fff", padding: "24px", fontFamily: "monospace", fontSize: 13, color: "#333", lineHeight: 1.8, whiteSpace: "pre-wrap", minHeight: 400 }}>
                         {preview.plain_text || preview.html?.replace(/<[^>]+>/g, "").replace(/\s{2,}/g, "\n").trim() || "No plain text available."}
