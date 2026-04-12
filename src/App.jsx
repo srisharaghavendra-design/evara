@@ -4266,6 +4266,38 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
   const [followUpGenerating, setFollowUpGenerating] = useState(false);
   const [schedPickerCam, setSchedPickerCam] = useState(null); // cam being scheduled via picker
   const [schedPickerVal, setSchedPickerVal] = useState("");
+  const [editingSubjectId, setEditingSubjectId] = useState(null); // cam id being edited inline
+  const [editingSubjectVal, setEditingSubjectVal] = useState("");
+  const [aiSubjectLoading, setAiSubjectLoading] = useState(null); // cam id loading AI subjects
+  const [aiSubjectOptions, setAiSubjectOptions] = useState({}); // camId → [subjects]
+
+  const saveSubject = async (camId, newSubject) => {
+    if (!newSubject.trim()) return;
+    await supabase.from("email_campaigns").update({ subject: newSubject.trim() }).eq("id", camId);
+    setCampaigns(p => p.map(c => c.id === camId ? { ...c, subject: newSubject.trim() } : c));
+    setEditingSubjectId(null);
+    fire("✅ Subject updated");
+  };
+
+  const generateAiSubjects = async (cam) => {
+    setAiSubjectLoading(cam.id);
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": ANON_KEY },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 300,
+          messages: [{ role: "user", content: `Generate 4 alternative email subject lines for this event email. Make each one different in style (curiosity, urgency, benefit, question). Keep each under 50 chars.\n\nEmail type: ${cam.email_type?.replace(/_/g," ")}\nEvent: ${activeEvent?.name}\nCurrent subject: "${cam.subject}"\n\nReturn ONLY a JSON array of 4 strings, no markdown.` }]
+        })
+      });
+      const d = await res.json();
+      const text = d.content?.[0]?.text || "[]";
+      const options = JSON.parse(text.replace(/```json|```/g,"").trim());
+      setAiSubjectOptions(p => ({ ...p, [cam.id]: options }));
+    } catch(e) { fire("Subject generation failed","err"); }
+    setAiSubjectLoading(null);
+  };
 
   const generateFollowUpSequence = async () => {
     if (!activeEvent || !profile) return;
@@ -4753,7 +4785,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               <div style={{ flex: 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <span style={{ fontSize: 14, fontWeight: 500, color: C.text, cursor: cam.html_content ? "pointer" : "default" }} onClick={() => cam.html_content && setPreviewCam(cam)}>{cam.name}{cam.html_content && <span style={{ fontSize: 9, color: C.blue, marginLeft: 5 }}>👁</span>}</span>
-                  {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>"{cam.subject}"</div>}
+                  {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>{editingSubjectId === cam.id ? null : `"${cam.subject}"`}</div>}
                   <span style={{ fontSize: 10.5, fontWeight: 500, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", background: cam.status === "sent" ? `${C.green}15` : cam.status === "scheduled" ? `${C.blue}15` : cam.status === "paused" ? `${C.amber}15` : `${C.raised}`, color: cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : cam.status === "paused" ? C.amber : C.muted }}>
                     {cam.status}{cam.status === "scheduled" && cam.scheduled_at ? ` · ${new Date(cam.scheduled_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : ""}
                   </span>
@@ -4798,7 +4830,49 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
                     </span>
                   )}
                 </div>
-                {cam.subject && <div style={{ fontSize: 11.5, color: C.muted, marginTop: 3, fontStyle: "italic" }}>"{cam.subject}"</div>}
+                {/* Inline subject editor */}
+                {cam.subject && (
+                  <div style={{ marginTop: 6 }}>
+                    {editingSubjectId === cam.id ? (
+                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+                        <input autoFocus value={editingSubjectVal}
+                          onChange={e => setEditingSubjectVal(e.target.value)}
+                          onKeyDown={e => { if(e.key==="Enter") saveSubject(cam.id, editingSubjectVal); if(e.key==="Escape") setEditingSubjectId(null); }}
+                          style={{ flex:1, background:C.bg, border:`1px solid ${C.blue}60`, borderRadius:6, color:C.text, padding:"5px 9px", fontSize:12, outline:"none" }} />
+                        <button onClick={() => saveSubject(cam.id, editingSubjectVal)} style={{ padding:"4px 10px", borderRadius:5, border:"none", background:C.blue, color:"#fff", fontSize:11, cursor:"pointer", fontWeight:600 }}>Save</button>
+                        <button onClick={() => setEditingSubjectId(null)} style={{ padding:"4px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:11, cursor:"pointer" }}>✕</button>
+                      </div>
+                    ) : (
+                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                        <span style={{ fontSize:11.5, color:C.muted, fontStyle:"italic", cursor:"pointer" }}
+                          onClick={() => { setEditingSubjectId(cam.id); setEditingSubjectVal(cam.subject); setAiSubjectOptions(p=>({...p,[cam.id]:null})); }}
+                          title="Click to edit subject line">
+                          "{cam.subject}" <span style={{ fontSize:10, color:C.blue }}>✏️</span>
+                        </span>
+                        {cam.status !== "sent" && (
+                          <button onClick={() => generateAiSubjects(cam)} disabled={aiSubjectLoading === cam.id}
+                            style={{ fontSize:10, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.blue}30`, background:`${C.blue}08`, color:C.blue, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
+                            {aiSubjectLoading === cam.id ? <Spin size={8}/> : "✨"} AI alternatives
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {/* AI subject alternatives */}
+                    {aiSubjectOptions[cam.id]?.length > 0 && editingSubjectId !== cam.id && (
+                      <div style={{ marginTop:8, background:C.raised, borderRadius:8, border:`1px solid ${C.border}`, padding:"10px 12px" }}>
+                        <div style={{ fontSize:10, color:C.muted, marginBottom:6, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>✨ AI Subject Alternatives</div>
+                        {aiSubjectOptions[cam.id].map((s, i) => (
+                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", borderBottom: i < aiSubjectOptions[cam.id].length-1 ? `1px solid ${C.border}` : "none" }}>
+                            <span style={{ flex:1, fontSize:12, color:C.sec }}>{s}</span>
+                            <button onClick={() => saveSubject(cam.id, s)}
+                              style={{ fontSize:10, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.green}40`, background:`${C.green}08`, color:C.green, cursor:"pointer", flexShrink:0 }}>Use</button>
+                          </div>
+                        ))}
+                        <button onClick={() => setAiSubjectOptions(p=>({...p,[cam.id]:null}))} style={{ marginTop:6, fontSize:10, color:C.muted, background:"none", border:"none", cursor:"pointer" }}>Dismiss</button>
+                      </div>
+                    )}
+                  </div>
+                )}
                 {cam.html_content && (() => {
                   const words = cam.html_content.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
                   return <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{words} words · ~{Math.max(1, Math.round(words/200))} min read</div>;
