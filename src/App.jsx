@@ -1,5 +1,6 @@
 // evara — All-in-One Event Marketing Platform v1.2
 import { useState, useEffect, useRef } from "react";
+import StoryBar from "./StoryBar";
 import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard, Mail, Globe, FileText, Users, Calendar,
@@ -2296,38 +2297,23 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         );
       })()}
 
-      {/* ── JOURNEY PROGRESS STRIP ── */}
-      {journeyDone < journeySteps.length && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"13px 16px", marginBottom:14 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:10 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <div style={{ width:6, height:6, borderRadius:"50%", background:C.blue, boxShadow:`0 0 6px ${C.blue}` }} />
-              <span style={{ fontSize:12, fontWeight:700, color:C.text }}>Your launch journey</span>
-              <span style={{ fontSize:11, color:C.muted }}>{journeyDone}/{journeySteps.length} complete</span>
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
-              <div style={{ width:100, height:4, background:C.raised, borderRadius:99, overflow:"hidden" }}>
-                <div style={{ height:"100%", width:`${(journeyDone/journeySteps.length)*100}%`, background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:99, transition:"width .6s" }} />
-              </div>
-              <span style={{ fontSize:11, fontWeight:700, color:C.blue }}>{Math.round(journeyDone/journeySteps.length*100)}%</span>
-            </div>
-          </div>
-          <div style={{ display:"flex", gap:6, overflowX:"auto", WebkitOverflowScrolling:"touch", paddingBottom:4 }}
-            className="journey-strip-inner">
-            {journeySteps.map((step, i) => {
-              const isNext = !step.done && journeySteps.slice(0,i).every(s=>s.done);
-              return (
-                <button key={step.id} onClick={step.action||undefined}
-                  style={{ flex:"0 0 auto", minWidth:80, padding:"9px 6px", borderRadius:8, border:`1px solid ${step.done?C.blue+"30":isNext?C.blue+"50":C.border}`, background:step.done?`${C.blue}08`:isNext?`${C.blue}06`:C.raised, cursor:step.action?"pointer":"default", textAlign:"center", transition:"all .15s" }}>
-                  <div style={{ fontSize:16, marginBottom:3 }}>{step.done?"✅":step.icon}</div>
-                  <div style={{ fontSize:10, fontWeight:step.done?400:isNext?700:400, color:step.done?C.green:isNext?C.blue:C.muted, lineHeight:1.3 }}>{step.label}</div>
-                  {isNext && step.cta && <div style={{ fontSize:9, color:C.blue, marginTop:2, fontWeight:600 }}>{step.cta}</div>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* ── STORY BAR ── */}
+      <StoryBar
+        event={activeEvent}
+        stats={{
+          contacts:    contacts.length,
+          emailsSent:  campaigns.filter(c => c.status === "sent").length,
+          emailDrafts: campaigns.filter(c => c.status === "draft").length,
+          confirmed:   metrics?.total_confirmed || 0,
+          checkedIn:   metrics?.total_attended || 0,
+        }}
+        onAction={(key) => {
+          if (key === "contacts") setView("contacts");
+          if (key === "schedule") setView("schedule");
+          if (key === "checkin")  window.open(`/checkin/${activeEvent?.id}`, "_blank");
+          if (key === "thankyou") setView("schedule");
+        }}
+      />
 
       {/* Post-event mode banner */}
       {isPostEvent && (
@@ -2582,36 +2568,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         </div>
       )}
 
-      {/* Go Live checklist */}
-      {goLiveChecklist.length > 0 && goLiveDone < goLiveChecklist.length && (
-        <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:10, padding:"14px 16px", marginBottom:12 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <span style={{ fontSize:13, fontWeight:600, color:C.text }}>🚀 Go Live Checklist</span>
-              <span style={{ fontSize:11, color:C.muted }}>{goLiveDone}/{goLiveChecklist.length} complete</span>
-            </div>
-            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-              <div style={{ width:80, height:5, background:C.raised, borderRadius:3, overflow:"hidden" }}>
-                <div style={{ width:`${Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%`, height:"100%", background:`linear-gradient(90deg,${C.blue},${C.teal})`, borderRadius:3, transition:"width .4s" }} />
-              </div>
-              <span style={{ fontSize:11, fontWeight:600, color:goLiveDone===goLiveChecklist.length?C.green:C.blue }}>{Math.round(goLiveDone/Math.max(1,goLiveChecklist.length)*100)}%</span>
-            </div>
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
-            {goLiveChecklist.map(item => (
-              <button key={item.id}
-                onClick={() => !item.done && setView(item.action)}
-                style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", borderRadius:7, border:`1px solid ${item.done?C.green+"40":C.border}`, background:item.done?C.green+"0a":C.raised, cursor:item.done?"default":"pointer", textAlign:"left" }}>
-                <div style={{ width:20, height:20, borderRadius:"50%", background:item.done?C.green:"transparent", border:`2px solid ${item.done?C.green:C.border}`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0, fontSize:10, color:"#fff" }}>
-                  {item.done?"✓":item.icon}
-                </div>
-                <span style={{ fontSize:12, color:item.done?C.green:C.text, fontWeight:item.done?400:500, textDecoration:item.done?"line-through":"none", opacity:item.done?0.6:1, lineHeight:1.3 }}>{item.label}</span>
-                {!item.done && <span style={{ marginLeft:"auto", fontSize:10, color:C.blue, flexShrink:0 }}>→</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Go Live checklist replaced by StoryBar above */}
 
       {/* ── SMART NUDGES — proactive AI watching your campaign ── */}
       {activeEvent && (() => {
