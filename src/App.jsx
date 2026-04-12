@@ -1,6 +1,7 @@
 // evara — All-in-One Event Marketing Platform v1.2
 import { useState, useEffect, useRef } from "react";
 import StoryBar from "./StoryBar";
+import { EmptyContacts, EmptyAnalytics, EmptySchedule } from "./EventEmptyStates";
 import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard, Mail, Globe, FileText, Users, Calendar,
@@ -4793,34 +4794,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
             );
           })()}
           {campaigns.length === 0 && (
-            <div style={{ background: C.card, borderRadius: 11, border: `1px solid ${C.border}`, padding: "36px 40px", textAlign: "center" }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>✉️</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: C.text, marginBottom: 8 }}>No email campaigns yet</div>
-              <div style={{ fontSize: 13, color: C.muted, marginBottom: 24, lineHeight: 1.7, maxWidth: 400, margin: "0 auto 24px" }}>
-                Build your emails in the eDM Builder — AI generates polished, on-brand emails from a single sentence. They'll appear here ready to schedule or send.
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, maxWidth: 480, margin: "0 auto 20px" }}>
-                {[
-                  { icon: "📅", title: "Save the Date", desc: "First touchpoint — lock in calendars" },
-                  { icon: "✉️", title: "Invitation", desc: "Full details + RSVP link" },
-                  { icon: "⏰", title: "Reminder", desc: "1 week and 1 day before" },
-                ].map(e => (
-                  <div key={e.title} style={{ padding: "12px", background: C.raised, borderRadius: 8, border: `1px solid ${C.border}`, textAlign: "left" }}>
-                    <div style={{ fontSize: 18, marginBottom: 4 }}>{e.icon}</div>
-                    <div style={{ fontSize: 11.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{e.title}</div>
-                    <div style={{ fontSize: 10.5, color: C.muted }}>{e.desc}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                <button onClick={() => setView("edm")} style={{ fontSize: 13, padding: "9px 20px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", fontWeight: 600, cursor: "pointer" }}>
-                  ✨ Build emails with AI →
-                </button>
-                <button onClick={() => setView("campaign")} style={{ fontSize: 13, padding: "9px 20px", background: "transparent", border: `1px solid ${C.border}`, borderRadius: 8, color: C.muted, cursor: "pointer" }}>
-                  ⚡ Generate full 7-email campaign
-                </button>
-              </div>
-            </div>
+            <EmptySchedule onGoToEdm={() => setView("edm")} onGoToCampaign={() => setView("campaign")} />
           )}
           {[...campaigns].sort((a, b) => {
                 const order = {"save_the_date":0,"invitation":1,"reminder":2,"day_of_details":3,"confirmation":4,"byo":5,"thank_you":6};
@@ -8625,11 +8599,7 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
         </div>
       )}
           {campaigns.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center" }}>
-                <div style={{ fontSize: 32, marginBottom: 10 }}>📧</div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: C.text, marginBottom: 6 }}>No email campaigns yet</div>
-                <div style={{ fontSize: 12, color: C.muted, lineHeight: 1.6 }}>📧 No emails sent yet · Build in eDM Builder → send from Scheduling → stats appear here automatically</div>
-              </div>
+              <EmptyAnalytics onGoToEdm={() => setView("edm")} onGoToSchedule={() => setView("schedule")} />
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead><tr style={{ borderBottom: `1px solid ${C.border}` }}>
