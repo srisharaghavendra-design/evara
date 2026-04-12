@@ -736,28 +736,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             })()}
             <span style={{ fontSize: 10, color: C.muted }}>⌘S to save</span>
           </div>
-          {/* ── Campaign email type sub-tabs ── */}
-          {campaigns.length > 0 && (
-            <div style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-              {campaigns.map((cam) => {
-                const isActive = preview?.campaign_id === cam.id;
-                const typeLabel = {
-                  save_the_date: "📅 Save the Date", invitation: "✉️ Invite",
-                  reminder: "⏰ Reminder", reminder_week: "⏰ Reminder", reminder_day: "⏰ Day Before",
-                  confirmation: "✅ Confirm", byo: "📋 BYO", thank_you: "🙏 Thank You",
-                }[cam.email_type] || cam.email_type;
-                return (
-                  <button key={cam.id}
-                    onClick={() => { setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text || "", campaign_id: cam.id }); setEType(cam.email_type || eType); }}
-                    style={{ fontSize: 11.5, padding: "5px 11px", borderRadius: 7, border: `1px solid ${isActive ? C.blue : C.border}`, background: isActive ? `${C.blue}18` : C.card, color: isActive ? C.blue : C.sec, cursor: "pointer", fontWeight: isActive ? 600 : 400, transition: "all .12s", whiteSpace: "nowrap" }}>
-                    {typeLabel}
-                    {cam.status === "sent" && <span style={{ marginLeft: 4, fontSize: 9, color: C.green }}>✓ sent</span>}
-                    {cam.status === "scheduled" && <span style={{ marginLeft: 4, fontSize: 9, color: C.blue }}>⏱</span>}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
             {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
             {gen && (() => {
@@ -879,7 +858,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   {/* Email body */}
                   <div style={{ overflowX: "auto", background: "#f0f0f0", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "20px" : "0" }}>
                     {(previewTab || "html") === "html" ? (
-                      <iframe srcDoc={preview.html.replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
+                      <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
                         style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 520, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
