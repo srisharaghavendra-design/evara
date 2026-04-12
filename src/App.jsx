@@ -3542,6 +3542,8 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [loadingAlts, setLoadingAlts] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [formLink, setFormLink] = useState("");
+  const [landingUrl, setLandingUrl] = useState("");
+  const [ctaTarget, setCtaTarget] = useState("landing"); // "landing" | "form"
   const [uploadingZone, setUploadingZone] = useState(null);
   const [images, setImages] = useState({ header: null, body: null, footer: null });
   const [info, setInfo] = useState({
