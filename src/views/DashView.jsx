@@ -377,15 +377,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
   const isPostEvent = daysToEvent !== null && daysToEvent < 0;
   const daysSinceEvent = isPostEvent ? Math.abs(daysToEvent) : null;
 
-  // Journey progress
-  const journeySteps = [
-    { id:1, label:"Event created", icon:"🎪", done:true, action:null },
-    { id:2, label:"AI drafted emails", icon:"🤖", done:campaigns.length>0, action:()=>setView("edm"), cta:"Build emails →" },
-    { id:3, label:"Contacts imported", icon:"👥", done:contacts.length>0, action:()=>setView("contacts"), cta:"Add contacts →" },
-    { id:4, label:"Campaign sent", icon:"📧", done:campaigns.some(c=>c.status==="sent"), action:()=>setView("schedule"), cta:"Schedule →" },
-    { id:5, label:"Registration live", icon:"📋", done:!!formShareLink, action:()=>{navigator.clipboard?.writeText(formShareLink);fire("📋 Reg link copied!");}, cta:"Copy link →" },
-  ];
-  const journeyDone = journeySteps.filter(s=>s.done).length;
+
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
@@ -632,8 +624,8 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
       {/* Quick actions strip */}
       {activeEvent && (
         <div className="quick-actions" style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
+          <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>Track & Manage</span>
           {[
-            { label:"✉️ Build email", action:() => setView("edm"), color:C.blue },
             { label:"📅 Schedule", action:() => setView("schedule"), color:C.blue },
             { label:"👥 Contacts", action:() => setView("contacts"), color:C.blue },
             { label:"📊 Analytics", action:() => setView("analytics"), color:C.blue },
