@@ -158,6 +158,35 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
 
   const progress = ((step - 1) / (totalSteps - 1)) * 100;
 
+  // ── Nav structure ─────────────────────────────────────────────────────────
+  const NAV = [
+    { id: "dashboard",  label: "Dashboard",    icon: LayoutDashboard },
+    { id: "calendar",   label: "Calendar",      icon: Calendar },
+    { id: "analytics",  label: "Analytics",     icon: BarChart3 },
+    { id: "contacts",   label: "Contacts",      icon: Users },
+    { id: "lifecycle",  label: "Lifecycle",     icon: TrendingUp },
+    { id: "roi",        label: "ROI",           icon: BarChart2 },
+  ];
+  const BUILD_NAV = [
+    { id: "edm",        label: "Emails",        icon: Mail },
+    { id: "schedule",   label: "Schedule",      icon: Calendar },
+    { id: "campaign",   label: "Campaign",      icon: Megaphone },
+    { id: "social",     label: "Social",        icon: Radio },
+    { id: "landing",    label: "Landing Page",  icon: Globe },
+    { id: "forms",      label: "Forms",         icon: FileText },
+  ];
+  const NAV_GROUPS = [
+    { label: "Manage", items: NAV },
+    { label: "Build",  items: BUILD_NAV },
+    { label: "Event Day", items: [
+      { id: "checkin",  label: "Check-in",  icon: QrCode },
+      { id: "agenda",   label: "Agenda",    icon: ClipboardList },
+      { id: "seating",  label: "Seating",   icon: Layers },
+      { id: "qa",       label: "Live Q&A",  icon: Zap },
+      { id: "feedback", label: "Feedback",  icon: UserCheck },
+    ]},
+  ];
+
   return (
     <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:24 }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
