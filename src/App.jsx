@@ -5244,6 +5244,34 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif }) {
               </div>
             </div>
 
+            {/* Pre-send readiness checks */}
+            {(() => {
+              const checks = [
+                { label: "Subject line set", ok: !!sendModal.subject, warn: "Add a subject line" },
+                { label: `Subject length OK (${sendModal.subject?.length || 0} chars)`, ok: (sendModal.subject?.length || 0) <= 60, warn: "Subject is over 60 chars — may get cut off in inbox" },
+                { label: "Email has content", ok: !!sendModal.html_content, warn: "No HTML content — regenerate in eDM Builder" },
+                { label: `${sendModal.recipientCount || 0} contacts to send to`, ok: (sendModal.recipientCount || 0) > 0, warn: "No contacts in this segment" },
+                { label: "Unsubscribe link included", ok: (sendModal.html_content||"").includes("UNSUBSCRIBE_URL") || (sendModal.html_content||"").toLowerCase().includes("unsubscribe"), warn: "No unsubscribe link found" },
+              ];
+              const allOk = checks.every(c => c.ok);
+              const issues = checks.filter(c => !c.ok);
+              return (
+                <div style={{ background: allOk ? `${C.green}06` : `${C.amber}08`, border: `1px solid ${allOk ? C.green+"30" : C.amber+"40"}`, borderRadius: 8, padding: "10px 14px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: allOk ? C.green : C.amber, marginBottom: 6 }}>
+                    {allOk ? "✅ Ready to send" : `⚠️ ${issues.length} thing${issues.length>1?"s":""} to review`}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                    {checks.map((c, i) => (
+                      <div key={i} style={{ fontSize: 11, color: c.ok ? C.muted : C.amber, display: "flex", alignItems: "center", gap: 5 }}>
+                        <span>{c.ok ? "✓" : "⚠"}</span>
+                        <span>{c.ok ? c.label : c.warn}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Recipient section */}
             <div style={{ background: `${C.blue}08`, border: `1px solid ${C.blue}22`, borderRadius: 10, padding: "14px 16px", marginBottom: 14 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
