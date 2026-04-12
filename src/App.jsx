@@ -1295,7 +1295,7 @@ function MainApp({ session }) {
         {/* ── JOURNEY PROGRESS STRIP — 4-step guided flow ── */}
         {activeEvent && (() => {
           // Step completion logic — driven by real data
-          const step1Done = campaigns.some(c => c.html_content);
+          const step1Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
           const step2Done = lpPublished;
           const step3Done = !!formShareLink;
           const step4Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
