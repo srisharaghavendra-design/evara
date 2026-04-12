@@ -3706,10 +3706,17 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
 
           <Sec label="Tone">
             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {["professional", "exciting", "formal", "friendly", "urgent"].map(t => (
-                <button key={t} onClick={() => setInfo(p => ({ ...p, tone: t }))}
-                  style={{ fontSize: 11, padding: "4px 10px", borderRadius: 4, border: `1px solid ${(info.tone||"professional") === t ? C.blue + "80" : C.border}`, background: (info.tone||"professional") === t ? C.blue + "10" : "transparent", cursor: "pointer", color: (info.tone||"professional") === t ? C.blue : C.muted, textTransform: "capitalize" }}>
-                  {t}
+              {[
+                { id:"professional and authoritative", label:"Professional", emoji:"💼" },
+                { id:"warm and friendly", label:"Warm", emoji:"🤝" },
+                { id:"exciting and high-energy", label:"Exciting", emoji:"⚡" },
+                { id:"formal and prestigious", label:"Formal", emoji:"🎩" },
+                { id:"urgent and compelling", label:"Urgent", emoji:"🔥" },
+                { id:"celebratory and joyful", label:"Celebratory", emoji:"🎉" },
+              ].map(t => (
+                <button key={t.id} onClick={() => setInfo(p => ({ ...p, tone: t.id }))}
+                  style={{ fontSize: 11, padding: "5px 11px", borderRadius: 6, border: `1px solid ${(info.tone||"professional and authoritative") === t.id ? C.blue + "80" : C.border}`, background: (info.tone||"professional and authoritative") === t.id ? C.blue + "15" : "transparent", cursor: "pointer", color: (info.tone||"professional and authoritative") === t.id ? C.blue : C.muted, fontWeight: (info.tone||"professional and authoritative") === t.id ? 600 : 400, display:"flex", alignItems:"center", gap:4 }}>
+                  <span>{t.emoji}</span>{t.label}
                 </button>
               ))}
             </div>
@@ -8427,16 +8434,29 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
     </div>
   );
 
+  const openRate = data?.total_sent > 0 ? Math.round((data.total_opened / data.total_sent) * 100) : null;
+  const clickRate = data?.total_sent && data?.total_clicked ? Math.round((data.total_clicked / data.total_sent) * 100) : null;
+  const showRate = data?.confirmed && data?.attended ? Math.round((data.attended / data.confirmed) * 100) : null;
+
+  // Benchmark context labels
+  const getOpenBenchmark = (r) => {
+    if (r === null) return null;
+    if (r >= 50) return { label: "🏆 Top 5% of B2B events", color: C.green };
+    if (r >= 35) return { label: "✅ Above average", color: C.green };
+    if (r >= 25) return { label: "👍 Industry average (25–35%)", color: C.teal };
+    if (r >= 15) return { label: "⚠️ Below average", color: C.amber };
+    return { label: "🔴 Needs improvement — try a new subject", color: C.red };
+  };
+
   const METRICS = [
-    { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧" },
-    { label: "Open Rate", val: data?.total_sent ? `${Math.round((data.total_opened / data.total_sent) * 100)}%` : "—", color: data?.total_sent && Math.round((data.total_opened/data.total_sent)*100) >= 25 ? C.green : C.teal, icon: "👁", sub: "25%+ = great" },
-    { label: "Click Rate", val: data?.total_sent && data?.total_clicked ? `${Math.round((data.total_clicked / data.total_sent) * 100)}%` : "—", color: C.blue, icon: "🖱" },
-    { label: "Registered", val: data?.ec_total || 0, color: C.text, icon: "📋" },
-    { label: "Confirmed", val: data?.confirmed || 0, color: C.green, icon: "✅" },
-    { label: "Attended", val: data?.attended || 0, color: C.blue, icon: "🎟" },
-    { label: "Declined", val: data?.declined || 0, color: C.red, icon: "❌" },
-    { label: "No-show Rate", val: data?.confirmed && data?.attended ? `${Math.round(((data.confirmed - data.attended) / data.confirmed) * 100)}%` : "—", color: C.amber, icon: "📉" },
-    { label: "Show Rate", val: data?.confirmed && data?.attended ? `${Math.round((data.attended / data.confirmed) * 100)}%` : "—", color: C.green, icon: "📈" },
+    { label: "Emails Sent", val: data?.total_sent || 0, color: C.blue, icon: "📧", sub: data?.total_sent > 0 ? `${campaigns.filter(c=>c.status==="sent").length} campaigns` : "No emails sent yet" },
+    { label: "Open Rate", val: openRate !== null ? `${openRate}%` : "—", color: openRate >= 35 ? C.green : openRate >= 25 ? C.teal : openRate !== null ? C.amber : C.muted, icon: "👁", sub: openRate !== null ? getOpenBenchmark(openRate)?.label : "Send emails to track opens", benchmark: getOpenBenchmark(openRate) },
+    { label: "Click Rate", val: clickRate !== null ? `${clickRate}%` : "—", color: clickRate >= 5 ? C.green : clickRate >= 3 ? C.teal : clickRate !== null ? C.amber : C.muted, icon: "🖱", sub: clickRate !== null ? (clickRate >= 5 ? "🏆 Excellent (3–5% is strong)" : clickRate >= 3 ? "✅ Good click rate" : "⚠️ Aim for 3%+ clicks") : "No clicks yet" },
+    { label: "Registered", val: data?.ec_total || 0, color: C.text, icon: "📋", sub: "total in guest list" },
+    { label: "Confirmed", val: data?.confirmed || 0, color: C.green, icon: "✅", sub: data?.ec_total > 0 ? `${Math.round(((data?.confirmed||0)/data.ec_total)*100)}% confirmation rate` : "" },
+    { label: "Attended", val: data?.attended || 0, color: C.blue, icon: "🎟", sub: showRate !== null ? `${showRate}% show rate` : "" },
+    { label: "Declined", val: data?.declined || 0, color: C.red, icon: "❌", sub: "" },
+    { label: "Show Rate", val: showRate !== null ? `${showRate}%` : "—", color: showRate >= 80 ? C.green : showRate >= 60 ? C.teal : showRate !== null ? C.amber : C.muted, icon: "📈", sub: showRate !== null ? (showRate >= 80 ? "🏆 Excellent retention" : showRate >= 60 ? "✅ Good show rate" : "⚠️ Follow up with no-shows") : "" },
   ];
 
   return (
@@ -8493,10 +8513,11 @@ function AnalyticsView({ supabase, profile, activeEvent, fire, campaigns, events
           )}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 20 }}>
             {METRICS.map((m, i) => (
-              <div key={i} style={{ background: C.card, borderRadius: 10, padding: "16px 14px", border: `1px solid ${C.border}`, borderTop: `2px solid ${m.color}35` }}>
+              <div key={i} style={{ background: C.card, borderRadius: 10, padding: "16px 14px", border: `1px solid ${C.border}`, borderTop: `2px solid ${m.color}50` }}>
                 <div style={{ fontSize: 18, marginBottom: 6 }}>{m.icon}</div>
                 <div style={{ fontSize: 10, color: C.muted, textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 6 }}>{m.label}</div>
-                <div style={{ fontSize: 26, fontWeight: 700, color: m.color, letterSpacing: "-0.5px" }}>{loading ? "—" : m.val}</div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: m.color, letterSpacing: "-0.5px", marginBottom: m.sub ? 4 : 0 }}>{loading ? "—" : m.val}</div>
+                {m.sub && <div style={{ fontSize: 10, color: C.muted, lineHeight: 1.4 }}>{m.sub}</div>}
               </div>
             ))}
           </div>
