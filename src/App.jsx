@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, getSender } from "./lib/evara";
 import { buildEmailHtml } from "./lib/utils";
-import { Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C } from "./components/Shared";
+import { Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C, ini, isBusinessEmail } from "./components/Shared";
 
 // ── View imports ─────────────────────────────────────────────────────────────
 import DashView from "./views/DashView";
@@ -44,36 +44,6 @@ import PublicDashboardPage from "./pages/PublicDashboardPage";
 
 // ── Shared constants (re-exported for legacy use) ──────────────────────────
 const ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxZGRwanNndHdibG1rZ3hxeXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwODk5NTAsImV4cCI6MjA4OTY2NTk1MH0.x5BOfQRzn-F_tvUJv3mHRmfdOZiklyMkGzmPfRYoII4";
-
-// ── Nav structure (module-level so all components can access) ────────────────
-const NAV = [
-  { id: "dashboard",  label: "Dashboard",    icon: LayoutDashboard },
-  { id: "calendar",   label: "Calendar",      icon: Calendar },
-  { id: "analytics",  label: "Analytics",     icon: BarChart3 },
-  { id: "contacts",   label: "Contacts",      icon: Users },
-  { id: "lifecycle",  label: "Lifecycle",     icon: TrendingUp },
-  { id: "roi",        label: "ROI",           icon: BarChart2 },
-];
-const BUILD_NAV = [
-  { id: "edm",      label: "Step 1 · Emails",            icon: Mail,     step: 1, hint: "Review & approve your AI-drafted emails" },
-  { id: "landing",  label: "Step 2 · Landing Page + Form", icon: Globe,    step: 2, hint: "Review & publish your event page + registration form" },
-  { id: "schedule", label: "Step 3 · Review & Send",     icon: Calendar, step: 3, hint: "Preview everything, then schedule" },
-];
-const POWER_NAV = [
-  { id: "social",   label: "Social",    icon: Radio },
-];
-const NAV_GROUPS = [
-  { label: "Manage",      items: NAV },
-  { label: "Build",       items: BUILD_NAV },
-  { label: "Power Tools", items: POWER_NAV },
-  { label: "Event Day", items: [
-    { id: "checkin",  label: "Check-in",  icon: QrCode },
-    { id: "agenda",   label: "Agenda",    icon: ClipboardList },
-    { id: "seating",  label: "Seating",   icon: Layers },
-    { id: "qa",       label: "Live Q&A",  icon: Zap },
-    { id: "feedback", label: "Feedback",  icon: UserCheck },
-  ]},
-];
 
 function OnboardingFlow({ profile, supabase, onComplete }) {
   const [step, setStep] = useState(1);
@@ -173,7 +143,35 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
 
   const progress = ((step - 1) / (totalSteps - 1)) * 100;
 
-
+  // ── Nav structure ─────────────────────────────────────────────────────────
+  const NAV = [
+    { id: "dashboard",  label: "Dashboard",    icon: LayoutDashboard },
+    { id: "calendar",   label: "Calendar",      icon: Calendar },
+    { id: "analytics",  label: "Analytics",     icon: BarChart3 },
+    { id: "contacts",   label: "Contacts",      icon: Users },
+    { id: "lifecycle",  label: "Lifecycle",     icon: TrendingUp },
+    { id: "roi",        label: "ROI",           icon: BarChart2 },
+  ];
+  const BUILD_NAV = [
+    { id: "edm",      label: "Step 1 · Emails",            icon: Mail,     step: 1, hint: "Review & approve your AI-drafted emails" },
+    { id: "landing",  label: "Step 2 · Landing Page + Form", icon: Globe,    step: 2, hint: "Review & publish your event page + registration form" },
+    { id: "schedule", label: "Step 3 · Review & Send",     icon: Calendar, step: 3, hint: "Preview everything, then schedule" },
+  ];
+  const POWER_NAV = [
+    { id: "social",   label: "Social",    icon: Radio },
+  ];
+  const NAV_GROUPS = [
+    { label: "Manage",      items: NAV },
+    { label: "Build",       items: BUILD_NAV },
+    { label: "Power Tools", items: POWER_NAV },
+    { label: "Event Day", items: [
+      { id: "checkin",  label: "Check-in",  icon: QrCode },
+      { id: "agenda",   label: "Agenda",    icon: ClipboardList },
+      { id: "seating",  label: "Seating",   icon: Layers },
+      { id: "qa",       label: "Live Q&A",  icon: Zap },
+      { id: "feedback", label: "Feedback",  icon: UserCheck },
+    ]},
+  ];
 
   return (
     <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"flex-start", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:"24px 24px", overflowY:"auto" }}>
