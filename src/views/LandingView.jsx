@@ -84,6 +84,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         const d = await res.json();
         const parsed = JSON.parse((d.content?.[0]?.text||"{}").replace(/\`\`\`json|\`\`\`/g,"").trim());
         if (type === "std") parsed.cta_text = "Add to Calendar";
+        else parsed.cta_text = "Register Now"; // lock CTA — AI keeps changing this
         setI(p => ({ ...p, ...parsed }));
         setS(2);
       } catch(_) { setS(2); }
@@ -191,7 +192,9 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
       const text = data.content?.[0]?.text || "";
       const clean = text.replace(/```json|```/g, "").trim();
       const parsed = JSON.parse(clean);
-      setInfo(p => ({ ...p, ...parsed }));
+      const isStdTab = pageTab === "std";
+      parsed.cta_text = isStdTab ? "Add to Calendar" : "Register Now";
+      setActiveInfo(p => ({ ...p, ...parsed }));
       fire("✨ AI copy generated!");
     } catch { fire("AI generation failed — fill in manually", "err"); }
     setAiGenerating(false);
@@ -506,7 +509,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                   ))}
                   {pageTab === "event" && (
                   <div>
-                    <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>About section</div>
+                    <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>Event description <span style={{fontSize:10,fontWeight:400}}>(shown on page + form)</span></div>
                     <textarea value={activeInfo.about_text||""} onChange={e => setActiveInfo(p=>({...p, about_text:e.target.value}))} rows={4} placeholder="What attendees will experience..." style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5 }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                   </div>
                   )}
@@ -637,7 +640,11 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                         <div style={{ marginBottom:12, padding:"8px 10px", background:C.green+"12", border:`1px solid ${C.green}30`, borderRadius:7 }}>
                           <div style={{ fontSize:10, color:C.green, fontWeight:600, marginBottom:3 }}>✓ Registration form ready</div>
                           <div style={{ fontSize:10, color:C.muted, fontFamily:"monospace", wordBreak:"break-all", marginBottom:8 }}>{window.location.origin}/form/{formShareToken}</div>
-                          <button onClick={() => window.open(`${window.location.origin}/form/${formShareToken}`, "_blank")}
+                          <button onClick={async () => {
+                              // Auto-activate form for preview
+                              if (formId) await supabase.from("forms").update({ is_active: true }).eq("id", formId);
+                              window.open(`${window.location.origin}/form/${formShareToken}`, "_blank");
+                            }}
                             style={{ width:"100%", padding:"7px", borderRadius:6, border:`1px solid ${C.green}40`, background:`${C.green}15`, color:C.green, fontSize:12, fontWeight:600, cursor:"pointer" }}>
                             👁 Preview live form →
                           </button>
