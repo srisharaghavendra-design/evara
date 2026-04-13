@@ -470,7 +470,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           <div style={{ width: 248, display: "flex", flexDirection: "column", gap: 0, flexShrink: 0, overflow:"hidden", border:`1px solid ${C.border}`, borderRadius:10, background:C.card }}>
             {/* Sidebar tabs */}
             <div style={{ display:"flex", borderBottom:`1px solid ${C.border}`, flexShrink:0 }}>
-              {[{id:"content",label:"Content"},{id:"design",label:"Design"},{id:"sections",label:"Sections"},{id:"form",label:"Form 📋"}].map(t => (
+              {[{id:"content",label:"Content"},{id:"design",label:"Design"},{id:"sections",label:"Sections"}, ...(pageTab === "event" ? [{id:"form",label:"Form 📋"}] : [])].map(t => (
                 <button key={t.id} onClick={() => setSideTab(t.id)} style={{ flex:1, padding:"9px 4px", border:"none", background:"transparent", color: sideTab===t.id ? C.text : C.muted, fontSize:12, fontWeight: sideTab===t.id ? 600 : 400, borderBottom: sideTab===t.id ? `2px solid ${C.blue}` : "2px solid transparent", cursor:"pointer", transition:"all .12s" }}>{t.label}</button>
               ))}
             </div>
@@ -504,10 +504,12 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                       <input value={activeInfo[f.k]||""} onChange={e => setActiveInfo(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.ph} style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                     </div>
                   ))}
+                  {pageTab === "event" && (
                   <div>
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>About section</div>
                     <textarea value={activeInfo.about_text||""} onChange={e => setActiveInfo(p=>({...p, about_text:e.target.value}))} rows={4} placeholder="What attendees will experience..." style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5 }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                   </div>
+                  )}
 
                   {/* Agenda editor — event tab only */}
                   {pageTab === "event" && (
@@ -633,8 +635,12 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <>
                       {formShareToken && (
                         <div style={{ marginBottom:12, padding:"8px 10px", background:C.green+"12", border:`1px solid ${C.green}30`, borderRadius:7 }}>
-                          <div style={{ fontSize:10, color:C.green, fontWeight:600, marginBottom:3 }}>Form link (auto-embedded on publish)</div>
-                          <div style={{ fontSize:10, color:C.muted, fontFamily:"monospace", wordBreak:"break-all" }}>/form/{formShareToken}</div>
+                          <div style={{ fontSize:10, color:C.green, fontWeight:600, marginBottom:3 }}>✓ Registration form ready</div>
+                          <div style={{ fontSize:10, color:C.muted, fontFamily:"monospace", wordBreak:"break-all", marginBottom:8 }}>{window.location.origin}/form/{formShareToken}</div>
+                          <button onClick={() => window.open(`${window.location.origin}/form/${formShareToken}`, "_blank")}
+                            style={{ width:"100%", padding:"7px", borderRadius:6, border:`1px solid ${C.green}40`, background:`${C.green}15`, color:C.green, fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                            👁 Preview live form →
+                          </button>
                         </div>
                       )}
                       <div style={{ fontSize:10.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>Registration Fields</div>
