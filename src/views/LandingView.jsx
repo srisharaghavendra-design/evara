@@ -25,6 +25,9 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
   const [sideTab, setSideTab] = useState("content"); // content | design | sections
   const [aiGenerating, setAiGenerating] = useState(false);
   const [blocks, setBlocks] = useState({ hero: true, countdown: true, details: true, speakers: false, rsvp: true, sponsors: false });
+  const [formId, setFormId] = useState(null);
+  const [formFields, setFormFields] = useState([]);
+  const [formShareToken, setFormShareToken] = useState(null);
   const brandColor = profile?.companies?.brand_color || "#0A84FF";
   const logoUrl = profile?.companies?.logo_url || "";
   const [info, setInfo] = useState({
@@ -64,6 +67,15 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         }
         setLoading(false);
       });
+    // Also load the form for this event
+    supabase.from("forms").select("*").eq("event_id", activeEvent.id).limit(1).maybeSingle()
+      .then(({ data }) => {
+        if (data) {
+          setFormId(data.id);
+          setFormFields(data.fields || []);
+          setFormShareToken(data.share_token || null);
+        }
+      });
     if (activeEvent) {
       setInfo(p => ({ ...p, title: p.title || activeEvent.name || "", description: p.description || activeEvent.description || "", location_text: p.location_text || activeEvent.location || "", slug: p.slug || (activeEvent.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"), organiser: p.organiser || profile?.companies?.name || "" }));
     }
@@ -71,12 +83,18 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
 
   const save = async (publish = false) => {
     if (!activeEvent || !profile) return; setSaving(true);
-    const payload = { event_id: activeEvent.id, company_id: profile.company_id, ...info, blocks, is_published: publish, reg_url: formShareLink || info.reg_url || "" };
+    // Derive reg_url from form share token
+    const formLink = formShareToken ? `${window.location.origin}/form/${formShareToken}` : formShareLink || "";
+    const payload = { event_id: activeEvent.id, company_id: profile.company_id, ...info, blocks, is_published: publish, reg_url: formLink || info.reg_url || "" };
     const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id" }).select().single();
     if (error) { fire(error.message, "err"); }
     else {
       setPage(data);
+      // On publish: activate the form + save any field changes
       if (publish) {
+        if (formId) {
+          await supabase.from("forms").update({ is_active: true, fields: formFields }).eq("id", formId);
+        }
         const url = `${window.location.origin}/page/${data.slug}`;
         fire(`🎉 Page published! Copied to clipboard.`);
         navigator.clipboard?.writeText(url);
@@ -101,7 +119,11 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
               )).then(() => fire(`✅ ${updates.length} email CTA${updates.length!==1?"s":""} auto-linked to landing page`));
             }
           });
-      } else { fire("Draft saved ✓"); }
+      } else {
+        // Save form field changes on draft save too
+        if (formId) await supabase.from("forms").update({ fields: formFields }).eq("id", formId);
+        fire("Draft saved ✓");
+      }
     }
     setSaving(false);
   };
@@ -247,12 +269,32 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           </div>
         )}
 
-        {/* RSVP CTA */}
+        {/* RSVP / Embedded Form */}
         {blocks.rsvp && (
           <div style={{ padding:"28px 24px", textAlign:"center", borderBottom:`1px solid ${borderCol}` }}>
-            <div style={{ fontSize:16, fontWeight:700, color:textColor, marginBottom:6 }}>Ready to attend?</div>
-            <div style={{ fontSize:12.5, color:subColor, marginBottom:16 }}>Secure your spot before registrations close.</div>
-            <div style={{ display:"inline-block", background:a, color: info.template==="neon"?"#000":"#fff", padding:"12px 32px", borderRadius:8, fontSize:13.5, fontWeight:700, cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+            {formFields.length > 0 ? (
+              <div style={{ maxWidth:420, margin:"0 auto", textAlign:"left" }}>
+                <div style={{ fontSize:16, fontWeight:700, color:textColor, marginBottom:4, textAlign:"center" }}>Reserve your spot</div>
+                <div style={{ fontSize:12, color:subColor, marginBottom:18, textAlign:"center" }}>Fill in your details to register.</div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {formFields.map(f => (
+                    <div key={f.id}>
+                      <div style={{ fontSize:10.5, color:subColor, marginBottom:4 }}>{f.label}{f.required && <span style={{ color:a, marginLeft:3 }}>*</span>}</div>
+                      <div style={{ height:34, borderRadius:6, border:`1px solid ${borderCol}`, background:isMinimal?"rgba(0,0,0,0.04)":"rgba(255,255,255,0.08)", padding:"0 10px", display:"flex", alignItems:"center" }}>
+                        <div style={{ fontSize:11, color:subColor, opacity:0.5 }}>{f.type === "email" ? "email@example.com" : f.label}</div>
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ marginTop:6, background:a, color:info.template==="neon"?"#000":"#fff", padding:"11px", borderRadius:7, fontSize:13, fontWeight:700, textAlign:"center", cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{ fontSize:16, fontWeight:700, color:textColor, marginBottom:6 }}>Ready to attend?</div>
+                <div style={{ fontSize:12.5, color:subColor, marginBottom:16 }}>Secure your spot before registrations close.</div>
+                <div style={{ display:"inline-block", background:a, color:info.template==="neon"?"#000":"#fff", padding:"12px 32px", borderRadius:8, fontSize:13.5, fontWeight:700, cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -339,7 +381,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           <div style={{ width: 248, display: "flex", flexDirection: "column", gap: 0, flexShrink: 0, overflow:"hidden", border:`1px solid ${C.border}`, borderRadius:10, background:C.card }}>
             {/* Sidebar tabs */}
             <div style={{ display:"flex", borderBottom:`1px solid ${C.border}`, flexShrink:0 }}>
-              {[{id:"content",label:"Content"},{id:"design",label:"Design"},{id:"sections",label:"Sections"}].map(t => (
+              {[{id:"content",label:"Content"},{id:"design",label:"Design"},{id:"sections",label:"Sections"},{id:"form",label:"Form 📋"}].map(t => (
                 <button key={t.id} onClick={() => setSideTab(t.id)} style={{ flex:1, padding:"9px 4px", border:"none", background:"transparent", color: sideTab===t.id ? C.text : C.muted, fontSize:12, fontWeight: sideTab===t.id ? 600 : 400, borderBottom: sideTab===t.id ? `2px solid ${C.blue}` : "2px solid transparent", cursor:"pointer", transition:"all .12s" }}>{t.label}</button>
               ))}
             </div>
@@ -446,6 +488,53 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {sideTab === "form" && (
+                <div>
+                  {!formId ? (
+                    <div style={{ padding:"12px 0", fontSize:12, color:C.muted }}>
+                      No registration form found for this event. Create an event first — the form is auto-generated.
+                    </div>
+                  ) : (
+                    <>
+                      {formShareToken && (
+                        <div style={{ marginBottom:12, padding:"8px 10px", background:C.green+"12", border:`1px solid ${C.green}30`, borderRadius:7 }}>
+                          <div style={{ fontSize:10, color:C.green, fontWeight:600, marginBottom:3 }}>Form link (auto-embedded on publish)</div>
+                          <div style={{ fontSize:10, color:C.muted, fontFamily:"monospace", wordBreak:"break-all" }}>/form/{formShareToken}</div>
+                        </div>
+                      )}
+                      <div style={{ fontSize:10.5, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>Registration Fields</div>
+                      <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                        {formFields.map((field, i) => (
+                          <div key={field.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 10px", background:C.raised, border:`1px solid ${C.border}`, borderRadius:7 }}>
+                            <span style={{ flex:1, fontSize:12, color:C.text }}>{field.label}</span>
+                            <button
+                              onClick={() => setFormFields(p => p.map((f,fi) => fi===i ? {...f, required: !f.required} : f))}
+                              style={{ fontSize:9.5, padding:"2px 7px", borderRadius:4, border:`1px solid ${field.required ? C.red+"40" : C.border}`, background: field.required ? C.red+"12" : "transparent", color: field.required ? C.red : C.muted, cursor:"pointer", whiteSpace:"nowrap" }}>
+                              {field.required ? "required" : "optional"}
+                            </button>
+                            {!field.required && (
+                              <button onClick={() => setFormFields(p => p.filter((_,fi) => fi!==i))} style={{ background:"transparent", border:"none", color:C.muted, cursor:"pointer", fontSize:14, lineHeight:1, padding:"0 2px" }}>×</button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                      {/* Add field */}
+                      <div style={{ marginTop:10 }}>
+                        <div style={{ fontSize:10.5, fontWeight:600, color:C.muted, marginBottom:6 }}>Add field</div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
+                          {[["LinkedIn URL","text"],["Website","text"],["Team size","text"],["How did you hear","text"],["Role / Seniority","text"]].filter(([lbl]) => !formFields.some(f=>f.label===lbl)).map(([lbl,type]) => (
+                            <button key={lbl} onClick={() => setFormFields(p => [...p, {id: Date.now(), type, label:lbl, required:false, options:[]}])} style={{ fontSize:10.5, padding:"3px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>+ {lbl}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ marginTop:10, fontSize:10.5, color:C.muted, padding:"8px 10px", background:C.raised, borderRadius:6, lineHeight:1.5 }}>
+                        💡 Form is embedded at the bottom of your landing page. Publishing the LP auto-activates the form.
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
