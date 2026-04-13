@@ -80,7 +80,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
             } catch(_) {}
           }
         } else if (activeEvent?.name) {
-          // No landing page at all — auto-generate from brief
+          // No landing page — auto-generate from brief and go straight to editor
           setLoading(false);
           try {
             const { data: { session } } = await supabase.auth.getSession();
@@ -92,9 +92,12 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
             });
             const d = await res.json();
             const parsed = JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
-            setInfo(p => ({ ...p, ...parsed }));
-            fire("✨ Landing page content generated from your event brief!");
-          } catch(_) {}
+            setInfo(p => ({ ...p, ...parsed, template: p.template || "corporate" }));
+            setStep(2); // skip template picker — go straight to editor with AI content
+            fire("✨ Landing page pre-filled from your event brief — review and publish!");
+          } catch(e) {
+            setStep(2); // even if AI fails, go to editor with event data
+          }
           return;
         }
         setLoading(false);
