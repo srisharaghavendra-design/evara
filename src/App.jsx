@@ -168,10 +168,9 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
     { id: "roi",        label: "ROI",           icon: BarChart2 },
   ];
   const BUILD_NAV = [
-    { id: "edm",      label: "Step 1 · Emails",         icon: Mail,     step: 1, hint: "Review & approve your AI-drafted emails" },
-    { id: "landing",  label: "Step 2 · Landing Page",   icon: Globe,    step: 2, hint: "Review & publish your event page" },
-    { id: "forms",    label: "Step 3 · Form",           icon: FileText, step: 3, hint: "Review & publish your registration form" },
-    { id: "schedule", label: "Step 4 · Review & Send",  icon: Calendar, step: 4, hint: "Preview everything, then schedule" },
+    { id: "edm",      label: "Step 1 · Emails",            icon: Mail,     step: 1, hint: "Review & approve your AI-drafted emails" },
+    { id: "landing",  label: "Step 2 · Landing Page + Form", icon: Globe,    step: 2, hint: "Review & publish your event page + registration form" },
+    { id: "schedule", label: "Step 3 · Review & Send",     icon: Calendar, step: 3, hint: "Preview everything, then schedule" },
   ];
   const POWER_NAV = [
     { id: "social",   label: "Social",    icon: Radio },
@@ -1154,7 +1153,7 @@ function MainApp({ session }) {
               {!sidebarOpen && <div style={{ height:8 }} />}
               {group.items.map(({ id, label, icon: Icon, badge }) => {
                 const on = view === id;
-                const schedLocked = id === "schedule" && !(campaigns.length > 0 && campaigns.every(c => c.status === "approved" || c.status === "sent")) && !lpPublished;
+                const schedLocked = id === "schedule" && !(campaigns.length > 0 && campaigns.every(c => c.status === "approved" || c.status === "sent") && lpPublished);
                 return (<button key={id} data-view={id} className="nb nav-btn" onClick={() => {
                   if (schedLocked) { fire("Approve all emails and publish your landing page first", "warn"); return; }
                   setView(id); if (window.innerWidth <= 768) setSidebarOpen(false);
@@ -1289,16 +1288,15 @@ function MainApp({ session }) {
           </div>
         </header>
 
-        {/* ── JOURNEY PROGRESS STRIP — 4-step guided flow ── */}
+        {/* ── JOURNEY PROGRESS STRIP — 3-step guided flow ── */}
         {activeEvent && (() => {
           // Step completion logic — driven by real data
           const step1Done = campaigns.length > 0 && campaigns.every(c => c.status === "approved" || c.status === "sent");
           const step2Done = lpPublished;
-          const step3Done = !!formShareLink;
-          const step4Done = campaigns.some(c => c.status === "sent");
-          const stepDone = [step1Done, step2Done, step3Done, step4Done];
+          const step3Done = campaigns.some(c => c.status === "sent");
+          const stepDone = [step1Done, step2Done, step3Done];
           const stepsComplete = stepDone.filter(Boolean).length;
-          const pct = Math.round((stepsComplete / 4) * 100);
+          const pct = Math.round((stepsComplete / 3) * 100);
 
           const activeStep = BUILD_NAV.findIndex(s => s.id === view);
 
@@ -1394,7 +1392,7 @@ function MainApp({ session }) {
                 {/* Right side: progress summary + extras */}
                 <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:12, paddingRight:4, flexShrink:0 }}>
                   <div style={{ fontSize:11, color:C.muted }}>
-                    <span style={{ color: stepsComplete === 4 ? C.green : C.blue, fontWeight:600 }}>{stepsComplete}/4</span> steps done
+                    <span style={{ color: stepsComplete === 3 ? C.green : C.blue, fontWeight:600 }}>{stepsComplete}/3</span> steps done
                   </div>
                   {/* Quick access to extras */}
                   <div style={{ display:"flex", gap:4 }}>
