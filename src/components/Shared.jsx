@@ -46,7 +46,7 @@ const isBusinessEmail = (email) => {
   return domain && !BLOCKED_DOMAINS.includes(domain);
 };
 
-const C = {
+export const C = {
   bg:"#080809", sidebar:"#0D0D0F", card:"#111114", raised:"#161619",
   border:"#1C1C1F", borderHi:"#2C2C30",
   blue:"#0A84FF", text:"#F5F5F7", sec:"#AEAEB2", muted:"#636366",
@@ -263,3 +263,4 @@ export function Spin({ size = 14 }) {
 }
 
 // ─── MAIN APP ────────────────────────────────────────────────
+
