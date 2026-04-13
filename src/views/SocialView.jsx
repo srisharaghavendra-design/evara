@@ -16,6 +16,15 @@ import { buildEmailHtml } from "../lib/utils";
 import {Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C} from "../components/Shared";
 
 // SocialView
+function Sec({ label, children }) {
+  return (
+    <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 14 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 11 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
 function SocialView({ supabase, profile, activeEvent, fire }) {
   const [generating, setGenerating] = useState(false);
   const [posts, setPosts] = useState(null);
