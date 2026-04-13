@@ -64,6 +64,18 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [showTemplateLib, setShowTemplateLib] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(false);
 
+  // Auto-resize iframe based on email content height
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.iframeHeight) {
+        const iframe = document.querySelector('iframe[title="Email Preview"]');
+        if (iframe) iframe.style.height = e.data.iframeHeight + 'px';
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   // Load saved templates
   useEffect(() => {
     if (!profile?.company_id) return;
@@ -1041,9 +1053,13 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   {/* Email body */}
                   <div style={{ background: previewWidth === "375px" ? "#1a1a2e" : "#ffffff", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "24px 20px" : "0", width: "100%" }}>
                     {(previewTab || "html") === "html" ? (
-                      <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
+                      <iframe srcDoc={(() => {
+                          const html = (preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#');
+                          const script = `<script>window.addEventListener('load',()=>{parent.postMessage({iframeHeight:document.body.scrollHeight},'*');});<\/script>`;
+                          return html.replace('</body>', script + '</body>') || html + script;
+                        })()}
                         style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "750px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
-                        onLoad={e => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.documentElement?.scrollHeight; if (h && h > 100 && h < 3000) e.target.style.height = h + "px"; } catch(_){} }}
+                        onLoad={e => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.documentElement?.scrollHeight || d?.body?.scrollHeight; if (h && h > 100) e.target.style.height = h + "px"; } catch(_){} }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
                       <div style={{ width: "100%", background: "#fff", padding: "24px" }}>
