@@ -194,6 +194,13 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
     setAiGenerating(false);
   };
 
+  // Wire active tab to correct state
+  const activeInfo = pageTab === "std" ? stdInfo : info;
+  const setActiveInfo = pageTab === "std" ? setStdInfo : setInfo;
+  const activeStep = pageTab === "std" ? stdStep : step;
+  const setActiveStep = pageTab === "std" ? setStdStep : setStep;
+  const activePage = pageTab === "std" ? stdPage : page;
+
   const tmpl = TMPLS.find(t => t.id === activeInfo.template) || TMPLS[1];
   const accent = activeInfo.brand_color || brandColor;
 
@@ -352,13 +359,6 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
   };
 
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", gap: 10, color: C.muted }}><Spin />Loading…</div>;
-
-  // Wire active tab to correct state
-  const activeInfo = pageTab === "std" ? stdInfo : info;
-  const setActiveInfo = pageTab === "std" ? setStdInfo : setInfo;
-  const activeStep = pageTab === "std" ? stdStep : step;
-  const setActiveStep = pageTab === "std" ? setStdStep : setStep;
-  const activePage = pageTab === "std" ? stdPage : page;
 
   return (
     <div style={{ animation: "fadeUp .2s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 110px)" }}>
