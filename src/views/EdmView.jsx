@@ -815,16 +815,39 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
         {/* PREVIEW PANEL */}
         <div style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Preview</div>
-            {preview?.html && (() => {
-              const words = preview.html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
-              const mins = Math.max(1, Math.round(words / 200));
-              return <span style={{ fontSize: 10, color: C.muted }}>{words} words · ~{mins} min read{words < 50 ? " ⚠️ too short" : words > 500 ? " ⚠️ too long" : ""}</span>;
-            })()}
-            <span style={{ fontSize: 10, color: C.muted }}>⌘S to save</span>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Preview</div>
+              {preview?.html && (() => {
+                const words = preview.html.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
+                const mins = Math.max(1, Math.round(words / 200));
+                return <span style={{ fontSize: 10, color: C.muted }}>{words} words · ~{mins} min read{words < 50 ? " ⚠️ too short" : words > 500 ? " ⚠️ too long" : ""}</span>;
+              })()}
+            </div>
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize: 10, color: C.muted }}>⌘S to save</span>
+              {preview?.campaign_id && (() => {
+                const cam = campaigns.find(c => c.id === preview.campaign_id);
+                const isApproved = cam?.status === "approved" || cam?.status === "sent";
+                return isApproved ? (
+                  <div style={{ display:"flex", alignItems:"center", gap:5, padding:"6px 14px", background:`${C.green}15`, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:12, fontWeight:700, color:C.green }}>
+                    ✓ Approved
+                  </div>
+                ) : (
+                  <button onClick={async () => {
+                    const { error } = await supabase.from("email_campaigns").update({ status: "approved" }).eq("id", preview.campaign_id);
+                    if (!error) {
+                      setCampaigns(p => p.map(c => c.id === preview.campaign_id ? { ...c, status: "approved" } : c));
+                      fire("✅ Email approved! Move to Step 2 when all emails are done.");
+                    }
+                  }} style={{ padding:"6px 18px", background:C.green, color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, boxShadow:`0 2px 8px ${C.green}40` }}>
+                    ✓ Approve this email
+                  </button>
+                );
+              })()}
+            </div>
           </div>
 
-          <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
+          <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", flexDirection: "column" }}>
             {!preview && !gen && (
               <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, minHeight: 300, padding: 32 }}>
                 {aiBuilding ? (
@@ -864,7 +887,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               );
             })()}
             {preview && (
-              <div>
+              <div style={{ width: "100%", display: "flex", flexDirection: "column" }}>
                 <div style={{ padding: "12px 16px", background: "white", borderBottom: "1px solid #E5E5EA", fontFamily: "Arial,sans-serif" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
@@ -983,7 +1006,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   )}
 
                   {/* Email body */}
-                  <div style={{ overflowX: "auto", background: "#f0f0f0", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "20px" : "0", height: previewWidth === "375px" ? "580px" : "520px", overflowY: "auto" }}>
+                  <div style={{ background: previewWidth === "375px" ? "#1a1a2e" : "#ffffff", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "24px 20px" : "0", height: "520px", overflowY: "auto", width: "100%" }}>
                     {(previewTab || "html") === "html" ? (
                       <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
                         style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "540px" : "500px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
