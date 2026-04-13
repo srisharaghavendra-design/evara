@@ -26,6 +26,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink, setL
   const [stdPage, setStdPage] = useState(null);
   const [previewMode, setPreviewMode] = useState("desktop"); // desktop | mobile
   const [sideTab, setSideTab] = useState("content"); // content | design | sections
+  const generatedRef = useRef({ event: false, std: false }); // prevent re-generating
   const [aiGenerating, setAiGenerating] = useState(false);
   const [blocks, setBlocks] = useState({ hero: true, countdown: true, details: true, speakers: false, rsvp: true, sponsors: false });
   const [agenda, setAgenda] = useState([]); // [{time, title, speaker}]
@@ -99,11 +100,10 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink, setL
           setBlocks(data.blocks || blocks);
           if (data.agenda) setAgenda(data.agenda);
           setStep(2);
-          if (!data.headline) autoGenerate("event", setInfo, setStep);
+          if (!data.headline && !generatedRef.current.event) { generatedRef.current.event = true; autoGenerate("event", setInfo, setStep); }
         } else {
           setInfo(p => ({ ...p, ...baseInfo, slug, cta_text:"Register Now" }));
-          if (activeEvent?.description || activeEvent?.name) autoGenerate("event", setInfo, setStep);
-          else setStep(2);
+          if ((activeEvent?.description || activeEvent?.name) && !generatedRef.current.event) { generatedRef.current.event = true; autoGenerate("event", setInfo, setStep); } else setStep(2);
         }
         setLoading(false);
       });
@@ -115,7 +115,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink, setL
           setStdPage(data);
           setStdInfo({ title:data.title||"", tagline:data.tagline||"Mark your calendar", description:data.description||"", headline:data.headline||"", subheadline:data.subheadline||"", about_text:data.about_text||"", brand_color:data.brand_color||brandColor, cta_text:"Add to Calendar", template:data.template||"corporate", slug:data.slug||slug+"-std", location_text:data.location_text||"", organiser:data.organiser||"" });
           setStdStep(2);
-          if (!data.headline) autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
+          if (!data.headline && !generatedRef.current.std) { generatedRef.current.std = true; autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'."); }
         } else {
           setStdInfo(p => ({ ...p, ...baseInfo, slug:slug+"-std", cta_text:"Add to Calendar" }));
           if (activeEvent?.description || activeEvent?.name) autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
