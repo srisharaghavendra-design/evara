@@ -16,7 +16,7 @@ import { buildEmailHtml } from "../lib/utils";
 import {Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C} from "../components/Shared";
 
 // LandingView
-function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
+function LandingView({ supabase, profile, activeEvent, fire, formShareLink, setLpPublished, setView }) {
   const [pageTab, setPageTab] = useState("std"); // "std" | "event"
   const [step, setStep] = useState(1);
   const [stdStep, setStdStep] = useState(1);
@@ -154,8 +154,9 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           await supabase.from("forms").update({ is_active: true, fields: formFields }).eq("id", formId);
         }
         const url = `${window.location.origin}/page/${data.slug}`;
-        fire(`🎉 Page published! Copied to clipboard.`);
+        fire(`✅ Page approved & live!`);
         navigator.clipboard?.writeText(url);
+        if (!isStd) { setLpPublished?.(true); } // tell App.jsx step 2 is done
         // ── Auto-update all draft email CTAs to point to this landing page ──
         supabase.from("email_campaigns")
           .select("id,html_content")
