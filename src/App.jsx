@@ -538,27 +538,6 @@ function AuthScreen() {
   );
 }
 
-function Inp({ label, value, set, ph, type = "text" }) {
-  return (
-    <div>
-      <label style={{ display: "block", fontSize: 11.5, color: C.muted, marginBottom: 5 }}>{label}</label>
-      <input type={type} value={value} onChange={e => set(e.target.value)} placeholder={ph} required
-        style={{ width: "100%", background: C.card, border: `1px solid ${C.border}`, borderRadius: 7, color: C.text, padding: "10px 12px", fontSize: 13, outline: "none", transition: "border-color .15s" }}
-        onFocus={e => e.target.style.borderColor = C.blue} onBlur={e => e.target.style.borderColor = C.border} />
-    </div>
-  );
-}
-
-function Alert({ type, children }) {
-  const color = type === "error" ? C.red : C.green;
-  const Icon = type === "error" ? AlertCircle : CheckCircle;
-  return (<div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px", background: `${color}10`, border: `1px solid ${color}30`, borderRadius: 7, fontSize: 13, color }}><Icon size={14} />{children}</div>);
-}
-
-function Spin({ size = 14 }) {
-  return <div style={{ width: size, height: size, border: `2px solid rgba(255,255,255,.25)`, borderTop: `2px solid #fff`, borderRadius: "50%", animation: "spin .7s linear infinite", flexShrink: 0 }} />;
-}
-
 // ─── MAIN APP ────────────────────────────────────────────────
 function EventSwitcher({ events, activeEvent, setActiveEvent, setView, showArchived, C }) {
   const [open, setOpen] = useState(false);

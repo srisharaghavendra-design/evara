@@ -597,7 +597,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
               )}
             </div>
           )}
-          {contactTab === "import" && <textarea
+          {contactTab === "import" && <><textarea
             value={inlineImportText}
             onChange={e => setInlineImportText(e.target.value)}
             placeholder={"Paste emails or CSV rows here, one per line:\nemail@example.com\nJane Doe, jane@example.com\nJohn, Smith, john@example.com"}
@@ -623,7 +623,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
                 Manage all contacts →
               </button>
             )}
-          </div>}
+          </div></>}
         </div>
       )}
       {hasContacts && !showInlineContacts && (
