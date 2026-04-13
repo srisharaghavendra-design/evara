@@ -136,7 +136,15 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
     if (!activeEvent || !profile) return; setSaving(true);
     const formLink = formShareToken ? `${window.location.origin}/form/${formShareToken}` : formShareLink || "";
     const payload = { event_id: activeEvent.id, company_id: profile.company_id, page_type: isStd ? "save_the_date" : "event", ...activeInfo, blocks, agenda: isStd ? [] : agenda, is_published: publish, reg_url: isStd ? "" : (formLink || activeInfo.reg_url || "") };
-    const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id,page_type" }).select().single();
+    // Check if record exists first, then insert or update
+    const pageTypeVal = isStd ? "save_the_date" : "event";
+    const { data: existing } = await supabase.from("landing_pages").select("id").eq("event_id", activeEvent.id).eq("page_type", pageTypeVal).maybeSingle();
+    let data, error;
+    if (existing?.id) {
+      ({ data, error } = await supabase.from("landing_pages").update(payload).eq("id", existing.id).select().single());
+    } else {
+      ({ data, error } = await supabase.from("landing_pages").insert(payload).select().single());
+    }
     if (error) { fire(error.message, "err"); }
     else {
       if (isStd) setStdPage(data); else setPage(data);
