@@ -586,7 +586,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </Sec>
 
           <button onClick={() => setShowAdvanced(p => !p)} style={{ width:"100%", padding:"7px 10px", background:"transparent", border:`1px dashed ${C.border}`, borderRadius:7, color:C.muted, fontSize:11.5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", fontWeight:500, marginBottom: showAdvanced ? 8 : 0 }}>
-            <span>⚙️ Advanced options (tone, images, form link)</span>
+            <span>⚙️ More options (tone & form link)</span>
             <span style={{ fontSize:10 }}>{showAdvanced ? "▲ hide" : "▼ show"}</span>
           </button>
           {showAdvanced && (<>
@@ -616,12 +616,14 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             <input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://…" style={{ width: "100%", background: C.bg, border: `1px solid ${formLink ? C.green + "50" : C.border}`, borderRadius: 5, color: C.text, padding: "7px 8px", fontSize: 12, outline: "none" }} />
           </Sec>
 
-          {/* IMAGE UPLOAD ZONES */}
-          <Sec label="Images (optional)">
-            <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Add images to your email — stored securely, rendered in all clients.</div>
+          </>)}
+
+          {/* IMAGE UPLOAD ZONES — always visible */}
+          <Sec label="Images">
+            <div style={{ fontSize: 11, color: C.muted, marginBottom: 10 }}>Uploaded securely · renders in all email clients</div>
             <ImageUploadZone
               label="Header image"
-              sublabel="Replaces colour header · 600×200px recommended"
+              sublabel="Replaces colour header · 600×200px"
               url={images.header}
               uploading={uploadingZone === "header"}
               onUpload={f => uploadImage(f, "header")}
@@ -633,12 +635,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 let updated = 0;
                 for (const cam of campaigns) {
                   if (!cam.html_content) continue;
-                  // Replace existing header img src or inject after opening body tag
                   let html = cam.html_content;
                   if (html.includes('class="email-header-img"') || html.includes('id="header-img"')) {
                     html = html.replace(/(<img[^>]*(?:class="email-header-img"|id="header-img")[^>]*src=")[^"]*(")/g, `$1${images.header}$2`);
                   } else {
-                    // Replace the brand-color header div with the image
                     html = html.replace(
                       /(<td[^>]*background-color[^>]*>)(\s*<\/td>)/,
                       `$1<img src="${images.header}" style="width:100%;max-width:600px;display:block" />$2`
@@ -650,12 +650,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 fire(`✅ Header applied to ${updated} emails`);
                 setCampaignsVersion(v => v + 1);
               }} style={{ width: "100%", marginTop: 6, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, fontSize: 12, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-                ✨ Apply this header to all {campaigns.length} emails
+                ✨ Apply header to all {campaigns.length} emails
               </button>
             )}
             <ImageUploadZone
               label="In-body image"
-              sublabel="Speaker photo, venue, or banner · 600×300px"
+              sublabel="Speaker / venue / banner · 600×300px"
               url={images.body}
               uploading={uploadingZone === "body"}
               onUpload={f => uploadImage(f, "body")}
@@ -663,14 +663,13 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             />
             <ImageUploadZone
               label="Footer image"
-              sublabel="Sponsor logos or brand lockup · 600×80px"
+              sublabel="Sponsor logos / brand lockup · 600×80px"
               url={images.footer}
               uploading={uploadingZone === "footer"}
               onUpload={f => uploadImage(f, "footer")}
               onClear={() => setImages(p => ({ ...p, footer: null }))}
             />
           </Sec>
-          </>)}
 
           <BrandVoiceBadge supabase={supabase} profile={profile} setView={setView} />
 
