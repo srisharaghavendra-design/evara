@@ -950,18 +950,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                         </button>
                       ))}
                       <button onClick={() => {
-                        const html = (preview.html||"").replace(/border-radius:[^;]+;/gi,"").replace(/box-shadow:[^;]+;/gi,"");
-                        const a = Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([html],{type:"text/html"})),download:"email-outlook-ios.html"});
-                        a.click();
-                      }} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                        ⬇ iOS
-                      </button>
-                      <button onClick={() => {
                         const html = (preview.html||"").replace(/border-radius:[^;]+;/gi,"").replace(/box-shadow:[^;]+;/gi,"").replace(/background-image:[^;]+;/gi,"");
-                        const a = Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([html],{type:"text/html"})),download:"email-outlook-win.html"});
-                        a.click();
+                        const w = window.open("","_blank"); w.document.write(html); w.document.close();
                       }} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                        ⬇ Win
+                        Outlook
                       </button>
                     </div>
                     {/* Spam score */}
@@ -1030,8 +1022,8 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   <div style={{ background: previewWidth === "375px" ? "#1a1a2e" : "#ffffff", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "24px 20px" : "0", width: "100%" }}>
                     {(previewTab || "html") === "html" ? (
                       <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
-                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "auto", minHeight: previewWidth === "375px" ? 0 : 200, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
-                        onLoad={e => { setTimeout(() => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.body?.scrollHeight || d?.documentElement?.scrollHeight; if (h > 100) e.target.style.height = h + 'px'; } catch(_){} }, 150); }}
+                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "750px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                        onLoad={e => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.documentElement?.scrollHeight; if (h && h > 100 && h < 3000) e.target.style.height = h + "px"; } catch(_){} }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
                       <div style={{ width: "100%", background: "#fff", padding: "24px" }}>
