@@ -841,6 +841,8 @@ function MainApp({ session }) {
   const [newEventName, setNewEventName] = useState("");
   const [newEventDate, setNewEventDate] = useState("");
   const [showDupModal, setShowDupModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [dupName, setDupName] = useState("");
   const [hoveredNav, setHoveredNav] = useState(null);
   const [dupDate, setDupDate] = useState("");
@@ -1135,14 +1137,7 @@ function MainApp({ session }) {
                   ↩ Unarchive event
                 </button>
               )}
-              <button onClick={async () => {
-                  if (!window.confirm(`Permanently delete "${activeEvent.name}"?\n\nAll emails, contacts, landing page and forms will be removed. This cannot be undone.`)) return;
-                  await supabase.from("events").delete().eq("id", activeEvent.id);
-                  const remaining = events.filter(e => e.id !== activeEvent.id);
-                  setEvents(remaining);
-                  setActiveEvent(remaining[0] || null);
-                  fire("🗑 Event deleted");
-                }} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.red}30`, borderRadius: 6, color: C.red, fontSize: 11, cursor: "pointer", textAlign: "center", marginTop: 4 }}>
+              <button onClick={() => setShowDeleteModal(true)} style={{ width: "100%", padding: "5px 8px", background: "transparent", border: `1px solid ${C.red}30`, borderRadius: 6, color: C.red, fontSize: 11, cursor: "pointer", textAlign: "center", marginTop: 4 }}>
                   🗑 Delete event
                 </button>
             </div>
@@ -1718,6 +1713,66 @@ function MainApp({ session }) {
                 setView("dashboard");
               }} style={{ flex:2, padding:"10px 0", background:dupName.trim()?C.blue:C.border, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor:dupName.trim()?"pointer":"default" }}>
                 {duping ? "Duplicating…" : "⧉ Duplicate Event →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && activeEvent && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.85)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:300 }}
+          onClick={() => !deleting && setShowDeleteModal(false)}>
+          <div className="evara-modal" style={{ background:C.card, borderRadius:14, border:`1.5px solid ${C.red}40`, padding:28, width:440, animation:"fadeUp .2s ease" }}
+            onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+              <div style={{ width:40, height:40, borderRadius:10, background:`${C.red}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>🗑</div>
+              <div>
+                <h2 style={{ fontSize:16, fontWeight:700, color:C.text, margin:0 }}>Delete Event</h2>
+                <p style={{ fontSize:12, color:C.muted, margin:0, marginTop:2 }}>This action cannot be undone</p>
+              </div>
+            </div>
+            {/* Event name pill */}
+            <div style={{ background:C.raised, borderRadius:8, padding:"10px 14px", marginBottom:16, border:`1px solid ${C.border}` }}>
+              <div style={{ fontSize:11, color:C.muted, marginBottom:3 }}>Event to be deleted</div>
+              <div style={{ fontSize:14, fontWeight:600, color:C.text }}>{activeEvent.name}</div>
+            </div>
+            {/* Warning list */}
+            <div style={{ background:`${C.red}0a`, borderRadius:8, padding:"10px 14px", marginBottom:22, border:`1px solid ${C.red}20` }}>
+              <div style={{ fontSize:11.5, fontWeight:600, color:C.red, marginBottom:6 }}>The following will be permanently removed:</div>
+              {["All email drafts & campaigns", "Landing page", "Registration form", "All associated data"].map(item => (
+                <div key={item} style={{ display:"flex", gap:6, alignItems:"center", marginBottom:3, fontSize:12, color:C.muted }}>
+                  <span style={{ color:C.red, fontSize:10 }}>✕</span>{item}
+                </div>
+              ))}
+            </div>
+            {/* Actions */}
+            <div style={{ display:"flex", gap:9 }}>
+              <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
+                style={{ flex:1, padding:"10px 0", background:"transparent", border:`1px solid ${C.border}`, borderRadius:8, color:C.muted, fontSize:13, fontWeight:500, cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button disabled={deleting} onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    await supabase.from("email_campaigns").delete().eq("event_id", activeEvent.id);
+                    await supabase.from("landing_pages").delete().eq("event_id", activeEvent.id);
+                    await supabase.from("forms").delete().eq("event_id", activeEvent.id);
+                    await supabase.from("events").delete().eq("id", activeEvent.id);
+                    const remaining = events.filter(e => e.id !== activeEvent.id);
+                    setEvents(remaining);
+                    setActiveEvent(remaining[0] || null);
+                    setView("dashboard");
+                    setShowDeleteModal(false);
+                    fire("Event deleted");
+                  } catch(err) {
+                    fire("Delete failed — try again", "err");
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                style={{ flex:1, padding:"10px 0", background:C.red, border:"none", borderRadius:8, color:"#fff", fontSize:13, fontWeight:600, cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.7 : 1 }}>
+                {deleting ? "Deleting…" : "Yes, delete event"}
               </button>
             </div>
           </div>
