@@ -263,12 +263,12 @@ Respond ONLY with a JSON object (no markdown):
         const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
 
         const fields = [
-          { id: 1, type: "text",   label: "First Name",           required: true,  options: [] },
-          { id: 2, type: "text",   label: "Last Name",            required: true,  options: [] },
-          { id: 3, type: "email",  label: "Email Address",        required: true,  options: [] },
-          { id: 4, type: "text",   label: "Company / Organisation", required: false, options: [] },
-          { id: 5, type: "text",   label: "Job Title",            required: false, options: [] },
-          { id: 6, type: "text",   label: "Phone Number",         required: false, options: [] },
+          { id: 1, type: "text",   label: "First Name",       required: true,  options: [] },
+          { id: 2, type: "text",   label: "Last Name",        required: true,  options: [] },
+          { id: 3, type: "email",  label: "Email ID",         required: true,  options: [] },
+          { id: 4, type: "text",   label: "Company Name",     required: true,  options: [] },
+          { id: 5, type: "text",   label: "Designation",      required: true,  options: [] },
+          { id: 6, type: "phone",  label: "Phone Number",     required: true,  options: [] },
           ...(isDining ? [{ id: 7, type: "text", label: "Dietary Requirements", required: false, options: [] }] : []),
         ];
 
