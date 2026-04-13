@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { EmptyAnalytics } from "../EventEmptyStates";
 import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard, Mail, Globe, FileText, Users, Calendar,
