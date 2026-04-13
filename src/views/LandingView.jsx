@@ -434,17 +434,17 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green }} />
           <span style={{ fontSize: 11, color: C.green, fontWeight: 600 }}>Live:</span>
           <code style={{ fontSize: 11.5, color: C.text, flex:1 }}>{window.location.origin}/page/{activePage.slug}</code>
-          <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/page/${page.slug}`); fire("✅ URL copied!"); }} style={{ fontSize: 10.5, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", fontWeight: 500 }}>Copy</button>
+          <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/page/${activePage?.slug}`); fire("✅ URL copied!"); }} style={{ fontSize: 10.5, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", fontWeight: 500 }}>Copy</button>
           <button onClick={() => {
-            const url = `${window.location.origin}/page/${page.slug}`;
+            const url = `${window.location.origin}/page/${activePage?.slug}`;
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(url)}&bgcolor=FFFFFF&color=0A84FF&margin=10`;
             const w = window.open("", "_blank", "width=380,height=420");
-            w.document.write(`<html><head><title>QR — ${page.slug}</title></head><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f8f9fa"><img src="${qrUrl}" width="280" style="border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12)"><p style="font-size:12px;color:#666;margin:12px 0 4px;text-align:center">Scan to open landing page</p><p style="font-size:11px;color:#999;margin:0">${url}</p><button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#0A84FF;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Print QR</button></body></html>`);
+            w.document.write(`<html><head><title>QR — ${activePage?.slug}</title></head><body style="margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:Arial,sans-serif;background:#f8f9fa"><img src="${qrUrl}" width="280" style="border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.12)"><p style="font-size:12px;color:#666;margin:12px 0 4px;text-align:center">Scan to open landing page</p><p style="font-size:11px;color:#999;margin:0">${url}</p><button onclick="window.print()" style="margin-top:16px;padding:8px 20px;background:#0A84FF;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">Print QR</button></body></html>`);
             w.document.close();
           }} style={{ fontSize: 10.5, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, cursor: "pointer" }} title="Download QR code for this page">
             QR
           </button>
-          <a href={`/page/${page.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 10.5, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, textDecoration: "none" }}>Open ↗</a>
+          <a href={`/page/${activePage?.slug}`} target="_blank" rel="noreferrer" style={{ fontSize: 10.5, padding: "3px 10px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 5, color: C.muted, textDecoration: "none" }}>Open ↗</a>
         </div>
       )}
 
