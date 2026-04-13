@@ -943,6 +943,26 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                         </div>
                       );
                     })()}
+                    {/* ── APPROVE BUTTON IN TOOLBAR ── */}
+                    {preview.campaign_id && (() => {
+                      const cam = campaigns.find(c => c.id === preview.campaign_id);
+                      const isApproved = cam?.status === "approved" || cam?.status === "sent";
+                      return isApproved ? (
+                        <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 12px", background:`${C.green}15`, border:`1px solid ${C.green}40`, borderRadius:6, fontSize:12, fontWeight:600, color:C.green }}>
+                          ✓ Approved
+                        </div>
+                      ) : (
+                        <button onClick={async () => {
+                          const { error } = await supabase.from("email_campaigns").update({ status: "approved" }).eq("id", preview.campaign_id);
+                          if (!error) {
+                            setCampaigns(p => p.map(c => c.id === preview.campaign_id ? { ...c, status: "approved" } : c));
+                            fire("✅ Approved! Move to Step 2 when all emails are done.");
+                          }
+                        }} style={{ padding:"5px 14px", background:C.green, color:"#fff", border:"none", borderRadius:6, fontSize:12, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap" }}>
+                          ✓ Approve
+                        </button>
+                      );
+                    })()}
                   </div>
 
                   {/* Alt subjects */}
@@ -963,10 +983,10 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   )}
 
                   {/* Email body */}
-                  <div style={{ overflowX: "auto", background: "#f0f0f0", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "20px" : "0" }}>
+                  <div style={{ overflowX: "auto", background: "#f0f0f0", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "20px" : "0", height: previewWidth === "375px" ? "580px" : "520px", overflowY: "auto" }}>
                     {(previewTab || "html") === "html" ? (
                       <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
-                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", minHeight: 520, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "540px" : "500px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
                       <div style={{ width: "100%", background: "#fff", padding: "24px" }}>
