@@ -494,14 +494,14 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     { k:"headline", ph:"Punchy event headline", label:"Headline" },
                     { k:"subheadline", ph:"One clear sentence about the event", label:"Subheadline" },
                     { k:"tagline", ph:"Short 5-word tagline", label:"Tagline" },
-                    { k:"cta_text", ph:"Register Now", label:"Button text" },
+                    { k:"cta_text", ph: pageTab === "std" ? "Add to Calendar" : "Register Now", label:"Button text" },
                     { k:"reg_url", ph:formShareLink||"https://...", label:"Registration URL (form link)" },
                     { k:"location_text", ph:activeEvent?.location||"Venue name or Online", label:"Location" },
                     { k:"organiser", ph:profile?.companies?.name||"Organiser name", label:"Organiser" },
                   ].map(f => (
                     <div key={f.k}>
                       <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>{f.label}</div>
-                      <input value={info[f.k]||""} onChange={e => setActiveInfo(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.ph} style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                      <input value={activeInfo[f.k]||""} onChange={e => setActiveInfo(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.ph} style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                     </div>
                   ))}
                   <div>
@@ -557,14 +557,14 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>SEO & Social Preview</div>
                     <div style={{ marginBottom:8 }}>
                       <div style={{ fontSize:10.5, color:C.muted, marginBottom:4 }}>Meta title <span style={{ color:C.muted, fontSize:9 }}>(55–60 chars ideal)</span></div>
-                      <input value={info.meta_title||""} onChange={e=>setActiveInfo(p=>({...p,meta_title:e.target.value}))} placeholder={`${activeEvent?.name || "Event"} — Register Now`}
+                      <input value={activeInfo.meta_title||""} onChange={e=>setActiveInfo(p=>({...p,meta_title:e.target.value}))} placeholder={`${activeEvent?.name || "Event"} — Register Now`}
                         style={{ width:"100%", background:C.bg, border:`1px solid ${(info.meta_title||"").length>60?C.red:(info.meta_title||"").length>45?C.green:C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }}
                         onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                       <div style={{ fontSize:10, color:(info.meta_title||"").length>60?C.red:C.muted, marginTop:2 }}>{(info.meta_title||"").length}/60</div>
                     </div>
                     <div style={{ marginBottom:8 }}>
                       <div style={{ fontSize:10.5, color:C.muted, marginBottom:4 }}>Meta description <span style={{ color:C.muted, fontSize:9 }}>(150–160 chars)</span></div>
-                      <textarea value={info.meta_description||""} onChange={e=>setActiveInfo(p=>({...p,meta_description:e.target.value}))} rows={2}
+                      <textarea value={activeInfo.meta_description||""} onChange={e=>setActiveInfo(p=>({...p,meta_description:e.target.value}))} rows={2}
                         placeholder="Join us for..."
                         style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12, outline:"none", resize:"none" }}
                         onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
