@@ -402,49 +402,47 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
             )}
           </div>
 
-          {/* ── SECTION 2: Landing Page ── */}
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, overflow:"hidden" }}>
-            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:13, fontWeight:600, color:C.text }}>🌐 Landing Page</span>
-                {lpPublished
-                  ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Published</span>
-                  : <span style={{ fontSize:11, color:C.amber }}>Not approved yet — go to Step 2</span>}
+          {/* ── SECTION 2: Landing Page — compact, no iframe ── */}
+          {(() => {
+            const isSaveTheDate = approvedEmails[reviewEmailIdx]?.email_type === "save_the_date";
+            const pageLabel = isSaveTheDate ? "📅 Save the Date Page" : "🌐 Invite Landing Page";
+            return (
+              <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{pageLabel}</span>
+                  {lpPublished
+                    ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Approved & live</span>
+                    : <span style={{ fontSize:11, color:C.amber }}>Not approved yet</span>}
+                  {lpUrl && <span style={{ fontSize:10, color:C.muted, fontFamily:"monospace" }}>{lpUrl.replace("http://localhost:5173","")}</span>}
+                </div>
+                <div style={{ display:"flex", gap:6 }}>
+                  {lpUrl && <a href={lpUrl} target="_blank" rel="noreferrer" style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, color:C.muted, textDecoration:"none" }}>Preview ↗</a>}
+                  <button onClick={() => setView("landing")} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.blue}30`, color:C.blue, background:"none", cursor:"pointer" }}>
+                    {lpPublished ? "Edit" : "Go to Step 2"} →
+                  </button>
+                </div>
               </div>
-              <button onClick={() => setView("landing")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
-                {lpPublished ? "Edit →" : "Go to Step 2 →"}
-              </button>
-            </div>
-            {lpUrl ? (
-              <iframe src={lpUrl} style={{ width:"100%", height:380, border:"none" }} title="Landing page preview" />
-            ) : (
-              <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
-                Invite Landing Page not approved yet. Go to Step 2 and click Approve.
-              </div>
-            )}
-          </div>
+            );
+          })()}
 
-          {/* ── SECTION 3: Form ── */}
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:16, overflow:"hidden" }}>
-            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          {/* ── SECTION 3: Form — only for invite/reminder, compact ── */}
+          {approvedEmails[reviewEmailIdx]?.email_type !== "save_the_date" && (
+            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:16, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ fontSize:13, fontWeight:600, color:C.text }}>📋 Registration Form</span>
                 {formActive
                   ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Active</span>
-                  : <span style={{ fontSize:11, color:C.amber }}>Not active yet — go to Step 3</span>}
+                  : <span style={{ fontSize:11, color:C.amber }}>Not active yet</span>}
+                {formUrl && <span style={{ fontSize:10, color:C.muted, fontFamily:"monospace" }}>{formUrl.replace("http://localhost:5173","")}</span>}
               </div>
-              <button onClick={() => setView("forms")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
-                {formActive ? "Edit →" : "Go to Step 3 →"}
-              </button>
+              <div style={{ display:"flex", gap:6 }}>
+                {formUrl && <a href={formUrl} target="_blank" rel="noreferrer" style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, color:C.muted, textDecoration:"none" }}>Preview ↗</a>}
+                <button onClick={() => setView("forms")} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.blue}30`, color:C.blue, background:"none", cursor:"pointer" }}>
+                  {formActive ? "Edit" : "Activate"} →
+                </button>
+              </div>
             </div>
-            {formUrl ? (
-              <iframe src={formUrl} style={{ width:"100%", height:360, border:"none" }} title="Form preview" />
-            ) : (
-              <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
-                Form not active yet. Go to Step 3 and save your form.
-              </div>
-            )}
-          </div>
+          )}
 
           {/* ── BOTTOM CTA ── */}
           <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 18px", background:hasApprovedEmails && lpPublished && formActive ? `${C.green}10` : C.raised, border:`1px solid ${hasApprovedEmails && lpPublished && formActive ? C.green+"40" : C.border}`, borderRadius:12 }}>
