@@ -731,7 +731,7 @@ function MainApp({ session }) {
       .then(({ data }) => setCampaigns(data || []));
     supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
       .then(({ data }) => setRootFormShareLink(data?.share_token ? `${window.location.origin}/form/${data.share_token}` : ""));
-    supabase.from("landing_pages").select("is_published").eq("event_id", activeEvent.id).eq("is_published", true).limit(1).maybeSingle()
+    supabase.from("landing_pages").select("is_published").eq("event_id", activeEvent.id).eq("page_type","event").eq("is_published", true).limit(1).maybeSingle()
       .then(({ data }) => setLpPublished(!!data));
   }, [activeEvent?.id]);
   const [newEventExtra, setNewEventExtra] = useState({ event_date: "", event_time: "", location: "" });
@@ -1342,9 +1342,9 @@ function MainApp({ session }) {
               nextView: "landing", nextLabel: "Build Landing Page",
             },
             landing: {
-              ready: s2, readyTip: "✅ Landing page published — next, set up your Form",
-              pendingTip: "Publish your landing page to continue",
-              nextView: "forms", nextLabel: "Set up Form",
+              ready: s2, readyTip: "✅ Landing page approved — now approve your registration form",
+              pendingTip: "Approve your Invite Landing Page to continue",
+              nextView: "forms", nextLabel: "✓ Approve Form →",
             },
             forms: {
               ready: s3, readyTip: "✅ Form active — next, schedule your emails",
