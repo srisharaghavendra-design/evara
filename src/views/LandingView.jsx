@@ -412,7 +412,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
             {activePage?.is_published && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: C.green, padding: "6px 12px", background: `${C.green}12`, border: `1px solid ${C.green}30`, borderRadius: 6 }}><div style={{ width:6,height:6,borderRadius:"50%",background:C.green }} /> Live</div>}
             <button onClick={() => setActiveStep(1)} style={{ fontSize: 12.5, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>← Templates</button>
             <button onClick={() => save(false)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.text, cursor: "pointer" }}>{saving ? <Spin /> : "Save draft"}</button>
-            <button onClick={() => save(true)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>{saving ? <><Spin />Publishing…</> : "Publish →"}</button>
+            <button onClick={() => save(true)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 18px", borderRadius: 7, border: "none", background: activePage?.is_published ? C.green : C.blue, color: "#fff", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>{saving ? <><Spin />Approving…</> : activePage?.is_published ? "✓ Approved & Live" : "✓ Approve this page"}</button>
             {activePage?.id && (
               <button onClick={async () => {
                 if (!window.confirm("Delete this landing page? This cannot be undone.")) return;
@@ -459,7 +459,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
       {activeStep === 2 && activePage && !activePage.is_published && (
         <div style={{ marginBottom:12, padding:"12px 16px", background:C.amber+"10", border:`1px solid ${C.amber}35`, borderRadius:10 }}>
           <div style={{ fontSize:13, fontWeight:600, color:C.amber, marginBottom:4 }}>📝 Your AI-drafted landing page is ready to review</div>
-          <div style={{ fontSize:12, color:C.muted }}>Edit the content on the left, preview on the right, then click <strong>Publish →</strong> when it looks good.</div>
+          <div style={{ fontSize:12, color:C.muted }}>Edit the content on the left, preview on the right, then click <strong>✓ Approve this page</strong> when it looks good.</div>
         </div>
       )}
 
@@ -663,7 +663,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                         </div>
                       </div>
                       <div style={{ marginTop:10, fontSize:10.5, color:C.muted, padding:"8px 10px", background:C.raised, borderRadius:6, lineHeight:1.5 }}>
-                        💡 Form is embedded at the bottom of your landing page. Publishing the LP auto-activates the form.
+                        💡 Form is embedded at the bottom of your landing page. Approving this page auto-activates the form.
                       </div>
                     </>
                   )}
