@@ -781,7 +781,7 @@ function MainApp({ session }) {
   const createEvent = async (overrideName, overrideExtra) => {
     const eventName = overrideName || newEventName;
     const eventExtra = overrideExtra || newEventExtra;
-    if (!eventName?.trim() || !profile) return;
+    if (!eventName?.trim() || !profile) { console.error('createEvent blocked: name=', eventName, 'profile=', profile); return; }
     const shareToken = Math.random().toString(36).substring(2, 14) + Date.now().toString(36);
     const { data } = await supabase.from("events").insert({ 
       name: eventName.trim(), 
@@ -1287,7 +1287,7 @@ function MainApp({ session }) {
           );
         })()}
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
-          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} />}
+          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} setShowNewEvent={setShowNewEvent} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} onFormSaved={() => {
