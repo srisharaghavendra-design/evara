@@ -50,47 +50,34 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
   const [saving, setSaving] = useState(false);
   const [creatingEvent, setCreatingEvent] = useState(false);
 
-  // Step 1 — Company
+  // Company (captured inline in brief)
   const [companyName, setCompanyName] = useState(profile?.companies?.name || "");
-  const [industry, setIndustry] = useState("");
 
-  // Step 2 — Brand
-  const [fromName, setFromName] = useState(profile?.companies?.from_name || profile?.full_name || "");
-  const [brandColor, setBrandColor] = useState(profile?.companies?.brand_color || "#0A84FF");
-
-  // Step 3 — First Event (full brief)
+  // Brief fields
   const [eventName, setEventName] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [eventType, setEventType] = useState("conference");
   const [eventLocation, setEventLocation] = useState("");
   const [eventDescription, setEventDescription] = useState("");
   const [eventTime, setEventTime] = useState("");
-  // Step 4 — AI generation state
+
+  // Generation state
   const [createdEventId, setCreatedEventId] = useState(null);
   const [draftsCreated, setDraftsCreated] = useState(0);
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiDone, setAiDone] = useState(false);
 
-  const INDUSTRIES = ["Technology","Finance & Banking","Healthcare","Real Estate","Education","Professional Services","Retail & E-commerce","Media & Entertainment","Not-for-profit","Government","Other"];
   const EVENT_TYPES = ["conference","seminar","networking","workshop","gala","product launch","webinar","training","awards","other"];
-  const COLORS = ["#0A84FF","#30D158","#FF453A","#FF9F0A","#BF5AF2","#FF375F","#5AC8FA","#FFD60A","#FF6B35","#00C7BE"];
 
-  const totalSteps = 4;
+  const totalSteps = 2;
 
   const handleNext = async () => {
     if (step === 1) {
-      if (!companyName.trim()) return;
-      setSaving(true);
-      await supabase.from("companies").update({ name: companyName.trim(), industry }).eq("id", profile.company_id);
-      setSaving(false);
-      setStep(2);
-    } else if (step === 2) {
-      setSaving(true);
-      await supabase.from("companies").update({ from_name: fromName, brand_color: brandColor }).eq("id", profile.company_id);
-      setSaving(false);
-      setStep(3);
-    } else if (step === 3) {
-      if (!eventName.trim()) { setStep(4); return; }
+      // Save company name if changed
+      if (companyName.trim() && companyName.trim() !== profile?.companies?.name) {
+        await supabase.from("companies").update({ name: companyName.trim() }).eq("id", profile.company_id);
+      }
+      if (!eventName.trim()) { setStep(2); return; }
       setCreatingEvent(true);
       const shareToken = Math.random().toString(36).substring(2,14) + Date.now().toString(36);
       const { data: newEvent } = await supabase.from("events").insert({
@@ -107,9 +94,8 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
       }).select().single();
       setCreatingEvent(false);
       setCreatedEventId(newEvent?.id || null);
-      setStep(4);
+      setStep(2);
 
-      // ── Trigger AI campaign generation in background ──
       if (newEvent?.id) {
         setAiGenerating(true);
         try {
@@ -135,10 +121,9 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
         setAiGenerating(false);
         setAiDone(true);
       }
-    } else if (step === 4) {
+    } else if (step === 2) {
       setSaving(true);
       await supabase.from("companies").update({ onboarding_completed: true }).eq("id", profile.company_id);
-      // Send welcome email to new user
       try {
         await fetch(`${SUPABASE_URL}/functions/v1/send-triggered-email`, {
           method: "POST",
@@ -207,106 +192,20 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
           </div>
         </div>
 
-        {/* Step 1 — Company */}
+        {/* Step 1 — Event Brief (first thing after login) */}
         {step === 1 && (
           <div key="s1" style={{ animation:"fadeUp .3s ease" }}>
-            <div style={{ marginBottom:8 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 1</span>
-            </div>
-            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>Welcome to evara 👋</h1>
-            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.5 }}>Let's get your account set up in 2 minutes. First, tell us about your company.</p>
-
-            <div style={{ marginBottom:18 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Company name *</label>
-              <input
-                value={companyName}
-                onChange={e => setCompanyName(e.target.value)}
-                onKeyDown={e => e.key === "Enter" && handleNext()}
-                placeholder="Acme Events Co."
-                autoFocus
-                style={{ width:"100%", background:C.card, border:`1.5px solid ${companyName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"13px 16px", fontSize:15, outline:"none", transition:"border .2s" }}
-              />
-            </div>
-
-            <div style={{ marginBottom:36 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Industry</label>
-              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-                {INDUSTRIES.map(ind => (
-                  <button key={ind} onClick={() => setIndustry(ind === industry ? "" : ind)} style={{ padding:"7px 14px", borderRadius:20, border:`1.5px solid ${industry === ind ? C.blue : C.border}`, background: industry === ind ? `${C.blue}20` : C.card, color: industry === ind ? C.blue : C.sec, fontSize:13, fontWeight:500, transition:"all .15s" }}>{ind}</button>
-                ))}
-              </div>
-            </div>
-
-            <button onClick={handleNext} disabled={!companyName.trim() || saving} style={{ width:"100%", padding:"14px", borderRadius:10, border:"none", background: companyName.trim() ? C.blue : C.border, color:"#fff", fontSize:15, fontWeight:600, transition:"all .2s", opacity: saving ? 0.7 : 1 }}>
-              {saving ? "Saving…" : "Continue →"}
-            </button>
-          </div>
-        )}
-
-        {/* Step 2 — Brand */}
-        {step === 2 && (
-          <div key="s2" style={{ animation:"fadeUp .3s ease" }}>
-            <div style={{ marginBottom:8 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 2</span>
-            </div>
-            <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:8 }}>Brand it your way 🎨</h1>
-            <p style={{ fontSize:15, color:C.sec, marginBottom:36, lineHeight:1.5 }}>Your sender name appears in every email. Pick a colour that represents your brand.</p>
-
-            <div style={{ marginBottom:18 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Sender name (appears as "From" in emails)</label>
-              <input
-                value={fromName}
-                onChange={e => setFromName(e.target.value)}
-                placeholder="Events Team at Acme"
-                autoFocus
-                style={{ width:"100%", background:C.card, border:`1.5px solid ${fromName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"13px 16px", fontSize:15, outline:"none", transition:"border .2s" }}
-              />
-            </div>
-
-            <div style={{ marginBottom:36 }}>
-              <label style={{ fontSize:12, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:8 }}>Brand colour</label>
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:14 }}>
-                {COLORS.map(col => (
-                  <button key={col} onClick={() => setBrandColor(col)} style={{ width:36, height:36, borderRadius:8, background:col, border: brandColor === col ? "3px solid #fff" : "3px solid transparent", outline: brandColor === col ? `2px solid ${col}` : "none", transition:"all .15s", boxShadow: brandColor === col ? `0 0 0 2px ${col}60` : "none" }} />
-                ))}
-              </div>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:36, height:36, borderRadius:8, background:brandColor, flexShrink:0 }} />
-                <input type="color" value={brandColor} onChange={e => setBrandColor(e.target.value)} style={{ width:44, height:36, borderRadius:8, border:`1px solid ${C.border}`, background:C.card, cursor:"pointer", padding:2 }} />
-                <input value={brandColor} onChange={e => { if (/^#[0-9A-Fa-f]{0,6}$/.test(e.target.value)) setBrandColor(e.target.value); }} style={{ flex:1, background:C.card, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"8px 12px", fontSize:14, outline:"none" }} />
-                <div style={{ fontSize:13, color:C.sec, background:C.card, border:`1px solid ${C.border}`, borderRadius:8, padding:"8px 14px", letterSpacing:"-0.2px" }}>Preview</div>
-                <div style={{ width:28, height:12, borderRadius:6, background:brandColor }} />
-              </div>
-            </div>
-
-            {/* Preview card */}
-            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:16, marginBottom:24 }}>
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:36, height:36, borderRadius:8, background:brandColor, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#fff" }}>{(fromName||"E").charAt(0).toUpperCase()}</div>
-                <div>
-                  <div style={{ fontSize:13, fontWeight:600 }}>{fromName || "Your Sender Name"}</div>
-                  <div style={{ fontSize:11, color:C.muted }}>hello@evarahq.com · Email preview</div>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setStep(1)} style={{ padding:"14px 20px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sec, fontSize:15, fontWeight:500 }}>← Back</button>
-              <button onClick={handleNext} disabled={saving} style={{ flex:1, padding:"14px", borderRadius:10, border:"none", background:C.blue, color:"#fff", fontSize:15, fontWeight:600, opacity:saving?0.7:1 }}>
-                {saving ? "Saving…" : "Continue →"}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3 — First Event (full brief) */}
-        {step === 3 && (
-          <div key="s3" style={{ animation:"fadeUp .3s ease" }}>
-            <div style={{ marginBottom:8 }}>
-              <span style={{ fontSize:12, fontWeight:600, color:C.blue, textTransform:"uppercase", letterSpacing:"1px" }}>Step 3 of 4</span>
-            </div>
             <h1 style={{ fontSize:26, fontWeight:700, letterSpacing:"-0.5px", marginBottom:6 }}>Tell us about your event 🎪</h1>
-            <p style={{ fontSize:14, color:C.sec, marginBottom:24, lineHeight:1.5 }}>The more you share, the better AI can build your emails, landing page and form — all automatically.</p>
+            <p style={{ fontSize:14, color:C.sec, marginBottom:22, lineHeight:1.5 }}>Fill in the details and AI will instantly draft all your emails, landing page, and registration form.</p>
+
+            {/* Company name — inline, lightweight */}
+            {!profile?.companies?.name && (
+              <div style={{ marginBottom:14 }}>
+                <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Your company / organisation *</label>
+                <input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Acme Events Co."
+                  style={{ width:"100%", background:C.card, border:`1.5px solid ${companyName ? C.blue : C.border}`, borderRadius:10, color:C.text, padding:"11px 16px", fontSize:14, outline:"none", transition:"border .2s" }} />
+              </div>
+            )}
 
             <div style={{ marginBottom:14 }}>
               <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Event name *</label>
@@ -340,7 +239,7 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
                 style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 16px", fontSize:13, outline:"none" }} />
             </div>
 
-            <div style={{ marginBottom:20 }}>
+            <div style={{ marginBottom:18 }}>
               <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>
                 What's this event about? <span style={{ fontSize:10, fontWeight:400, color:C.muted, textTransform:"none", letterSpacing:0 }}>(AI uses this to write your emails)</span>
               </label>
@@ -350,32 +249,27 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
                 style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 16px", fontSize:13, outline:"none", resize:"vertical", lineHeight:1.5 }} />
             </div>
 
-            {/* AI preview of what will be generated */}
             {eventName.trim() && (
               <div style={{ marginBottom:18, padding:"10px 14px", background:C.blue+"08", border:`1px solid ${C.blue}20`, borderRadius:9 }}>
                 <div style={{ fontSize:11, fontWeight:600, color:C.blue, marginBottom:6 }}>✨ AI will automatically generate for {eventName}:</div>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                  {["Save the Date","Invitation","Reminder","Day-of Details","Confirmation","BYO","Thank You"].map(t => (
+                  {["Save the Date","Invitation","Reminder","Day-of Details","Thank You"].map(t => (
                     <span key={t} style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.blue+"15", color:C.blue }}>{t}</span>
                   ))}
                   <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>Landing Page</span>
-                  <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>Form fields</span>
-                  <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>LinkedIn post</span>
+                  <span style={{ fontSize:10.5, padding:"2px 8px", borderRadius:4, background:C.teal+"15", color:C.teal }}>Registration Form</span>
                 </div>
               </div>
             )}
 
-            <div style={{ display:"flex", gap:10 }}>
-              <button onClick={() => setStep(2)} style={{ padding:"13px 18px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sec, fontSize:14, fontWeight:500 }}>← Back</button>
-              <button onClick={handleNext} disabled={creatingEvent} style={{ flex:1, padding:"13px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:14, fontWeight:600, opacity:creatingEvent?0.7:1 }}>
-                {creatingEvent ? "Creating event…" : eventName.trim() ? "Create & generate campaign ✨" : "Skip for now →"}
-              </button>
-            </div>
+            <button onClick={handleNext} disabled={creatingEvent} style={{ width:"100%", padding:"13px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:14, fontWeight:600, opacity:creatingEvent?0.7:1, cursor:eventName.trim()?"pointer":"default" }}>
+              {creatingEvent ? "Creating event…" : eventName.trim() ? "Generate campaign ✨" : "Fill in event name to continue"}
+            </button>
           </div>
         )}
 
-        {/* Step 4 — AI generating + done */}
-        {step === 4 && (
+        {/* Step 2 — AI generating + done */}
+        {step === 2 && (
           <div key="s4" style={{ animation:"fadeUp .3s ease", textAlign:"center" }}>
             {aiGenerating ? (
               /* ── AI is working ── */
