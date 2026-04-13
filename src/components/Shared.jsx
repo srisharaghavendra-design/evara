@@ -1,3 +1,4 @@
+import { LayoutDashboard, Calendar, BarChart2, Layout, UserCheck2, ClipboardList, Megaphone, Users, TrendingUp } from "lucide-react";
 import { useState } from "react";
 
 // ViewHint
