@@ -1343,6 +1343,7 @@ function MainApp({ session }) {
 
           const b = cfg[view];
           if (!b) return null;
+          if (view === 'edm') return null; // User reviews emails individually — no bar needed
 
           const col = b.ready ? C.green : C.amber;
           return (
