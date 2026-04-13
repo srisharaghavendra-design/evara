@@ -252,7 +252,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
         setContactCount(counts.all);
         setSegmentCounts(counts);
       });
-    supabase.from("landing_pages").select("is_published,slug").eq("event_id", activeEvent.id).maybeSingle()
+    supabase.from("landing_pages").select("is_published,slug").eq("event_id", activeEvent.id).eq("page_type","event").maybeSingle()
       .then(({ data }) => { setLpPublished(!!data?.is_published); if (data?.slug && data?.is_published) setLpUrl(`${window.location.origin}/page/${data.slug}`); });
     supabase.from("forms").select("is_active,share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
       .then(({ data }) => { setFormActive(!!data); if (data?.share_token) setFormUrl(`${window.location.origin}/form/${data.share_token}`); });
@@ -409,7 +409,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
                 <span style={{ fontSize:13, fontWeight:600, color:C.text }}>🌐 Landing Page</span>
                 {lpPublished
                   ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Published</span>
-                  : <span style={{ fontSize:11, color:C.amber }}>Not published yet — go to Step 2</span>}
+                  : <span style={{ fontSize:11, color:C.amber }}>Not approved yet — go to Step 2</span>}
               </div>
               <button onClick={() => setView("landing")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
                 {lpPublished ? "Edit →" : "Go to Step 2 →"}
@@ -419,7 +419,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
               <iframe src={lpUrl} style={{ width:"100%", height:380, border:"none" }} title="Landing page preview" />
             ) : (
               <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
-                Landing page not published. Go to Step 2 and click Publish.
+                Invite Landing Page not approved yet. Go to Step 2 and click Approve.
               </div>
             )}
           </div>
