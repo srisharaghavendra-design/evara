@@ -164,22 +164,32 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     }
   }, [activeEvent]);
 
+  const [aiBuilding, setAiBuilding] = useState(false);
   useEffect(() => {
     if (!activeEvent || !profile) return;
-    supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
-      .then(({ data: d }) => {
-        const list = d || [];
-        setCampaigns(list);
-        // Always auto-load first campaign on first mount (ref prevents overriding user selection)
-        if (!initialLoadDone.current && list.length > 0) {
-          initialLoadDone.current = true;
-          const first = list[0];
-          if (first.html_content) {
-            setPreview({ subject: first.subject, html: first.html_content, plain_text: first.plain_text || "", campaign_id: first.id });
-            setEType(first.email_type || "invitation");
+    let pollTimer = null;
+    const fetchCampaigns = () => {
+      supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
+        .then(({ data: d }) => {
+          const list = d || [];
+          setCampaigns(list);
+          if (!initialLoadDone.current && list.length > 0) {
+            initialLoadDone.current = true;
+            setAiBuilding(false);
+            const first = list[0];
+            if (first.html_content) {
+              setPreview({ subject: first.subject, html: first.html_content, plain_text: first.plain_text || "", campaign_id: first.id });
+              setEType(first.email_type || "invitation");
+            }
+          } else if (list.length === 0 && !initialLoadDone.current) {
+            // AI still generating — poll every 4s for up to 90s
+            setAiBuilding(true);
+            pollTimer = setTimeout(fetchCampaigns, 4000);
           }
-        }
-      });
+        });
+    };
+    fetchCampaigns();
+    return () => { if (pollTimer) clearTimeout(pollTimer); };
   }, [activeEvent, profile]);
 
   // Upload image to Supabase Storage
@@ -416,7 +426,9 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 <button key={cam.id} onClick={() => { setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text || "", campaign_id: cam.id }); setEType(cam.email_type || eType); }}
                   style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${isActive ? C.blue : C.border}`, background: isActive ? `${C.blue}15` : C.bg, color: isActive ? C.blue : C.text, cursor: "pointer", fontWeight: isActive ? 600 : 400, display: "flex", alignItems: "center", gap: 5, transition: "all .12s" }}>
                   {label}
-                  <span style={{ fontSize: 9, color: statusCol, fontWeight: 600 }}>● {cam.status}</span>
+                  <span style={{ fontSize: 9, color: cam.status === "approved" || cam.status === "sent" ? C.green : cam.status === "draft" ? C.amber : statusCol, fontWeight: 600 }}>
+                    {cam.status === "approved" ? "✓ approved" : cam.status === "sent" ? "✓ sent" : "● draft"}
+                  </span>
                 </button>
               );
             })}
@@ -738,7 +750,27 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>
 
           <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", justifyContent: "center" }}>
-            {!preview && !gen && <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, minHeight: 300 }}><Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} /><span style={{ fontSize: 13, color: "#AEAEB2" }}>Fill in event details and click Generate</span></div>}
+            {!preview && !gen && (
+              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, minHeight: 300, padding: 32 }}>
+                {aiBuilding ? (
+                  <>
+                    <svg viewBox="0 0 56 56" width="44" height="44" style={{ animation:"spin 1.2s linear infinite" }}>
+                      <circle cx="28" cy="28" r="24" fill="none" stroke="#0A84FF20" strokeWidth="4"/>
+                      <circle cx="28" cy="28" r="24" fill="none" stroke="#0A84FF" strokeWidth="4" strokeDasharray="38 113" strokeLinecap="round"/>
+                    </svg>
+                    <div style={{ textAlign:"center" }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:C.text, marginBottom:6 }}>AI is building your emails…</div>
+                      <div style={{ fontSize:12, color:C.muted }}>This takes 20–40 seconds. They'll appear automatically.</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <Mail size={32} color="#AEAEB2" strokeWidth={1} style={{ opacity: .4 }} />
+                    <span style={{ fontSize: 13, color: "#AEAEB2" }}>Select an email above to preview, or generate a new one below</span>
+                  </>
+                )}
+              </div>
+            )}
             {gen && (() => {
               return (
                 <div style={{ height:"100%", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, minHeight:300, padding:32 }}>
@@ -916,6 +948,27 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             )}
           </div>
           {preview && <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+            {/* ── APPROVE BUTTON — primary action ── */}
+            {preview.campaign_id && (() => {
+              const cam = campaigns.find(c => c.id === preview.campaign_id);
+              const isApproved = cam?.status === "approved" || cam?.status === "sent";
+              return isApproved ? (
+                <div style={{ display:"flex", alignItems:"center", gap:6, padding:"9px 16px", background:`${C.green}15`, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:13, fontWeight:600, color:C.green }}>
+                  ✓ Approved
+                </div>
+              ) : (
+                <button onClick={async () => {
+                  if (!preview.campaign_id) return;
+                  const { error } = await supabase.from("email_campaigns").update({ status: "approved" }).eq("id", preview.campaign_id);
+                  if (!error) {
+                    setCampaigns(p => p.map(c => c.id === preview.campaign_id ? { ...c, status: "approved" } : c));
+                    fire("✅ Email approved! Move to Step 2 when all emails are done.");
+                  }
+                }} style={{ padding:"9px 20px", background:C.green, color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                  ✓ Approve this email
+                </button>
+              );
+            })()}
             <button onClick={() => {
               const win = window.open("", "_blank");
               win.document.write(preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"));
