@@ -26,7 +26,11 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   const [camSearch, setCamSearch] = useState("");
   const [contactCount, setContactCount] = useState(0);
   const [lpPublished, setLpPublished] = useState(false);
+  const [lpUrl, setLpUrl] = useState("");
   const [formActive, setFormActive] = useState(false);
+  const [formUrl, setFormUrl] = useState("");
+  const [reviewMode, setReviewMode] = useState(true); // show review panel by default
+  const [reviewEmailIdx, setReviewEmailIdx] = useState(0); // which email tab in review
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0 });
   const [newCam, setNewCam] = useState({ email_type: "invitation", send_at: "", segment: "all" });
@@ -247,10 +251,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
         setContactCount(counts.all);
         setSegmentCounts(counts);
       });
-    supabase.from("landing_pages").select("is_published").eq("event_id", activeEvent.id).maybeSingle()
-      .then(({ data }) => setLpPublished(!!data?.is_published));
-    supabase.from("forms").select("is_active").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
-      .then(({ data }) => setFormActive(!!data));
+    supabase.from("landing_pages").select("is_published,slug").eq("event_id", activeEvent.id).maybeSingle()
+      .then(({ data }) => { setLpPublished(!!data?.is_published); if (data?.slug && data?.is_published) setLpUrl(`${window.location.origin}/page/${data.slug}`); });
+    supabase.from("forms").select("is_active,share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
+      .then(({ data }) => { setFormActive(!!data); if (data?.share_token) setFormUrl(`${window.location.origin}/form/${data.share_token}`); });
   }, [activeEvent, profile]);
 
   const openSendModal = async (cam) => {
@@ -324,6 +328,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
 
   // Ready-to-send checklist
   const hasEmailDraft = campaigns.some(c => c.html_content);
+  const approvedEmails = campaigns.filter(c => (c.status === "approved" || c.status === "sent") && c.html_content);
+  const hasApprovedEmails = approvedEmails.length > 0;
   const hasContacts = contactCount > 0;
   const readyChecks = [
     { label: "Emails drafted", done: hasEmailDraft, action: "Go to Emails view", actionId: null },
@@ -333,8 +339,138 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   ];
   const allReady = readyChecks.every(c => c.done);
 
+  const TYPE_LABEL = { save_the_date:"📅 Save the Date", invitation:"✉️ Invite", reminder:"⏰ Reminder", reminder_week:"⏰ Reminder", reminder_day:"🌅 Day Before", confirmation:"✅ Confirmation", byo:"🎒 BYO Details", thank_you:"🙏 Thank You" };
+
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
+
+      {/* ── STEP 4: PRE-SEND REVIEW PANEL ── */}
+      {reviewMode && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+            <div>
+              <div style={{ fontSize:16, fontWeight:700, color:C.text }}>Review before you send</div>
+              <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>Check all 3 below, then set your schedule</div>
+            </div>
+            <button onClick={() => setReviewMode(false)}
+              style={{ fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+              Skip to schedule →
+            </button>
+          </div>
+
+          {/* ── SECTION 1: Emails ── */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, overflow:"hidden" }}>
+            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:C.text }}>✉️ Emails</span>
+                {hasApprovedEmails
+                  ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ {approvedEmails.length} approved</span>
+                  : <span style={{ fontSize:11, color:C.amber }}>No approved emails yet — go to Step 1</span>}
+              </div>
+              <button onClick={() => setView("edm")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
+                {hasApprovedEmails ? "Edit →" : "Go to Step 1 →"}
+              </button>
+            </div>
+            {approvedEmails.length > 0 ? (
+              <div>
+                {/* Email type tabs */}
+                <div style={{ display:"flex", gap:4, padding:"10px 14px 0", flexWrap:"wrap" }}>
+                  {approvedEmails.map((cam, i) => (
+                    <button key={cam.id} onClick={() => setReviewEmailIdx(i)}
+                      style={{ fontSize:11.5, padding:"5px 12px", borderRadius:7, border:`1.5px solid ${reviewEmailIdx===i ? C.blue : C.border}`, background:reviewEmailIdx===i ? `${C.blue}15` : "transparent", color:reviewEmailIdx===i ? C.blue : C.muted, cursor:"pointer", fontWeight:reviewEmailIdx===i ? 600 : 400 }}>
+                      {TYPE_LABEL[cam.email_type] || cam.email_type}
+                    </button>
+                  ))}
+                </div>
+                {/* Subject line */}
+                <div style={{ padding:"8px 16px 4px", fontSize:12, color:C.muted }}>
+                  Subject: <span style={{ color:C.text, fontWeight:500 }}>{approvedEmails[reviewEmailIdx]?.subject}</span>
+                </div>
+                {/* Email iframe */}
+                <div style={{ padding:"0 14px 14px" }}>
+                  <iframe
+                    srcDoc={(approvedEmails[reviewEmailIdx]?.html_content || "").replace(/\{\{REGISTRATION_URL\}\}/g, lpUrl||formUrl||"#").replace(/\{\{UNSUBSCRIBE_URL\}\}/g, "#")}
+                    style={{ width:"100%", height:400, border:`1px solid ${C.border}`, borderRadius:8 }}
+                    sandbox="allow-same-origin" title="Email preview" />
+                </div>
+              </div>
+            ) : (
+              <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
+                No approved emails yet. Go to Step 1 and click <strong>Approve this email</strong> on each one.
+              </div>
+            )}
+          </div>
+
+          {/* ── SECTION 2: Landing Page ── */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, overflow:"hidden" }}>
+            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:C.text }}>🌐 Landing Page</span>
+                {lpPublished
+                  ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Published</span>
+                  : <span style={{ fontSize:11, color:C.amber }}>Not published yet — go to Step 2</span>}
+              </div>
+              <button onClick={() => setView("landing")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
+                {lpPublished ? "Edit →" : "Go to Step 2 →"}
+              </button>
+            </div>
+            {lpUrl ? (
+              <iframe src={lpUrl} style={{ width:"100%", height:380, border:"none" }} title="Landing page preview" />
+            ) : (
+              <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
+                Landing page not published. Go to Step 2 and click Publish.
+              </div>
+            )}
+          </div>
+
+          {/* ── SECTION 3: Form ── */}
+          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:16, overflow:"hidden" }}>
+            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:13, fontWeight:600, color:C.text }}>📋 Registration Form</span>
+                {formActive
+                  ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Active</span>
+                  : <span style={{ fontSize:11, color:C.amber }}>Not active yet — go to Step 3</span>}
+              </div>
+              <button onClick={() => setView("forms")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
+                {formActive ? "Edit →" : "Go to Step 3 →"}
+              </button>
+            </div>
+            {formUrl ? (
+              <iframe src={formUrl} style={{ width:"100%", height:360, border:"none" }} title="Form preview" />
+            ) : (
+              <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
+                Form not active yet. Go to Step 3 and save your form.
+              </div>
+            )}
+          </div>
+
+          {/* ── BOTTOM CTA ── */}
+          <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 18px", background:hasApprovedEmails && lpPublished && formActive ? `${C.green}10` : C.raised, border:`1px solid ${hasApprovedEmails && lpPublished && formActive ? C.green+"40" : C.border}`, borderRadius:12 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:3 }}>
+                {hasApprovedEmails && lpPublished && formActive ? "✅ Everything looks good!" : "⚡ Complete the steps above first"}
+              </div>
+              <div style={{ fontSize:11.5, color:C.muted }}>
+                {`${approvedEmails.length} email${approvedEmails.length!==1?"s":""} approved · Landing page ${lpPublished?"live":"not published"} · Form ${formActive?"active":"not active"} · ${contactCount} contact${contactCount!==1?"s":""}`}
+              </div>
+            </div>
+            <button onClick={() => setReviewMode(false)}
+              style={{ padding:"10px 22px", background:hasApprovedEmails ? C.blue : C.border, color:hasApprovedEmails ? "#fff" : C.muted, border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:hasApprovedEmails ? "pointer" : "not-allowed" }}>
+              Set schedule →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── TOGGLE BACK TO REVIEW ── */}
+      {!reviewMode && (
+        <button onClick={() => setReviewMode(true)}
+          style={{ marginBottom:14, fontSize:12, padding:"7px 14px", borderRadius:7, border:`1px solid ${C.blue}40`, background:`${C.blue}10`, color:C.blue, cursor:"pointer" }}>
+          ← Back to review
+        </button>
+      )}
+
       {/* ── Ready-to-send gate ── */}
       {!allReady && campaigns.length > 0 && (
         <div style={{ marginBottom: 16, padding: "12px 16px", background: C.amber + "10", border: `1px solid ${C.amber}35`, borderRadius: 10, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
