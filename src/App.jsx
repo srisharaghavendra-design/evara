@@ -168,13 +168,12 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
     { id: "roi",        label: "ROI",           icon: BarChart2 },
   ];
   const BUILD_NAV = [
-    { id: "edm",      label: "Emails",        icon: Mail,     step: 1, hint: "Draft your email sequence" },
-    { id: "landing",  label: "Landing Page",  icon: Globe,    step: 2, hint: "Build your event page" },
-    { id: "forms",    label: "Form",          icon: FileText, step: 3, hint: "Set up registration" },
-    { id: "schedule", label: "Schedule",      icon: Calendar, step: 4, hint: "Schedule & send" },
+    { id: "edm",      label: "Step 1 · Emails",         icon: Mail,     step: 1, hint: "Review & approve your AI-drafted emails" },
+    { id: "landing",  label: "Step 2 · Landing Page",   icon: Globe,    step: 2, hint: "Review & publish your event page" },
+    { id: "forms",    label: "Step 3 · Form",           icon: FileText, step: 3, hint: "Review & publish your registration form" },
+    { id: "schedule", label: "Step 4 · Review & Send",  icon: Calendar, step: 4, hint: "Preview everything, then schedule" },
   ];
   const POWER_NAV = [
-    { id: "campaign", label: "Campaign",  icon: Megaphone },
     { id: "social",   label: "Social",    icon: Radio },
   ];
   const NAV_GROUPS = [
@@ -1295,10 +1294,10 @@ function MainApp({ session }) {
         {/* ── JOURNEY PROGRESS STRIP — 4-step guided flow ── */}
         {activeEvent && (() => {
           // Step completion logic — driven by real data
-          const step1Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
+          const step1Done = campaigns.some(c => c.status === "approved" || c.status === "sent");
           const step2Done = lpPublished;
           const step3Done = !!formShareLink;
-          const step4Done = campaigns.some(c => c.status === "scheduled" || c.status === "sent");
+          const step4Done = campaigns.some(c => c.status === "sent");
           const stepDone = [step1Done, step2Done, step3Done, step4Done];
           const stepsComplete = stepDone.filter(Boolean).length;
           const pct = Math.round((stepsComplete / 4) * 100);
