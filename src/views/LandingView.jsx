@@ -102,7 +102,8 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           if (!data.headline) autoGenerate("event", setInfo, setStep);
         } else {
           setInfo(p => ({ ...p, ...baseInfo, slug, cta_text:"Register Now" }));
-          autoGenerate("event", setInfo, setStep);
+          if (activeEvent?.description || activeEvent?.name) autoGenerate("event", setInfo, setStep);
+          else setStep(2);
         }
         setLoading(false);
       });
@@ -117,7 +118,8 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           if (!data.headline) autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
         } else {
           setStdInfo(p => ({ ...p, ...baseInfo, slug:slug+"-std", cta_text:"Add to Calendar" }));
-          autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
+          if (activeEvent?.description || activeEvent?.name) autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
+          else setStdStep(2);
         }
       });
 
@@ -389,7 +391,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
       <div style={{ display: "flex", gap: 0, marginBottom: 16, background: C.raised, borderRadius: 10, padding: 4, alignSelf: "flex-start", flexShrink: 0 }}>
         {[
           { id: "std", label: "📅 Save the Date", hint: "Teaser page with .ics download" },
-          { id: "event", label: "🌐 Event Page", hint: "Full page with registration form" }
+          { id: "event", label: "📨 Invite Landing Page", hint: "Full page with registration form" }
         ].map(t => (
           <button key={t.id} onClick={() => setPageTab(t.id)}
             style={{ padding: "8px 18px", borderRadius: 7, border: "none", background: pageTab === t.id ? C.blue : "transparent", color: pageTab === t.id ? "#fff" : C.muted, fontSize: 13, fontWeight: pageTab === t.id ? 600 : 400, cursor: "pointer", transition: "all .15s" }}
