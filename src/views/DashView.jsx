@@ -394,11 +394,11 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
 
         // Smart insight
         let insight = null;
-        if (sentCount === 0 && campaigns.length > 0) insight = { msg: `You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready to send.`, cta: "Go to Scheduling →", action: () => setView("schedule"), color: C.blue };
-        else if (pendingCount > 5 && daysLeft !== null && daysLeft < 14) insight = { msg: `${pendingCount} contacts haven't responded yet — ${daysLeft} days to go.`, cta: "Send a nudge →", action: () => setView("schedule"), color: C.amber };
-        else if (openRate > 0 && openRate < 30) insight = { msg: `${openRate}% open rate is below average. Consider a new subject line.`, cta: "Edit email →", action: () => setView("edm"), color: C.red };
+        if (sentCount === 0 && campaigns.length > 0) insight = { msg: `You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready — approve them in Step 1 then schedule.`, cta: null, color: C.blue };
+        else if (pendingCount > 5 && daysLeft !== null && daysLeft < 14) insight = { msg: `${pendingCount} contacts haven't responded yet — ${daysLeft} days to go.`, cta: null, color: C.amber };
+        else if (openRate > 0 && openRate < 30) insight = { msg: `${openRate}% open rate is below average. Consider updating your subject line in Step 1.`, cta: null, color: C.red };
         else if (openRate >= 60) insight = { msg: `${openRate}% open rate — that's exceptional. Your subject line is working.`, cta: null, color: C.green };
-        else if (daysLeft !== null && daysLeft <= 7 && daysLeft > 0) insight = { msg: `${daysLeft} day${daysLeft===1?"":"s"} to go. Make sure your day-of details email is ready.`, cta: "Check schedule →", action: () => setView("schedule"), color: C.amber };
+        else if (daysLeft !== null && daysLeft <= 7 && daysLeft > 0) insight = { msg: `${daysLeft} day${daysLeft===1?"":"s"} to go. Check your day-of details email is scheduled.`, cta: null, color: C.amber };
         else if (contacts.length === 0) insight = { msg: "No contacts imported yet. Add your guest list to get started.", cta: "Import contacts →", action: () => setView("contacts"), color: C.blue };
 
         return (
@@ -436,9 +436,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         }}
         onAction={(key) => {
           if (key === "contacts") setView("contacts");
-          if (key === "schedule") setView("schedule");
           if (key === "checkin")  window.open(`/checkin/${activeEvent?.id}`, "_blank");
-          if (key === "thankyou") setView("schedule");
         }}
       />
       )}
@@ -455,11 +453,6 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
             </div>
           </div>
           <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
-            {!campaigns.some(c=>c.email_type==="thank_you"&&c.status==="sent") && (
-              <button onClick={() => setView("schedule")} style={{ fontSize:12, padding:"6px 13px", background:C.green, border:"none", borderRadius:7, color:"#fff", cursor:"pointer", fontWeight:600 }}>
-                Send Thank You →
-              </button>
-            )}
             <button onClick={() => setView("feedback")} style={{ fontSize:12, padding:"6px 13px", background:"transparent", border:`1px solid ${C.green}50`, borderRadius:7, color:C.green, cursor:"pointer" }}>
               Feedback Form
             </button>
@@ -628,7 +621,6 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         <div className="quick-actions" style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap", alignItems:"center" }}>
           <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"1px", flexShrink:0 }}>Track & Manage</span>
           {[
-            { label:"📅 Schedule", action:() => setView("schedule"), color:C.blue },
             { label:"👥 Contacts", action:() => setView("contacts"), color:C.blue },
             { label:"📊 Analytics", action:() => setView("analytics"), color:C.blue },
             { label:"🎪 Check-in", action:() => setView("checkin"), color:C.green },
@@ -707,15 +699,15 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         const scheduledCount = campaigns.filter(c=>c.status==="scheduled").length;
 
         if (sentCount===0 && campaigns.length>0)
-          nudges.push({ icon:"📧", color:C.blue, msg:`You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready — nothing sent yet.`, cta:"Go to Schedule →", action:()=>setView("schedule") });
+          nudges.push({ icon:"📧", color:C.blue, msg:`You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready — approve in Step 1 then schedule.`, cta:null, action:null });
 
         if (openRate !== null && openRate < 25 && sentCount > 0)
-          nudges.push({ icon:"⚠️", color:C.amber, msg:`${openRate}% open rate is below average. Try a different subject line on your next email.`, cta:"Edit emails →", action:()=>setView("edm") });
+          nudges.push({ icon:"⚠️", color:C.amber, msg:`${openRate}% open rate is below average. Consider updating your subject line in Step 1.`, cta:null, action:null });
 
         if (pendingCount > 0 && daysToEvent !== null && daysToEvent <= 7 && daysToEvent > 0)
-          nudges.push({ icon:"⏰", color:C.red, msg:`${pendingCount} contacts haven't responded — event is in ${daysToEvent} day${daysToEvent===1?"":"s"}. Send a final nudge now.`, cta:"Send nudge →", action:()=>setView("schedule") });
+          nudges.push({ icon:"⏰", color:C.red, msg:`${pendingCount} contacts haven't responded — event is in ${daysToEvent} day${daysToEvent===1?"":"s"}.`, cta:null, action:null });
         else if (pendingCount > 10 && daysToEvent !== null && daysToEvent <= 14)
-          nudges.push({ icon:"📣", color:C.amber, msg:`${pendingCount} contacts are still pending. A reminder email could improve your confirmation rate.`, cta:"Schedule reminder →", action:()=>setView("schedule") });
+          nudges.push({ icon:"📣", color:C.amber, msg:`${pendingCount} contacts are still pending. A reminder email could improve your confirmation rate.`, cta:null, action:null });
 
         if (contacts.length === 0 && activeEvent)
           nudges.push({ icon:"👥", color:C.blue, msg:"No contacts imported yet. Add your guest list to start tracking RSVPs.", cta:"Add contacts →", action:()=>setView("contacts") });
@@ -800,17 +792,14 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           <div style={{ fontSize: 28 }}>📊</div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 4 }}>No emails sent yet</div>
-            <div style={{ fontSize: 12, color: C.muted }}>Send your first campaign to see open rates, RSVPs, and attendance metrics here.</div>
+            <div style={{ fontSize: 12, color: C.muted }}>Metrics will populate here once your first email is sent. Approve your emails in Step 1, then schedule them in Step 4.</div>
           </div>
-          <button onClick={() => setView("schedule")} style={{ marginLeft: "auto", fontSize: 12, padding: "7px 14px", background: C.blue, border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0 }}>
-            Schedule & Send →
-          </button>
         </div>
       )}
       {activeEvent && campaigns.filter(c => c.status === "sent").length > 0 && (
         <div className="metrics-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
           {[
-            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: () => setView("schedule"), pct: null },
+            { label: "Emails Sent", val: metrics?.total_sent || 0, sub: (() => { const sched = campaigns.filter(c => c.status === "scheduled").length; if (sched > 0) return `${sched} scheduled`; const last = campaigns.filter(c => c.status === "sent" && c.sent_at).sort((a,b) => new Date(b.sent_at)-new Date(a.sent_at))[0]; if (!last) return "No sends yet"; const d = Math.round((new Date()-new Date(last.sent_at))/(1000*60*60*24)); return d === 0 ? "sent today" : `${d}d ago`; })(), color: C.blue, icon: "📧", action: null, pct: null },
             { label: "Confirmed", val: metrics?.total_confirmed || 0, sub: contacts.length > 0 ? `of ${contacts.length} invited` : "awaiting RSVPs", color: C.green, icon: "✅", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_confirmed||0)/contacts.length)*100) : 0 },
             { label: "Pending", val: metrics?.total_pending || 0, sub: metrics?.total_pending > 0 ? "need a nudge?" : "all responded", color: C.amber, icon: "⏳", action: () => setView("contacts"), pct: contacts.length > 0 ? Math.round(((metrics?.total_pending||0)/contacts.length)*100) : 0 },
             { label: "Attended", val: metrics?.total_attended || 0, sub: metrics?.total_confirmed > 0 ? `${Math.round((metrics.total_attended / metrics.total_confirmed) * 100)}% show rate` : "event day", color: C.teal, icon: "🎟", action: () => setView("checkin"), pct: (metrics?.total_confirmed||0) > 0 ? Math.round(((metrics?.total_attended||0)/(metrics?.total_confirmed||1))*100) : 0 },
