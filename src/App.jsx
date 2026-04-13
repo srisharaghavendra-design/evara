@@ -174,10 +174,10 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
   ];
 
   return (
-    <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:24 }}>
+    <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"flex-start", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:"24px 24px", overflowY:"auto" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');*{box-sizing:border-box;margin:0;padding:0}button{cursor:pointer;font-family:Outfit,sans-serif}input,select{font-family:Outfit,sans-serif}@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
-      <div style={{ width:"100%", maxWidth:520, animation:"fadeUp .35s ease" }}>
+      <div style={{ width:"100%", maxWidth:520, animation:"fadeUp .35s ease", paddingTop:40, paddingBottom:100 }}>
         {/* Logo + progress */}
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:40 }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
@@ -217,12 +217,12 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
               <div style={{ flex:1 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Date</label>
                 <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)}
-                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:eventDate ? C.text : C.muted, padding:"11px 14px", fontSize:13, outline:"none" }} />
+                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 14px", fontSize:13, outline:"none", colorScheme:"dark" }} />
               </div>
               <div style={{ flex:1 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Time</label>
                 <input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)}
-                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:eventTime ? C.text : C.muted, padding:"11px 14px", fontSize:13, outline:"none" }} />
+                  style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:10, color:C.text, padding:"11px 14px", fontSize:13, outline:"none", colorScheme:"dark" }} />
               </div>
               <div style={{ flex:1 }}>
                 <label style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", display:"block", marginBottom:7 }}>Type</label>
@@ -262,7 +262,7 @@ function OnboardingFlow({ profile, supabase, onComplete }) {
               </div>
             )}
 
-            <button onClick={handleNext} disabled={creatingEvent} style={{ width:"100%", padding:"13px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:14, fontWeight:600, opacity:creatingEvent?0.7:1, cursor:eventName.trim()?"pointer":"default" }}>
+            <button onClick={handleNext} disabled={creatingEvent} style={{ position:"sticky", bottom:0, width:"100%", padding:"14px", borderRadius:10, border:"none", background:eventName.trim() ? C.blue : C.border, color:"#fff", fontSize:14, fontWeight:700, opacity:creatingEvent?0.7:1, cursor:eventName.trim()?"pointer":"default", boxShadow:"0 -8px 24px rgba(0,0,0,0.6)", zIndex:10 }}>
               {creatingEvent ? "Creating event…" : eventName.trim() ? "Generate campaign ✨" : "Fill in event name to continue"}
             </button>
           </div>
@@ -382,7 +382,7 @@ function AuthScreen() {
   // Post-signup confirmation screen
   if (confirmed) {
     return (
-      <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:24 }}>
+      <div style={{ height:"100vh", background:C.bg, display:"flex", alignItems:"flex-start", justifyContent:"center", fontFamily:"Outfit,sans-serif", color:C.text, padding:"24px 24px", overflowY:"auto" }}>
         <div style={{ maxWidth:460, width:"100%", textAlign:"center", animation:"fadeUp .35s ease" }}>
           <div style={{ width:72, height:72, borderRadius:20, background:`${C.blue}15`, border:`2px solid ${C.blue}30`, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 28px", fontSize:36 }}>📧</div>
           <h1 style={{ fontSize:28, fontWeight:700, letterSpacing:"-0.5px", marginBottom:10 }}>Check your inbox</h1>

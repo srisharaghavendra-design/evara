@@ -430,32 +430,77 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </div>
         );
       })()}
-      {/* ── YOUR CAMPAIGNS — primary nav when campaigns exist ── */}
-      {campaigns.length > 0 && (
-        <div style={{ marginBottom: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 12px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px" }}>Your emails</span>
-            <span style={{ fontSize: 10, color: C.muted, background: C.raised, padding: "2px 7px", borderRadius: 10 }}>{campaigns.length} drafted</span>
-            <span style={{ fontSize: 10.5, color: C.muted, marginLeft: "auto" }}>Click to preview · Edit below</span>
+      {/* ── EMAIL TYPE TABS — primary navigation ── */}
+      {(() => {
+        const EMAIL_TABS = [
+          { type: "save_the_date", label: "Save the Date", icon: "📅" },
+          { type: "invitation",    label: "Invite",         icon: "✉️" },
+          { type: "reminder",      label: "Reminder",       icon: "⏰" },
+          { type: "day_of_details",label: "Day-of Details", icon: "🌅" },
+          { type: "thank_you",     label: "Thank You",      icon: "🙏" },
+        ];
+        const isGenerating = aiBuilding || (campaigns.length === 0 && activeEvent);
+        return (
+          <div style={{ marginBottom: 0 }}>
+            {/* Tab bar */}
+            <div style={{ display: "flex", borderBottom: `2px solid ${C.border}`, marginBottom: 0 }}>
+              {EMAIL_TABS.map(tab => {
+                const cam = campaigns.find(c => c.email_type === tab.type);
+                const isActive = preview?.campaign_id === cam?.id;
+                const isApproved = cam?.status === "approved" || cam?.status === "sent";
+                const isDraft = cam?.status === "draft";
+                return (
+                  <button key={tab.type}
+                    onClick={() => {
+                      if (cam) {
+                        setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text || "", campaign_id: cam.id });
+                        setEType(cam.email_type);
+                      } else {
+                        setEType(tab.type);
+                        setPreview(null);
+                      }
+                    }}
+                    style={{
+                      flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
+                      padding: "12px 8px 10px",
+                      background: "transparent", border: "none",
+                      borderBottom: `2.5px solid ${isActive ? C.blue : "transparent"}`,
+                      marginBottom: -2,
+                      color: isActive ? C.blue : cam ? C.text : C.muted,
+                      cursor: "pointer", transition: "all .12s",
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <span style={{ fontSize: 13 }}>{tab.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: isActive ? 700 : 500, whiteSpace: "nowrap" }}>{tab.label}</span>
+                    </div>
+                    <div style={{ fontSize: 9.5, fontWeight: 600,
+                      color: isApproved ? C.green : isDraft ? C.amber : isGenerating ? C.blue : C.muted }}>
+                      {isApproved ? "✓ approved" : isDraft ? "● draft" : isGenerating ? "generating…" : "not started"}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Tab content area — generating state */}
+            {isGenerating && campaigns.length === 0 && (
+              <div style={{ padding: "32px 24px", textAlign: "center", background: C.card, borderRadius: "0 0 10px 10px", border: `1px solid ${C.border}`, borderTop: "none", marginBottom: 16 }}>
+                <div style={{ fontSize: 28, marginBottom: 12 }}>✨</div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 8 }}>AI is drafting your emails…</div>
+                <div style={{ fontSize: 13, color: C.muted, marginBottom: 4 }}>This takes about 10–30 seconds. They'll appear as tabs above once ready.</div>
+                <div style={{ fontSize: 12, color: C.muted, opacity: 0.8 }}>You can generate a custom email using the builder below while you wait.</div>
+              </div>
+            )}
+
+            {/* Tab content area — no selection prompt */}
+            {!isGenerating && campaigns.length > 0 && !preview && (
+              <div style={{ padding: "20px 24px", textAlign: "center", background: C.card, border: `1px solid ${C.border}`, borderTop: "none", borderRadius: "0 0 10px 10px", marginBottom: 16 }}>
+                <div style={{ fontSize: 13, color: C.muted }}>← Select an email tab above to preview and approve it</div>
+              </div>
+            )}
           </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {campaigns.map(cam => {
-              const isActive = preview?.campaign_id === cam.id;
-              const label = { save_the_date: "📅 Save the Date", invitation: "✉️ Invitation", reminder: "⏰ Reminder", reminder_week: "⏰ Reminder", reminder_day: "🌅 Day Before", confirmation: "✅ Confirmation", byo: "🎒 BYO Details", thank_you: "🙏 Thank You" }[cam.email_type] || cam.email_type;
-              const statusCol = cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : C.muted;
-              return (
-                <button key={cam.id} onClick={() => { setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text || "", campaign_id: cam.id }); setEType(cam.email_type || eType); }}
-                  style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${isActive ? C.blue : C.border}`, background: isActive ? `${C.blue}15` : C.bg, color: isActive ? C.blue : C.text, cursor: "pointer", fontWeight: isActive ? 600 : 400, display: "flex", alignItems: "center", gap: 5, transition: "all .12s" }}>
-                  {label}
-                  <span style={{ fontSize: 9, color: cam.status === "approved" || cam.status === "sent" ? C.green : cam.status === "draft" ? C.amber : statusCol, fontWeight: 600 }}>
-                    {cam.status === "approved" ? "✓ approved" : cam.status === "sent" ? "✓ sent" : "● draft"}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+        );
+      })()}
       <div className="edm-grid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 16, minHeight: "70vh" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 11, overflow: "auto" }}>
           <Sec label="Email type">
