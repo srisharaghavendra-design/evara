@@ -783,13 +783,14 @@ function MainApp({ session }) {
         const allApproved = hasCampaigns && (cams || []).filter(c => c.html_content).every(c => c.status === "approved" || c.status === "scheduled" || c.status === "sent");
         const lpPublishedNow = lp?.is_published;
         if (!hasCampaigns) {
-          setView("edm"); // No emails yet — go to Step 1
+          setView("edm");
         } else if (hasCampaigns && !allApproved) {
-          setView("edm"); // Has drafts but not all approved — stay in Step 1
+          setView("edm");
         } else if (allApproved && !lpPublishedNow) {
-          setView("landing"); // All approved, no landing page — go to Step 2
+          setView("landing");
+        } else if (allApproved && lpPublishedNow) {
+          setView("schedule"); // Both steps done — go straight to Step 3
         }
-        // If landing page published too, stay on dashboard (they're in schedule/send phase)
       }
     };
     load();
@@ -1304,7 +1305,7 @@ function MainApp({ session }) {
           );
         })()}
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
-          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} setShowNewEvent={setShowNewEvent} />}
+          {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} setShowNewEvent={setShowNewEvent} lpPublished={lpPublished} campaigns={campaigns} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
           {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} setLpPublished={setLpPublished} setView={setView} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} onFormSaved={() => {
