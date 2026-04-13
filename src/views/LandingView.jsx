@@ -646,6 +646,13 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     </div>
                   ) : (
                     <>
+                      {/* Approve form button — prominent at top */}
+                      <button onClick={async () => {
+                        await supabase.from("forms").update({ is_active: true, fields: formFields }).eq("id", formId);
+                        fire("✅ Registration form approved & live!");
+                      }} style={{ width:"100%", marginBottom:10, padding:"10px", borderRadius:8, border:"none", background:C.green, color:"#fff", fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6 }}>
+                        ✓ Approve Registration Form
+                      </button>
                       {formShareToken && (
                         <div style={{ marginBottom:12, padding:"8px 10px", background:C.green+"12", border:`1px solid ${C.green}30`, borderRadius:7 }}>
                           <div style={{ fontSize:10, color:C.green, fontWeight:600, marginBottom:3 }}>✓ Registration form ready</div>
