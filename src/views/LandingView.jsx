@@ -28,6 +28,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
   const [sideTab, setSideTab] = useState("content"); // content | design | sections
   const [aiGenerating, setAiGenerating] = useState(false);
   const [blocks, setBlocks] = useState({ hero: true, countdown: true, details: true, speakers: false, rsvp: true, sponsors: false });
+  const [agenda, setAgenda] = useState([]); // [{time, title, speaker}]
   const [formId, setFormId] = useState(null);
   const [formFields, setFormFields] = useState([]);
   const [formShareToken, setFormShareToken] = useState(null);
@@ -62,6 +63,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
     { id: "details", label: "Event Details", icon: "📍" },
     { id: "about", label: "About Section", icon: "📝" },
     { id: "speakers", label: "Speakers", icon: "🎤" },
+    { id: "agenda", label: "Agenda / Schedule", icon: "🗓" },
     { id: "rsvp", label: "RSVP / Register Button", icon: "📋" },
     { id: "sponsors", label: "Sponsors", icon: "🏅" },
   ];
@@ -94,6 +96,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           setPage(data);
           setInfo({ title:data.title||"", tagline:data.tagline||"", description:data.description||"", headline:data.headline||"", subheadline:data.subheadline||"", about_text:data.about_text||"", brand_color:data.brand_color||brandColor, cta_text:data.cta_text||"Register Now", template:data.template||"corporate", slug:data.slug||slug, location_text:data.location_text||"", organiser:data.organiser||"" });
           setBlocks(data.blocks || blocks);
+          if (data.agenda) setAgenda(data.agenda);
           setStep(2);
           if (!data.headline) autoGenerate("event", setInfo, setStep);
         } else {
@@ -129,7 +132,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
     const activeInfo = isStd ? stdInfo : info;
     if (!activeEvent || !profile) return; setSaving(true);
     const formLink = formShareToken ? `${window.location.origin}/form/${formShareToken}` : formShareLink || "";
-    const payload = { event_id: activeEvent.id, company_id: profile.company_id, page_type: isStd ? "save_the_date" : "event", ...activeInfo, blocks, is_published: publish, reg_url: isStd ? "" : (formLink || activeInfo.reg_url || "") };
+    const payload = { event_id: activeEvent.id, company_id: profile.company_id, page_type: isStd ? "save_the_date" : "event", ...activeInfo, blocks, agenda: isStd ? [] : agenda, is_published: publish, reg_url: isStd ? "" : (formLink || activeInfo.reg_url || "") };
     const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id,page_type" }).select().single();
     if (error) { fire(error.message, "err"); }
     else {
@@ -321,6 +324,22 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         )}
 
         {/* RSVP / Embedded Form */}
+        {blocks.agenda && agenda.length > 0 && (
+          <div style={{ padding:"32px 20px", maxWidth:620, margin:"0 auto", width:"100%" }}>
+            <h2 style={{ fontSize:previewMode==="mobile"?18:22, fontWeight:700, marginBottom:20, color:textColor, textAlign:"center" }}>Agenda</h2>
+            <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+              {agenda.map((item, i) => (
+                <div key={i} style={{ display:"flex", gap:14, padding:"12px 16px", background:"rgba(255,255,255,0.06)", borderRadius:8, borderLeft:`3px solid ${a}` }}>
+                  <div style={{ fontSize:12, fontWeight:700, color:a, minWidth:60, paddingTop:1 }}>{item.time}</div>
+                  <div>
+                    <div style={{ fontSize:14, fontWeight:600, color:textColor, marginBottom:item.speaker?3:0 }}>{item.title}</div>
+                    {item.speaker && <div style={{ fontSize:12, color:subColor }}>{item.speaker}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {blocks.rsvp && (
           <div style={{ padding:"28px 24px", textAlign:"center", borderBottom:`1px solid ${borderCol}` }}>
             {formFields.length > 0 ? (
@@ -489,6 +508,49 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>About section</div>
                     <textarea value={activeInfo.about_text||""} onChange={e => setActiveInfo(p=>({...p, about_text:e.target.value}))} rows={4} placeholder="What attendees will experience..." style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5 }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                   </div>
+
+                  {/* Agenda editor — event tab only */}
+                  {pageTab === "event" && (
+                    <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:12, marginTop:4 }}>
+                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px" }}>🗓 Agenda</div>
+                        <button onClick={() => { setAgenda(p => [...p, { time:"", title:"", speaker:"" }]); setBlocks(p => ({...p, agenda:true})); }}
+                          style={{ fontSize:11, padding:"3px 10px", borderRadius:5, border:`1px solid ${C.blue}40`, background:`${C.blue}10`, color:C.blue, cursor:"pointer" }}>
+                          + Add item
+                        </button>
+                      </div>
+                      {agenda.length === 0 && (
+                        <div style={{ fontSize:11, color:C.muted, padding:"8px 0" }}>No agenda items yet. Add time slots, talks, or sessions.</div>
+                      )}
+                      {agenda.map((item, i) => (
+                        <div key={i} style={{ marginBottom:8, padding:"8px 10px", background:C.bg, borderRadius:7, border:`1px solid ${C.border}`, position:"relative" }}>
+                          <button onClick={() => setAgenda(p => p.filter((_,j)=>j!==i))}
+                            style={{ position:"absolute", top:6, right:6, fontSize:10, padding:"2px 6px", borderRadius:4, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>✕</button>
+                          <div style={{ display:"grid", gridTemplateColumns:"80px 1fr", gap:6, marginBottom:5 }}>
+                            <input value={item.time} onChange={e => setAgenda(p => p.map((a,j)=>j===i?{...a,time:e.target.value}:a))}
+                              placeholder="9:00 AM" style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"5px 7px", fontSize:11.5, outline:"none" }} />
+                            <input value={item.title} onChange={e => setAgenda(p => p.map((a,j)=>j===i?{...a,title:e.target.value}:a))}
+                              placeholder="Session title" style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"5px 7px", fontSize:11.5, outline:"none" }} />
+                          </div>
+                          <input value={item.speaker} onChange={e => setAgenda(p => p.map((a,j)=>j===i?{...a,speaker:e.target.value}:a))}
+                            placeholder="Speaker / host (optional)" style={{ width:"100%", background:C.card, border:`1px solid ${C.border}`, borderRadius:5, color:C.text, padding:"5px 7px", fontSize:11.5, outline:"none", boxSizing:"border-box" }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* ICS preview — STD tab only */}
+                  {pageTab === "std" && (
+                    <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:12, marginTop:4 }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>📅 Calendar Invite Preview</div>
+                      <div style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, padding:"10px 12px", fontSize:12 }}>
+                        <div style={{ fontWeight:700, color:C.text, marginBottom:4 }}>{activeEvent?.name || "Event Name"}</div>
+                        <div style={{ color:C.muted, marginBottom:2 }}>📅 {activeEvent?.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "Date TBC"}{activeEvent?.event_time ? ` · ${activeEvent.event_time}` : ""}</div>
+                        <div style={{ color:C.muted, marginBottom:2 }}>📍 {activeEvent?.location || "Location TBC"}</div>
+                        <div style={{ color:C.muted, fontSize:11, marginTop:6, padding:"6px 8px", background:C.raised, borderRadius:5 }}>When visitor clicks "Add to Calendar", this .ics file downloads and adds to their calendar app.</div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* SEO + Social Meta */}
                   <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:12, marginTop:4 }}>
