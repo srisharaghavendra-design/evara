@@ -95,6 +95,15 @@ function AddCustomQuestion({ feedbackForm, setFeedbackForm, supabase, fire }) {
 
 // ─── FEEDBACK VIEW ────────────────────────────────────────────
 // AI-powered post-event feedback collection and analysis
+function Sec({ label, children }) {
+  return (
+    <div style={{ background: C.card, borderRadius: 10, border: `1px solid ${C.border}`, padding: 14 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 500, color: C.muted, textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 11 }}>{label}</div>
+      {children}
+    </div>
+  );
+}
+
 function FeedbackView({ supabase, profile, activeEvent, fire }) {
   const [tab, setTab] = useState("collect"); // collect | analyse | report
   const [submissions, setSubmissions] = useState([]);
