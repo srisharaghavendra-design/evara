@@ -25,15 +25,21 @@ function PublicFormPage({ token }) {
   const [submitError, setSubmitError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [landingPage, setLandingPage] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const load = async () => {
-      const { data: f } = await supabase.from("forms").select("*, events(*), companies(name)").eq("share_token", token).single();
+      const { data: f } = await supabase.from("forms").select("*, events(*), companies(name, brand_color, logo_url)").eq("share_token", token).single();
       if (!f) { setError("Form not found or no longer active."); setLoading(false); return; }
       if (!f.is_active) { setError("This form is no longer accepting responses."); setLoading(false); return; }
       setForm(f);
       setEvent(f.events);
+      // Load landing page branding
+      if (f.events?.id) {
+        const { data: lp } = await supabase.from("landing_pages").select("headline,brand_color,template,about_text,organiser").eq("event_id", f.events.id).eq("page_type","event").maybeSingle();
+        if (lp) setLandingPage(lp);
+      }
       setLoading(false);
     };
     load();
@@ -189,17 +195,38 @@ function PublicFormPage({ token }) {
 
   return (
     <div style={{ minHeight: "100vh", background: "#F2F2F7", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: "#fff", borderBottom: "1px solid #E5E5EA", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div>
-          {event?.name && <div style={{ fontSize: 15, fontWeight: 600, color: "#111" }}>{event.name}</div>}
-          {event?.event_date && <div style={{ fontSize: 12, color: "#999" }}>
-            {new Date(event.event_date).toLocaleDateString("en-AU", { day: "numeric", month: "long", year: "numeric" })}
-            {event.location ? ` · ${event.location}` : ""}
-          </div>}
-        </div>
-        <div style={{ fontSize: 11, color: "#0A84FF", fontWeight: 600, letterSpacing: "0.5px" }}>evara</div>
-      </div>
+      {/* Branded hero header */}
+      {(() => {
+        const accent = landingPage?.brand_color || "#0A84FF";
+        const isDark = landingPage?.template !== "minimal" && landingPage?.template !== "light" && landingPage?.template !== "editorial";
+        const heroBg = isDark ? "#0D0D0F" : "#fff";
+        const heroText = isDark ? "#F5F5F7" : "#111";
+        const heroSub = isDark ? "rgba(255,255,255,0.6)" : "#555";
+        return (
+          <div style={{ background: heroBg, borderBottom: `3px solid ${accent}`, padding: "28px 20px 24px" }}>
+            <div style={{ maxWidth: 560, margin: "0 auto" }}>
+              {/* Organiser */}
+              <div style={{ fontSize: 11, fontWeight: 700, color: accent, letterSpacing: "1.5px", textTransform: "uppercase", marginBottom: 12 }}>
+                {event?.companies?.name || landingPage?.organiser || ""}
+              </div>
+              {/* Event name */}
+              <h1 style={{ fontSize: 28, fontWeight: 800, color: heroText, margin: "0 0 8px", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
+                {landingPage?.headline || event?.name}
+              </h1>
+              {/* Date · Time · Location */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px", marginTop: 10 }}>
+                {event?.event_date && <span style={{ fontSize: 13, color: heroSub, display: "flex", alignItems: "center", gap: 5 }}>📅 {new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}</span>}
+                {event?.event_time && <span style={{ fontSize: 13, color: heroSub, display: "flex", alignItems: "center", gap: 5 }}>🕐 {event.event_time}</span>}
+                {event?.location && <span style={{ fontSize: 13, color: heroSub, display: "flex", alignItems: "center", gap: 5 }}>📍 {event.location}</span>}
+              </div>
+              {/* About text */}
+              {landingPage?.about_text && (
+                <p style={{ fontSize: 13, color: heroSub, marginTop: 12, lineHeight: 1.65, maxWidth: 480 }}>{landingPage.about_text}</p>
+              )}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Form */}
       <div style={{ maxWidth: 560, margin: "0 auto", padding: "32px 20px 60px" }}>
