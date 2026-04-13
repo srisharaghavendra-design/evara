@@ -17,10 +17,13 @@ import {Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C} from "../com
 
 // LandingView
 function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
+  const [pageTab, setPageTab] = useState("std"); // "std" | "event"
   const [step, setStep] = useState(1);
+  const [stdStep, setStdStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(null);
+  const [stdPage, setStdPage] = useState(null);
   const [previewMode, setPreviewMode] = useState("desktop"); // desktop | mobile
   const [sideTab, setSideTab] = useState("content"); // content | design | sections
   const [aiGenerating, setAiGenerating] = useState(false);
@@ -34,6 +37,14 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
     title: "", tagline: "", description: "", headline: "", subheadline: "",
     about_text: "", brand_color: brandColor, cta_text: "Register Now",
     template: "corporate", slug: (activeEvent?.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    location_text: "", organiser: "",
+  });
+  const [stdInfo, setStdInfo] = useState({
+    title: "", tagline: "Mark your calendar", description: "",
+    headline: "", subheadline: "", about_text: "",
+    brand_color: brandColor, cta_text: "Add to Calendar",
+    template: "corporate",
+    slug: (activeEvent?.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-std",
     location_text: "", organiser: "",
   });
 
@@ -57,74 +68,72 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
 
   useEffect(() => {
     if (!activeEvent || !profile) return;
-    supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).maybeSingle()
+    const slug = (activeEvent.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const baseInfo = { title: activeEvent.name||"", description: activeEvent.description||"", location_text: activeEvent.location||"", organiser: profile?.companies?.name||"" };
+
+    const autoGenerate = async (type, setI, setS, extraPrompt="") => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+          method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
+          body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:600,
+            messages:[{ role:"user", content:`Write landing page copy for this event. Return JSON only with keys: headline, subheadline, tagline, about_text, cta_text. ${extraPrompt} Event: ${activeEvent.name}. Date: ${activeEvent.event_date||"TBC"}. Location: ${activeEvent.location||"TBC"}. Type: ${activeEvent.event_type||"event"}. Description: ${activeEvent.description||"Professional event"}. Keep headline punchy (max 8 words), subheadline 1 sentence, tagline 5 words, about_text 2-3 sentences, cta_text 3 words max.` }] })
+        });
+        const d = await res.json();
+        const parsed = JSON.parse((d.content?.[0]?.text||"{}").replace(/\`\`\`json|\`\`\`/g,"").trim());
+        if (type === "std") parsed.cta_text = "Add to Calendar";
+        setI(p => ({ ...p, ...parsed }));
+        setS(2);
+      } catch(_) { setS(2); }
+    };
+
+    // Load Event page
+    supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).eq("page_type","event").maybeSingle()
       .then(async ({ data }) => {
         if (data) {
           setPage(data);
-          setInfo({ title: data.title || "", tagline: data.tagline || "", description: data.description || "", headline: data.headline || "", subheadline: data.subheadline || "", about_text: data.about_text || "", brand_color: data.brand_color || brandColor, cta_text: data.cta_text || "Register Now", template: data.template || "corporate", slug: data.slug || (activeEvent?.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "", location_text: data.location_text || "", organiser: data.organiser || "" });
+          setInfo({ title:data.title||"", tagline:data.tagline||"", description:data.description||"", headline:data.headline||"", subheadline:data.subheadline||"", about_text:data.about_text||"", brand_color:data.brand_color||brandColor, cta_text:data.cta_text||"Register Now", template:data.template||"corporate", slug:data.slug||slug, location_text:data.location_text||"", organiser:data.organiser||"" });
           setBlocks(data.blocks || blocks);
           setStep(2);
-          // Auto-generate AI copy if headline is missing
-          if (!data.headline && activeEvent?.name) {
-            try {
-              const { data: { session } } = await supabase.auth.getSession();
-              const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 600,
-                  messages: [{ role: "user", content: `Write landing page copy for this event. Return JSON only with keys: headline, subheadline, tagline, about_text, cta_text. Event: ${activeEvent.name}. Date: ${activeEvent.event_date || "TBC"}. Location: ${activeEvent.location || "TBC"}. Type: ${activeEvent.event_type || "event"}. Description: ${activeEvent.description || "Professional event"}. Keep headline punchy (max 8 words), subheadline 1 sentence, tagline 5 words, about_text 2-3 sentences, cta_text 3 words max.` }] })
-              });
-              const d = await res.json();
-              const parsed = JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
-              setInfo(p => ({ ...p, ...parsed }));
-            } catch(_) {}
-          }
-        } else if (activeEvent?.name) {
-          // No landing page — auto-generate from brief and go straight to editor
-          setLoading(false);
-          try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-              body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 600,
-                messages: [{ role: "user", content: `Write landing page copy for this event. Return JSON only with keys: headline, subheadline, tagline, about_text, cta_text. Event: ${activeEvent.name}. Date: ${activeEvent.event_date || "TBC"}. Location: ${activeEvent.location || "TBC"}. Type: ${activeEvent.event_type || "event"}. Description: ${activeEvent.description || "Professional event"}. Keep headline punchy (max 8 words), subheadline 1 sentence, tagline 5 words, about_text 2-3 sentences, cta_text 3 words max.` }] })
-            });
-            const d = await res.json();
-            const parsed = JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
-            setInfo(p => ({ ...p, ...parsed, template: p.template || "corporate" }));
-            setStep(2); // skip template picker — go straight to editor with AI content
-            fire("✨ Landing page pre-filled from your event brief — review and publish!");
-          } catch(e) {
-            setStep(2); // even if AI fails, go to editor with event data
-          }
-          return;
+          if (!data.headline) autoGenerate("event", setInfo, setStep);
+        } else {
+          setInfo(p => ({ ...p, ...baseInfo, slug, cta_text:"Register Now" }));
+          autoGenerate("event", setInfo, setStep);
         }
         setLoading(false);
       });
-    // Also load the form for this event
-    supabase.from("forms").select("*").eq("event_id", activeEvent.id).limit(1).maybeSingle()
-      .then(({ data }) => {
+
+    // Load Save the Date page
+    supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).eq("page_type","save_the_date").maybeSingle()
+      .then(async ({ data }) => {
         if (data) {
-          setFormId(data.id);
-          setFormFields(data.fields || []);
-          setFormShareToken(data.share_token || null);
+          setStdPage(data);
+          setStdInfo({ title:data.title||"", tagline:data.tagline||"Mark your calendar", description:data.description||"", headline:data.headline||"", subheadline:data.subheadline||"", about_text:data.about_text||"", brand_color:data.brand_color||brandColor, cta_text:"Add to Calendar", template:data.template||"corporate", slug:data.slug||slug+"-std", location_text:data.location_text||"", organiser:data.organiser||"" });
+          setStdStep(2);
+          if (!data.headline) autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
+        } else {
+          setStdInfo(p => ({ ...p, ...baseInfo, slug:slug+"-std", cta_text:"Add to Calendar" }));
+          autoGenerate("std", setStdInfo, setStdStep, "This is a Save the Date teaser — keep it brief and exciting. cta_text must be 'Add to Calendar'.");
         }
       });
-    if (activeEvent) {
-      setInfo(p => ({ ...p, title: p.title || activeEvent.name || "", description: p.description || activeEvent.description || "", location_text: p.location_text || activeEvent.location || "", slug: p.slug || (activeEvent.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-"), organiser: p.organiser || profile?.companies?.name || "" }));
-    }
+
+    // Load form
+    supabase.from("forms").select("*").eq("event_id", activeEvent.id).limit(1).maybeSingle()
+      .then(({ data }) => {
+        if (data) { setFormId(data.id); setFormFields(data.fields||[]); setFormShareToken(data.share_token||null); }
+      });
   }, [activeEvent, profile]);
 
   const save = async (publish = false) => {
+    const isStd = pageTab === "std";
+    const activeInfo = isStd ? stdInfo : info;
     if (!activeEvent || !profile) return; setSaving(true);
-    // Derive reg_url from form share token
     const formLink = formShareToken ? `${window.location.origin}/form/${formShareToken}` : formShareLink || "";
-    const payload = { event_id: activeEvent.id, company_id: profile.company_id, ...info, blocks, is_published: publish, reg_url: formLink || info.reg_url || "" };
-    const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id" }).select().single();
+    const payload = { event_id: activeEvent.id, company_id: profile.company_id, page_type: isStd ? "save_the_date" : "event", ...activeInfo, blocks, is_published: publish, reg_url: isStd ? "" : (formLink || activeInfo.reg_url || "") };
+    const { data, error } = await supabase.from("landing_pages").upsert(payload, { onConflict: "event_id,page_type" }).select().single();
     if (error) { fire(error.message, "err"); }
     else {
-      setPage(data);
+      if (isStd) setStdPage(data); else setPage(data);
       // On publish: activate the form + save any field changes
       if (publish) {
         if (formId) {
@@ -185,14 +194,14 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
     setAiGenerating(false);
   };
 
-  const tmpl = TMPLS.find(t => t.id === info.template) || TMPLS[1];
-  const accent = info.brand_color || brandColor;
+  const tmpl = TMPLS.find(t => t.id === activeInfo.template) || TMPLS[1];
+  const accent = activeInfo.brand_color || brandColor;
 
   // ── Template mini-preview ──
   const TemplateThumbnail = ({ t, selected }) => {
     const a = t.id === "neon" ? "#39FF14" : t.id === "editorial" ? "#000" : t.id === "minimal" ? "#111" : accent;
     return (
-      <div onClick={() => { setInfo(p => ({ ...p, template: t.id })); setStep(2); }}
+      <div onClick={() => { setActiveInfo(p => ({ ...p, template: t.id })); setStep(2); }}
         style={{ borderRadius: 10, border: `2px solid ${selected ? accent : C.border}`, overflow: "hidden", cursor: "pointer", transition: "all .15s", boxShadow: selected ? `0 0 0 2px ${accent}40` : "none" }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.transform = "translateY(-2px)"; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = selected ? accent : C.border; e.currentTarget.style.transform = "none"; }}>
@@ -227,43 +236,43 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
 
   // ── Rich live preview ──
   const LivePreview = () => {
-    const isMinimal = info.template === "minimal" || info.template === "light" || info.template === "editorial";
+    const isMinimal = activeInfo.template === "minimal" || activeInfo.template === "light" || activeInfo.template === "editorial";
     const textColor = tmpl.textCol;
     const subColor = isMinimal ? "#555" : "rgba(255,255,255,0.6)";
     const borderCol = isMinimal ? "#E5E5E7" : "rgba(255,255,255,0.1)";
-    const a = info.template === "neon" ? "#39FF14" : info.template === "editorial" ? "#000" : info.template === "minimal" ? "#111" : accent;
+    const a = activeInfo.template === "neon" ? "#39FF14" : activeInfo.template === "editorial" ? "#000" : activeInfo.template === "minimal" ? "#111" : accent;
 
     const days = activeEvent?.event_date ? Math.max(0, Math.ceil((new Date(activeEvent.event_date) - new Date()) / (1000*60*60*24))) : null;
 
     return (
-      <div style={{ background: tmpl.bg, fontFamily: info.template==="editorial" ? "Georgia,serif" : "Outfit,sans-serif", color: textColor, minHeight:"100%", fontSize:14 }}>
+      <div style={{ background: tmpl.bg, fontFamily: activeInfo.template==="editorial" ? "Georgia,serif" : "Outfit,sans-serif", color: textColor, minHeight:"100%", fontSize:14 }}>
         {/* Top accent bar */}
-        {info.template === "editorial" && <div style={{ height:4, background:"#000" }} />}
-        {info.template === "neon" && <div style={{ height:2, background:`linear-gradient(90deg, transparent, #39FF14, transparent)` }} />}
+        {activeInfo.template === "editorial" && <div style={{ height:4, background:"#000" }} />}
+        {activeInfo.template === "neon" && <div style={{ height:2, background:`linear-gradient(90deg, transparent, #39FF14, transparent)` }} />}
 
         {/* Nav */}
         <div style={{ padding:"12px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", borderBottom:`1px solid ${borderCol}` }}>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             {logoUrl && <img src={logoUrl} alt="" style={{ height:22, objectFit:"contain" }} />}
-            <span style={{ fontSize:13, fontWeight:700, color:textColor }}>{info.organiser || profile?.companies?.name || "Organiser"}</span>
+            <span style={{ fontSize:13, fontWeight:700, color:textColor }}>{activeInfo.organiser || profile?.companies?.name || "Organiser"}</span>
           </div>
-          <div style={{ background:a, color: info.template==="neon"?"#000":"#fff", padding:"5px 14px", borderRadius:5, fontSize:11.5, fontWeight:600, cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+          <div style={{ background:a, color: activeInfo.template==="neon"?"#000":"#fff", padding:"5px 14px", borderRadius:5, fontSize:11.5, fontWeight:600, cursor:"pointer" }}>{activeInfo.cta_text || "Register Now"}</div>
         </div>
 
         {/* Hero */}
         {blocks.hero && (
           <div style={{ padding: previewMode==="mobile" ? "36px 20px" : "52px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
-            {(info.template==="bold"||info.template==="neon") && <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse at 50% 0%, ${a}25 0%, transparent 65%)`, pointerEvents:"none" }} />}
+            {(activeInfo.template==="bold"||activeInfo.template==="neon") && <div style={{ position:"absolute", inset:0, background:`radial-gradient(ellipse at 50% 0%, ${a}25 0%, transparent 65%)`, pointerEvents:"none" }} />}
             {activeEvent?.event_date && (
               <div style={{ fontSize:10, fontWeight:600, color:a, textTransform:"uppercase", letterSpacing:"2px", marginBottom:10 }}>
                 {new Date(activeEvent.event_date).toLocaleDateString("en-AU", { day:"numeric", month:"long", year:"numeric" })}
                 {activeEvent.location ? ` · ${activeEvent.location}` : ""}
               </div>
             )}
-            <h1 style={{ fontSize: previewMode==="mobile"?26:38, fontWeight:800, letterSpacing:"-0.8px", lineHeight:1.08, marginBottom:12, color:textColor }}>{info.headline || info.title || activeEvent?.name || "Event Title"}</h1>
-            {info.subheadline && <p style={{ fontSize: previewMode==="mobile"?13:15, color:subColor, maxWidth:460, margin:"0 auto 10px", lineHeight:1.6 }}>{info.subheadline}</p>}
-            {info.tagline && <p style={{ fontSize:13, color: isMinimal?"#888":"rgba(255,255,255,0.45)", marginBottom:20, fontStyle: info.template==="editorial"?"italic":"normal" }}>{info.tagline}</p>}
-            <div style={{ display:"inline-block", background:a, color: info.template==="neon"?"#000":"#fff", padding:"11px 28px", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+            <h1 style={{ fontSize: previewMode==="mobile"?26:38, fontWeight:800, letterSpacing:"-0.8px", lineHeight:1.08, marginBottom:12, color:textColor }}>{activeInfo.headline || activeInfo.title || activeEvent?.name || "Event Title"}</h1>
+            {activeInfo.subheadline && <p style={{ fontSize: previewMode==="mobile"?13:15, color:subColor, maxWidth:460, margin:"0 auto 10px", lineHeight:1.6 }}>{activeInfo.subheadline}</p>}
+            {activeInfo.tagline && <p style={{ fontSize:13, color: isMinimal?"#888":"rgba(255,255,255,0.45)", marginBottom:20, fontStyle: activeInfo.template==="editorial"?"italic":"normal" }}>{activeInfo.tagline}</p>}
+            <div style={{ display:"inline-block", background:a, color: activeInfo.template==="neon"?"#000":"#fff", padding:"11px 28px", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer" }}>{activeInfo.cta_text || "Register Now"}</div>
           </div>
         )}
 
@@ -284,7 +293,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
           <div style={{ padding:"24px", display:"grid", gridTemplateColumns: previewMode==="mobile"?"1fr":"1fr 1fr 1fr", gap:12, borderBottom:`1px solid ${borderCol}` }}>
             {[
               { icon:"📅", label:"Date", val: activeEvent?.event_date ? new Date(activeEvent.event_date).toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long",year:"numeric"}) : "Date TBC" },
-              { icon:"📍", label:"Location", val: info.location_text || activeEvent?.location || "Location TBC" },
+              { icon:"📍", label:"Location", val: activeInfo.location_text || activeEvent?.location || "Location TBC" },
               { icon:"🕐", label:"Time", val: activeEvent?.event_time || "Time TBC" },
             ].map(({ icon, label, val }) => (
               <div key={label} style={{ background: isMinimal?"rgba(0,0,0,0.04)":"rgba(255,255,255,0.05)", border:`1px solid ${borderCol}`, borderRadius:8, padding:"12px 14px" }}>
@@ -297,10 +306,10 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         )}
 
         {/* About */}
-        {blocks.about && (info.about_text || info.description) && (
+        {blocks.about && (activeInfo.about_text || activeInfo.description) && (
           <div style={{ padding:"24px 28px", borderBottom:`1px solid ${borderCol}` }}>
             <div style={{ fontSize:9.5, color:a, textTransform:"uppercase", letterSpacing:"1.5px", fontWeight:600, marginBottom:10 }}>About</div>
-            <p style={{ fontSize:13.5, color:subColor, lineHeight:1.75, maxWidth:560 }}>{info.about_text || info.description}</p>
+            <p style={{ fontSize:13.5, color:subColor, lineHeight:1.75, maxWidth:560 }}>{activeInfo.about_text || activeInfo.description}</p>
           </div>
         )}
 
@@ -320,14 +329,14 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                       </div>
                     </div>
                   ))}
-                  <div style={{ marginTop:6, background:a, color:info.template==="neon"?"#000":"#fff", padding:"11px", borderRadius:7, fontSize:13, fontWeight:700, textAlign:"center", cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+                  <div style={{ marginTop:6, background:a, color:activeInfo.template==="neon"?"#000":"#fff", padding:"11px", borderRadius:7, fontSize:13, fontWeight:700, textAlign:"center", cursor:"pointer" }}>{activeInfo.cta_text || "Register Now"}</div>
                 </div>
               </div>
             ) : (
               <div>
                 <div style={{ fontSize:16, fontWeight:700, color:textColor, marginBottom:6 }}>Ready to attend?</div>
                 <div style={{ fontSize:12.5, color:subColor, marginBottom:16 }}>Secure your spot before registrations close.</div>
-                <div style={{ display:"inline-block", background:a, color:info.template==="neon"?"#000":"#fff", padding:"12px 32px", borderRadius:8, fontSize:13.5, fontWeight:700, cursor:"pointer" }}>{info.cta_text || "Register Now"}</div>
+                <div style={{ display:"inline-block", background:a, color:activeInfo.template==="neon"?"#000":"#fff", padding:"12px 32px", borderRadius:8, fontSize:13.5, fontWeight:700, cursor:"pointer" }}>{activeInfo.cta_text || "Register Now"}</div>
               </div>
             )}
           </div>
@@ -335,7 +344,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
 
         {/* Footer */}
         <div style={{ padding:"14px 24px", display:"flex", alignItems:"center", justifyContent:"space-between", borderTop:`1px solid ${borderCol}`, opacity:0.6 }}>
-          <span style={{ fontSize:11 }}>© 2025 {info.organiser || profile?.companies?.name}</span>
+          <span style={{ fontSize:11 }}>© 2025 {activeInfo.organiser || profile?.companies?.name}</span>
           <span style={{ fontSize:11 }}>Powered by evara</span>
         </div>
       </div>
@@ -344,26 +353,52 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
 
   if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "50vh", gap: 10, color: C.muted }}><Spin />Loading…</div>;
 
+  // Wire active tab to correct state
+  const activeInfo = pageTab === "std" ? stdInfo : info;
+  const setActiveInfo = pageTab === "std" ? setStdInfo : setInfo;
+  const activeStep = pageTab === "std" ? stdStep : step;
+  const setActiveStep = pageTab === "std" ? setStdStep : setStep;
+  const activePage = pageTab === "std" ? stdPage : page;
+
   return (
     <div style={{ animation: "fadeUp .2s ease", display: "flex", flexDirection: "column", height: "calc(100vh - 110px)" }}>
+
+      {/* Tab switcher */}
+      <div style={{ display: "flex", gap: 0, marginBottom: 16, background: C.raised, borderRadius: 10, padding: 4, alignSelf: "flex-start", flexShrink: 0 }}>
+        {[
+          { id: "std", label: "📅 Save the Date", hint: "Teaser page with .ics download" },
+          { id: "event", label: "🌐 Event Page", hint: "Full page with registration form" }
+        ].map(t => (
+          <button key={t.id} onClick={() => setPageTab(t.id)}
+            style={{ padding: "8px 18px", borderRadius: 7, border: "none", background: pageTab === t.id ? C.blue : "transparent", color: pageTab === t.id ? "#fff" : C.muted, fontSize: 13, fontWeight: pageTab === t.id ? 600 : 400, cursor: "pointer", transition: "all .15s" }}
+            title={t.hint}>
+            {t.label}
+            {pageTab === t.id && (activePage?.is_published ? <span style={{ marginLeft: 6, fontSize: 10, background: "rgba(255,255,255,0.25)", padding: "1px 6px", borderRadius: 4 }}>Live</span> : null)}
+          </button>
+        ))}
+      </div>
+
       {/* Header */}
       <div style={{ marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", color: C.text }}>Landing Page Builder</h1>
-          <p style={{ color: C.muted, fontSize: 12.5, marginTop: 3 }}>Event page live in minutes — publish when ready.</p>
+          <h1 style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.5px", color: C.text }}>
+            {pageTab === "std" ? "Save the Date Page" : "Event Registration Page"}
+          </h1>
+          <p style={{ color: C.muted, fontSize: 12.5, marginTop: 3 }}>
+            {pageTab === "std" ? "Teaser page — CTA downloads .ics to add to calendar" : "Full event page with registration form"}
+          </p>
         </div>
-        {step === 2 && (
+        {activeStep === 2 && (
           <div style={{ display: "flex", gap: 8, alignItems:"center" }}>
-            {page?.is_published && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: C.green, padding: "6px 12px", background: `${C.green}12`, border: `1px solid ${C.green}30`, borderRadius: 6 }}><div style={{ width:6,height:6,borderRadius:"50%",background:C.green }} /> Live</div>}
-            <button onClick={() => setStep(1)} style={{ fontSize: 12.5, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>← Templates</button>
+            {activePage?.is_published && <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: C.green, padding: "6px 12px", background: `${C.green}12`, border: `1px solid ${C.green}30`, borderRadius: 6 }}><div style={{ width:6,height:6,borderRadius:"50%",background:C.green }} /> Live</div>}
+            <button onClick={() => setActiveStep(1)} style={{ fontSize: 12.5, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>← Templates</button>
             <button onClick={() => save(false)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.text, cursor: "pointer" }}>{saving ? <Spin /> : "Save draft"}</button>
             <button onClick={() => save(true)} disabled={saving} style={{ fontSize: 12.5, padding: "7px 18px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>{saving ? <><Spin />Publishing…</> : "Publish →"}</button>
-            {page?.id && (
+            {activePage?.id && (
               <button onClick={async () => {
                 if (!window.confirm("Delete this landing page? This cannot be undone.")) return;
-                await supabase.from("landing_pages").delete().eq("id", page.id);
-                setPage(null);
-                setStep(1);
+                await supabase.from("landing_pages").delete().eq("id", activePage.id);
+                if (pageTab === "std") { setStdPage(null); setStdStep(1); } else { setPage(null); setStep(1); }
                 fire("🗑 Landing page deleted");
               }} style={{ fontSize: 12.5, padding: "7px 10px", borderRadius: 7, border: `1px solid ${C.red}30`, background: `${C.red}08`, color: C.red, cursor: "pointer" }}>🗑</button>
             )}
@@ -372,11 +407,11 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
       </div>
 
       {/* Live URL bar */}
-      {page?.is_published && page?.slug && (
+      {activePage?.is_published && activePage?.slug && (
         <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: C.green + "10", border: `1px solid ${C.green}25`, borderRadius: 8, marginBottom: 10, flexShrink:0 }}>
           <div style={{ width: 6, height: 6, borderRadius: "50%", background: C.green }} />
           <span style={{ fontSize: 11, color: C.green, fontWeight: 600 }}>Live:</span>
-          <code style={{ fontSize: 11.5, color: C.text, flex:1 }}>{window.location.origin}/page/{page.slug}</code>
+          <code style={{ fontSize: 11.5, color: C.text, flex:1 }}>{window.location.origin}/page/{activePage.slug}</code>
           <button onClick={() => { navigator.clipboard?.writeText(`${window.location.origin}/page/${page.slug}`); fire("✅ URL copied!"); }} style={{ fontSize: 10.5, padding: "3px 10px", background: C.green + "20", border: `1px solid ${C.green}40`, borderRadius: 5, color: C.green, cursor: "pointer", fontWeight: 500 }}>Copy</button>
           <button onClick={() => {
             const url = `${window.location.origin}/page/${page.slug}`;
@@ -392,17 +427,17 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
       )}
 
       {/* Template picker */}
-      {step === 1 && (
+      {activeStep === 1 && (
         <div style={{ flex:1, overflow:"auto" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: 14 }}>Choose a template</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, paddingBottom:20 }}>
-            {TMPLS.map(t => <TemplateThumbnail key={t.id} t={t} selected={info.template === t.id} />)}
+            {TMPLS.map(t => <TemplateThumbnail key={t.id} t={t} selected={activeInfo.template === t.id} />)}
           </div>
         </div>
       )}
 
       {/* ── LP Preview banner — shows what AI built ── */}
-      {step === 2 && page && !page.is_published && (
+      {activeStep === 2 && activePage && !activePage.is_published && (
         <div style={{ marginBottom:12, padding:"12px 16px", background:C.amber+"10", border:`1px solid ${C.amber}35`, borderRadius:10 }}>
           <div style={{ fontSize:13, fontWeight:600, color:C.amber, marginBottom:4 }}>📝 Your AI-drafted landing page is ready to review</div>
           <div style={{ fontSize:12, color:C.muted }}>Edit the content on the left, preview on the right, then click <strong>Publish →</strong> when it looks good.</div>
@@ -433,7 +468,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>Page URL</div>
                     <div style={{ display:"flex", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, overflow:"hidden" }}>
                       <span style={{ fontSize:10, color:C.muted, padding:"8px 6px 8px 8px", whiteSpace:"nowrap", borderRight:`1px solid ${C.border}` }}>/page/</span>
-                      <input value={info.slug} onChange={e => setInfo(p => ({ ...p, slug: e.target.value.replace(/[^a-z0-9-]/g, "-") }))} style={{ flex:1, background:"none", border:"none", outline:"none", color:C.text, padding:"8px 6px", fontSize:11.5, fontFamily:"monospace" }} />
+                      <input value={activeInfo.slug} onChange={e => setActiveInfo(p => ({ ...p, slug: e.target.value.replace(/[^a-z0-9-]/g, "-") }))} style={{ flex:1, background:"none", border:"none", outline:"none", color:C.text, padding:"8px 6px", fontSize:11.5, fontFamily:"monospace" }} />
                     </div>
                   </div>
                   {[
@@ -447,12 +482,12 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                   ].map(f => (
                     <div key={f.k}>
                       <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>{f.label}</div>
-                      <input value={info[f.k]||""} onChange={e => setInfo(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.ph} style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                      <input value={info[f.k]||""} onChange={e => setActiveInfo(p => ({ ...p, [f.k]: e.target.value }))} placeholder={f.ph} style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                     </div>
                   ))}
                   <div>
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:4, fontWeight:500 }}>About section</div>
-                    <textarea value={info.about_text||""} onChange={e => setInfo(p=>({...p, about_text:e.target.value}))} rows={4} placeholder="What attendees will experience..." style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5 }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
+                    <textarea value={activeInfo.about_text||""} onChange={e => setActiveInfo(p=>({...p, about_text:e.target.value}))} rows={4} placeholder="What attendees will experience..." style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none", resize:"none", lineHeight:1.5 }} onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                   </div>
 
                   {/* SEO + Social Meta */}
@@ -460,29 +495,29 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.6px", marginBottom:8 }}>SEO & Social Preview</div>
                     <div style={{ marginBottom:8 }}>
                       <div style={{ fontSize:10.5, color:C.muted, marginBottom:4 }}>Meta title <span style={{ color:C.muted, fontSize:9 }}>(55–60 chars ideal)</span></div>
-                      <input value={info.meta_title||""} onChange={e=>setInfo(p=>({...p,meta_title:e.target.value}))} placeholder={`${activeEvent?.name || "Event"} — Register Now`}
+                      <input value={info.meta_title||""} onChange={e=>setActiveInfo(p=>({...p,meta_title:e.target.value}))} placeholder={`${activeEvent?.name || "Event"} — Register Now`}
                         style={{ width:"100%", background:C.bg, border:`1px solid ${(info.meta_title||"").length>60?C.red:(info.meta_title||"").length>45?C.green:C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12.5, outline:"none" }}
                         onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                       <div style={{ fontSize:10, color:(info.meta_title||"").length>60?C.red:C.muted, marginTop:2 }}>{(info.meta_title||"").length}/60</div>
                     </div>
                     <div style={{ marginBottom:8 }}>
                       <div style={{ fontSize:10.5, color:C.muted, marginBottom:4 }}>Meta description <span style={{ color:C.muted, fontSize:9 }}>(150–160 chars)</span></div>
-                      <textarea value={info.meta_description||""} onChange={e=>setInfo(p=>({...p,meta_description:e.target.value}))} rows={2}
+                      <textarea value={info.meta_description||""} onChange={e=>setActiveInfo(p=>({...p,meta_description:e.target.value}))} rows={2}
                         placeholder="Join us for..."
                         style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"7px 9px", fontSize:12, outline:"none", resize:"none" }}
                         onFocus={e=>e.target.style.borderColor=C.blue} onBlur={e=>e.target.style.borderColor=C.border} />
                       <div style={{ fontSize:10, color:(info.meta_description||"").length>160?C.red:C.muted, marginTop:2 }}>{(info.meta_description||"").length}/160</div>
                     </div>
                     {/* Social preview card */}
-                    {(info.meta_title||info.title) && (
+                    {(info.meta_title||activeInfo.title) && (
                       <div style={{ border:`1px solid ${C.border}`, borderRadius:8, overflow:"hidden" }}>
-                        <div style={{ height:48, background:`linear-gradient(135deg,${info.brand_color||C.blue}40,${info.brand_color||C.blue}20)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <div style={{ height:48, background:`linear-gradient(135deg,${activeInfo.brand_color||C.blue}40,${activeInfo.brand_color||C.blue}20)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
                           {logoUrl ? <img src={logoUrl} style={{ height:28, objectFit:"contain" }} alt="logo" /> : <span style={{ fontSize:11, color:C.muted }}>No image</span>}
                         </div>
                         <div style={{ padding:"8px 10px", background:C.raised }}>
-                          <div style={{ fontSize:11, fontWeight:600, color:C.text, marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{info.meta_title||info.title}</div>
-                          <div style={{ fontSize:10, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{info.meta_description||info.description}</div>
-                          <div style={{ fontSize:9, color:C.muted, marginTop:3 }}>evarahq.com/page/{info.slug}</div>
+                          <div style={{ fontSize:11, fontWeight:600, color:C.text, marginBottom:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{info.meta_title||activeInfo.title}</div>
+                          <div style={{ fontSize:10, color:C.muted, overflow:"hidden", textOverflow:"ellipsis", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>{info.meta_description||activeInfo.description}</div>
+                          <div style={{ fontSize:9, color:C.muted, marginTop:3 }}>evarahq.com/page/{activeInfo.slug}</div>
                         </div>
                       </div>
                     )}
@@ -496,7 +531,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:8, fontWeight:500 }}>Template</div>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:6 }}>
                       {TMPLS.map(t => (
-                        <button key={t.id} onClick={() => setInfo(p => ({...p, template:t.id}))} style={{ padding:"7px 8px", borderRadius:7, border:`2px solid ${info.template===t.id ? accent : C.border}`, background: info.template===t.id ? accent+"18" : C.bg, color: info.template===t.id ? accent : C.sec, fontSize:11.5, fontWeight: info.template===t.id ? 600 : 400, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
+                        <button key={t.id} onClick={() => setActiveInfo(p => ({...p, template:t.id}))} style={{ padding:"7px 8px", borderRadius:7, border:`2px solid ${activeInfo.template===t.id ? accent : C.border}`, background: activeInfo.template===t.id ? accent+"18" : C.bg, color: activeInfo.template===t.id ? accent : C.sec, fontSize:11.5, fontWeight: activeInfo.template===t.id ? 600 : 400, cursor:"pointer", display:"flex", alignItems:"center", gap:5 }}>
                           <div style={{ width:10, height:10, borderRadius:2, background: t.bg, border:`1px solid ${C.border}`, flexShrink:0 }} />
                           {t.name}
                         </button>
@@ -506,8 +541,8 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                   <div>
                     <div style={{ fontSize:10.5, color:C.muted, marginBottom:6, fontWeight:500 }}>Accent colour</div>
                     <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                      <input type="color" value={info.brand_color||accent} onChange={e=>setInfo(p=>({...p,brand_color:e.target.value}))} style={{ width:36, height:30, border:"none", background:"none", cursor:"pointer", padding:0 }} />
-                      <input value={info.brand_color||accent} onChange={e=>setInfo(p=>({...p,brand_color:e.target.value}))} style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"6px 8px", fontSize:12, outline:"none" }} />
+                      <input type="color" value={activeInfo.brand_color||accent} onChange={e=>setActiveInfo(p=>({...p,brand_color:e.target.value}))} style={{ width:36, height:30, border:"none", background:"none", cursor:"pointer", padding:0 }} />
+                      <input value={activeInfo.brand_color||accent} onChange={e=>setActiveInfo(p=>({...p,brand_color:e.target.value}))} style={{ flex:1, background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"6px 8px", fontSize:12, outline:"none" }} />
                     </div>
                   </div>
                 </div>
@@ -581,7 +616,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, flexShrink:0 }}>
               <div style={{ display:"flex", alignItems:"center", gap:6, background:C.card, border:`1px solid ${C.border}`, borderRadius:7, padding:"5px 10px" }}>
                 <Globe size={11} color={C.muted} />
-                <span style={{ fontSize:11.5, color:C.muted, fontFamily:"monospace" }}>{window.location.origin}/page/{info.slug || "your-event"}</span>
+                <span style={{ fontSize:11.5, color:C.muted, fontFamily:"monospace" }}>{window.location.origin}/page/{activeInfo.slug || "your-event"}</span>
               </div>
               <div style={{ display:"flex", gap:4 }}>
                 {[{id:"desktop",icon:"🖥"},{id:"mobile",icon:"📱"}].map(m => (
