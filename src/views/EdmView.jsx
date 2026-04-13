@@ -713,21 +713,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
           </button>
 
           {/* ── SEND TO MY INBOX — always visible ── */}
-          {preview && profile?.email && (
-            <button onClick={async () => {
-              const { data: { session } } = await supabase.auth.getSession();
-              setSendingTest(true);
-              const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-                body: JSON.stringify({ contacts:[{ email:profile.email, first_name:profile.full_name?.split(" ")[0]||"Test" }], subject:`[PREVIEW] ${preview.subject}`, htmlContent:preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g,"#"), ...getSender(profile) })
-              });
-              setSendingTest(false);
-              const d = await res.json();
-              fire(d.sent > 0 ? `✅ Sent to ${profile.email}` : "Send failed", d.sent > 0 ? "ok" : "err");
-            }} style={{ padding:"9px", borderRadius:7, border:`1px solid ${C.green}40`, background:`${C.green}08`, color:C.green, fontSize:12.5, fontWeight:600, display:"flex", alignItems:"center", justifyContent:"center", gap:6, cursor:"pointer", transition:"all .1s" }}>
-              {sendingTest ? "Sending…" : `⚡ Send to my inbox (${profile.email})`}
-            </button>
-          )}
+
 
           {campaigns.length === 0 && activeEvent && (
             <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}25`, borderRadius:10, padding:"16px 14px", marginTop:8 }}>
@@ -1055,7 +1041,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                     {(previewTab || "html") === "html" ? (
                       <iframe srcDoc={(() => {
                           const html = (preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#');
-                          const script = `<script>window.addEventListener('load',()=>{parent.postMessage({iframeHeight:document.body.scrollHeight},'*');});<\/script>`;
+                          const script = `<script>window.addEventListener('load',function(){var els=document.querySelectorAll('table,div,td');var maxBottom=0;for(var i=0;i<els.length;i++){var r=els[i].getBoundingClientRect();if(r.bottom>maxBottom)maxBottom=r.bottom;}parent.postMessage({iframeHeight:Math.ceil(maxBottom)+8},'*');});<\/script>`;
                           return html.replace('</body>', script + '</body>') || html + script;
                         })()}
                         style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "750px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
