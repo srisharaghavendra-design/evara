@@ -1154,10 +1154,15 @@ function MainApp({ session }) {
               {!sidebarOpen && <div style={{ height:8 }} />}
               {group.items.map(({ id, label, icon: Icon, badge }) => {
                 const on = view === id;
-                return (<button key={id} data-view={id} className="nb nav-btn" onClick={() => { setView(id); if (window.innerWidth <= 768) setSidebarOpen(false); }} title={!sidebarOpen ? label : undefined} style={{ display: "flex", alignItems: "center", gap: sidebarOpen?8:0, padding: sidebarOpen?"7px 10px":"8px", justifyContent: sidebarOpen?"flex-start":"center", borderRadius: 7, border: "none", background: on ? `${C.blue}16` : "transparent", color: on ? C.blue : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: sidebarOpen?`2px solid ${on ? C.blue : "transparent"}`:"2px solid transparent", marginBottom: 1, boxShadow: on && sidebarOpen ? `inset 0 0 0 1px ${C.blue}18` : "none" }}>
+                const schedLocked = id === "schedule" && !(campaigns.length > 0 && campaigns.every(c => c.status === "approved" || c.status === "sent")) && !lpPublished;
+                return (<button key={id} data-view={id} className="nb nav-btn" onClick={() => {
+                  if (schedLocked) { fire("Approve all emails and publish your landing page first", "warn"); return; }
+                  setView(id); if (window.innerWidth <= 768) setSidebarOpen(false);
+                }} title={!sidebarOpen ? label : undefined} style={{ display: "flex", alignItems: "center", gap: sidebarOpen?8:0, padding: sidebarOpen?"7px 10px":"8px", justifyContent: sidebarOpen?"flex-start":"center", borderRadius: 7, border: "none", background: on ? `${C.blue}16` : "transparent", color: on ? C.blue : schedLocked ? C.muted : C.muted, width: "100%", textAlign: "left", fontSize: 12.5, fontWeight: on ? 600 : 400, borderLeft: sidebarOpen?`2px solid ${on ? C.blue : "transparent"}`:"2px solid transparent", marginBottom: 1, boxShadow: on && sidebarOpen ? `inset 0 0 0 1px ${C.blue}18` : "none", opacity: schedLocked ? 0.5 : 1, cursor: schedLocked ? "not-allowed" : "pointer" }}>
                   <Icon size={14} strokeWidth={on ? 2.5 : 1.5} color={on ? C.blue : C.muted} />
                   {sidebarOpen && <><span style={{ flex: 1 }}>{label}</span>
-                  {badge && <span style={{ fontSize: 9, fontWeight: 700, background: on ? C.blue : `${C.blue}20`, color: on ? "#fff" : C.blue, padding: "1px 5px", borderRadius: 3, letterSpacing:"0.3px" }}>{badge}</span>}</>}
+                  {schedLocked && <span style={{ fontSize:9 }}>🔒</span>}
+                  {badge && !schedLocked && <span style={{ fontSize: 9, fontWeight: 700, background: on ? C.blue : `${C.blue}20`, color: on ? "#fff" : C.blue, padding: "1px 5px", borderRadius: 3, letterSpacing:"0.3px" }}>{badge}</span>}</>}
                 </button>);
               })}
             </div>
@@ -1287,7 +1292,7 @@ function MainApp({ session }) {
         {/* ── JOURNEY PROGRESS STRIP — 4-step guided flow ── */}
         {activeEvent && (() => {
           // Step completion logic — driven by real data
-          const step1Done = campaigns.some(c => c.status === "approved" || c.status === "sent");
+          const step1Done = campaigns.length > 0 && campaigns.every(c => c.status === "approved" || c.status === "sent");
           const step2Done = lpPublished;
           const step3Done = !!formShareLink;
           const step4Done = campaigns.some(c => c.status === "sent");
@@ -1311,16 +1316,24 @@ function MainApp({ session }) {
                   const isDone = stepDone[i];
                   const isPending = !isDone && !isCurrent;
                   const hovered = hoveredNav === item.id;
+                  const isSchedule = item.id === "schedule";
+                  const schedLocked = isSchedule && !(step1Done && step2Done);
 
-                  const dotColor = isDone ? C.green : isCurrent ? C.blue : C.border;
-                  const labelColor = isDone ? C.green : isCurrent ? C.blue : hovered ? C.text : C.muted;
+                  const dotColor = isDone ? C.green : isCurrent ? C.blue : schedLocked ? C.red + "60" : C.border;
+                  const labelColor = isDone ? C.green : isCurrent ? C.blue : schedLocked ? C.muted : hovered ? C.text : C.muted;
                   const numBg = isDone ? C.green + "20" : isCurrent ? C.blue + "18" : "transparent";
                   const numColor = isDone ? C.green : isCurrent ? C.blue : C.muted;
 
                   return (
                     <div key={item.id} style={{ display:"flex", alignItems:"center", flexShrink:0 }}>
                       <button
-                        onClick={() => setView(item.id)}
+                        onClick={() => {
+                          if (schedLocked) {
+                            fire(!step1Done ? "Approve all emails in Step 1 first" : "Publish your landing page in Step 2 first", "warn");
+                            return;
+                          }
+                          setView(item.id);
+                        }}
                         onMouseEnter={() => setHoveredNav(item.id)}
                         onMouseLeave={() => setHoveredNav(null)}
                         style={{
@@ -1328,7 +1341,9 @@ function MainApp({ session }) {
                           gap:3, padding:"10px 14px",
                           background:"transparent", border:"none",
                           borderBottom:`2.5px solid ${isCurrent ? C.blue : "transparent"}`,
-                          cursor:"pointer", transition:"all .12s", minWidth:120
+                          cursor: schedLocked ? "not-allowed" : "pointer",
+                          transition:"all .12s", minWidth:120,
+                          opacity: schedLocked ? 0.55 : 1,
                         }}>
                         {/* Top row: step number + icon + label + badge */}
                         <div style={{ display:"flex", alignItems:"center", gap:6 }}>
@@ -1338,7 +1353,7 @@ function MainApp({ session }) {
                             display:"flex", alignItems:"center", justifyContent:"center",
                             fontSize:9.5, fontWeight:700, color:numColor, flexShrink:0
                           }}>
-                            {isDone ? "✓" : item.step}
+                            {isDone ? "✓" : schedLocked ? "🔒" : item.step}
                           </div>
                           <item.icon size={13} strokeWidth={1.8} />
                           <span style={{ fontSize:12.5, fontWeight:isCurrent ? 600 : 400, color:labelColor, whiteSpace:"nowrap" }}>
