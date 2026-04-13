@@ -169,9 +169,13 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
     if (!activeEvent || !profile) return;
     let pollTimer = null;
     const fetchCampaigns = () => {
-      supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false })
+      supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: true })
         .then(({ data: d }) => {
-          const list = d || [];
+          const TYPE_ORDER = ["save_the_date","invitation","reminder","reminder_week","reminder_day","confirmation","byo","thank_you"];
+          const list = (d || []).sort((a,b) => {
+            const ai = TYPE_ORDER.indexOf(a.email_type); const bi = TYPE_ORDER.indexOf(b.email_type);
+            return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+          });
           setCampaigns(list);
           if (!initialLoadDone.current && list.length > 0) {
             initialLoadDone.current = true;
@@ -341,6 +345,23 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
       fire(msg, "err");
     } finally { setGen(false); }
   };
+
+  // Full-page AI building state — replaces entire view
+  if (aiBuilding && campaigns.length === 0) {
+    return (
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", minHeight:"60vh", gap:20 }}>
+        <svg viewBox="0 0 56 56" width="52" height="52" style={{ animation:"spin 1.2s linear infinite" }}>
+          <circle cx="28" cy="28" r="24" fill="none" stroke="#0A84FF20" strokeWidth="4"/>
+          <circle cx="28" cy="28" r="24" fill="none" stroke="#0A84FF" strokeWidth="4" strokeDasharray="38 113" strokeLinecap="round"/>
+        </svg>
+        <div style={{ textAlign:"center" }}>
+          <div style={{ fontSize:17, fontWeight:700, color:"#1C1C1E", marginBottom:8 }}>AI is drafting your emails…</div>
+          <div style={{ fontSize:13, color:"#AEAEB2" }}>Building Save the Date, Invite, Reminder &amp; Thank You.</div>
+          <div style={{ fontSize:12, color:"#AEAEB2", marginTop:4 }}>This takes about 30 seconds — they'll appear automatically.</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
