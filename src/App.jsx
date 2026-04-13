@@ -897,7 +897,7 @@ function MainApp({ session }) {
       }
       const { data: evts } = await supabase.from("events").select("*").eq("company_id", prof?.company_id).order("event_date", { ascending: true });
       setEvents(evts || []);
-      if (evts?.length) setActiveEvent(evts[0]);
+      setActiveEvent(prev => prev || evts?.[0] || null);
     };
     load();
   }, [session]);
