@@ -41,7 +41,7 @@ const BLOCKED_DOMAINS = [
   "tempmail.com","throwaway.email","mailinator.com","guerrillamail.com"
 ];
 
-const isBusinessEmail = (email) => {
+export const isBusinessEmail = (email) => {
   if (!email || !email.includes("@")) return false;
   const domain = email.split("@")[1]?.toLowerCase();
   return domain && !BLOCKED_DOMAINS.includes(domain);
@@ -55,7 +55,7 @@ export const C = {
 };
 
 // Generate an ICS calendar file string
-const generateICS = (event) => {
+export const generateICS = (event) => {
   const formatDate = (dateStr, timeStr) => {
     if (!dateStr) return null;
     const d = new Date(dateStr + (timeStr ? "T" + timeStr.replace(/[^\d:]/g, "").replace(/^(\d):/, "0$1:") + ":00" : "T090000"));
@@ -77,7 +77,7 @@ const generateICS = (event) => {
   return ics;
 };
 
-const ST = {
+export const ST = {
   confirmed:{ label:"Confirmed", color:C.green  },
   declined: { label:"Declined",  color:C.red    },
   pending:  { label:"Pending",   color:C.amber  },
@@ -86,7 +86,7 @@ const ST = {
   waitlist: { label:"Waitlist",  color:"#8B5CF6" },
 };
 
-const NAV_GROUPS = [
+export const NAV_GROUPS = [
   { label: "Overview", items: [
     { id:"dashboard", label:"Dashboard",  icon:LayoutDashboard },
     { id:"calendar",  label:"Calendar",   icon:Calendar },
@@ -108,15 +108,15 @@ const NAV_GROUPS = [
 ];
 
 // Top bar BUILD tools — ordered by event flow
-const BUILD_NAV = [
+export const BUILD_NAV = [
   { id:"edm",      label:"Emails",       icon:"✉️", badge:"AI", step:1, hint:"Build & review your AI-generated emails" },
   { id:"landing",  label:"Landing Page", icon:"🌐", step:2,     hint:"Publish your event page — form lives here" },
   { id:"schedule", label:"Schedule",     icon:"📅", step:3,     hint:"Add contacts and set your send dates" },
   { id:"analytics",label:"Results",      icon:"📊", step:4,     hint:"Track opens, clicks and attendance" },
 ];
-const NAV = NAV_GROUPS.flatMap(g => g.items);
+export const NAV = NAV_GROUPS.flatMap(g => g.items);
 
-const EMAIL_TYPES = [
+export const EMAIL_TYPES = [
   {id:"save_the_date",label:"Save the Date"},
   {id:"invitation",   label:"Invitation"},
   {id:"reminder",     label:"Reminder"},
@@ -126,7 +126,7 @@ const EMAIL_TYPES = [
   {id:"thank_you",    label:"Thank You"},
 ];
 
-const ini = n => n?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "?";
+export const ini = n => n?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() || "?";
 
 // ─── WORLD-CLASS EMAIL TEMPLATE BUILDER ─────────────────────
 // Builds beautiful, table-based, Outlook-safe HTML emails
