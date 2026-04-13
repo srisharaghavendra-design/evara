@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, getSender } from "./lib/evara";
 import { buildEmailHtml } from "./lib/utils";
-import { Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone } from "./components/Shared";
+import { Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C } from "./components/Shared";
 
 // ── View imports ─────────────────────────────────────────────────────────────
 import DashView from "./views/DashView";
@@ -1747,4 +1747,5 @@ function AuthedApp() {
 }
 
 export default App;
+
 
