@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, ANON_KEY, getSender } from "../lib/evara";
 import { buildEmailHtml } from "../lib/utils";
-import { Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone } from "../components/Shared";
+import {Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, ST, C} from "../components/Shared";
 
 // EmailActivityTimeline + DashView
 function EmailActivityTimeline({ supabase, contactId, eventId, contact, eventContact }) {
