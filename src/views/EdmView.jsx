@@ -741,12 +741,12 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 <div key={cam.id}
                   style={{ padding: "9px 10px", borderRadius: 7, border: `1px solid ${C.border}`, marginBottom: 6, transition: "border-color .12s", background: C.bg }}
                   onMouseEnter={e => e.currentTarget.style.borderColor = C.blue} onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }} onClick={() => {
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4, cursor: cam.html_content ? "pointer" : "default" }} onClick={() => {
                     if (cam.html_content) {
                       setPreview({ subject: cam.subject, html: cam.html_content, plain_text: cam.plain_text, campaign_id: cam.id });
                       setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
                     }
-                  }} style={{ cursor: cam.html_content ? "pointer" : "default" }}>
+                  }}>
                     <span style={{ fontSize: 14, flexShrink: 0 }}>
                       {cam.email_type === "save_the_date" ? "📅" : cam.email_type === "invitation" ? "✉️" : cam.email_type === "reminder" ? "⏰" : cam.email_type === "day_of_details" ? "📍" : cam.email_type === "thank_you" ? "🙏" : cam.email_type === "confirmation" ? "✅" : "📧"}
                     </span>
