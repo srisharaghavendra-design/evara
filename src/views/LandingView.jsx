@@ -324,6 +324,14 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         </div>
       )}
 
+      {/* ── LP Preview banner — shows what AI built ── */}
+      {step === 2 && page && !page.is_published && (
+        <div style={{ marginBottom:12, padding:"12px 16px", background:C.amber+"10", border:`1px solid ${C.amber}35`, borderRadius:10 }}>
+          <div style={{ fontSize:13, fontWeight:600, color:C.amber, marginBottom:4 }}>📝 Your AI-drafted landing page is ready to review</div>
+          <div style={{ fontSize:12, color:C.muted }}>Edit the content on the left, preview on the right, then click <strong>Publish →</strong> when it looks good.</div>
+        </div>
+      )}
+
       {/* Editor */}
       {step === 2 && (
         <div style={{ display: "flex", gap: 12, flex: 1, minHeight: 0 }}>
@@ -356,6 +364,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
                     { k:"subheadline", ph:"One clear sentence about the event", label:"Subheadline" },
                     { k:"tagline", ph:"Short 5-word tagline", label:"Tagline" },
                     { k:"cta_text", ph:"Register Now", label:"Button text" },
+                    { k:"reg_url", ph:formShareLink||"https://...", label:"Registration URL (form link)" },
                     { k:"location_text", ph:activeEvent?.location||"Venue name or Online", label:"Location" },
                     { k:"organiser", ph:profile?.companies?.name||"Organiser name", label:"Organiser" },
                   ].map(f => (
