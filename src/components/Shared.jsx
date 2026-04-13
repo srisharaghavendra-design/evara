@@ -1,4 +1,4 @@
-import { AlertCircle, BarChart2, Calendar, CheckCircle, ClipboardList, Layout, LayoutDashboard, Megaphone, TrendingUp, Upload, UserCheck2, Users } from "lucide-react";
+import { AlertCircle, BarChart2, Calendar, CheckCircle, ClipboardList, Layout, LayoutDashboard, Megaphone, TrendingUp, Upload, UserCheck2, Users, X } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 
 // ViewHint
