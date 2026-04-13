@@ -213,6 +213,9 @@ function PublicFormPage({ token }) {
               <h1 style={{ fontSize: 28, fontWeight: 800, color: heroText, margin: "0 0 8px", letterSpacing: "-0.5px", lineHeight: 1.1 }}>
                 {landingPage?.headline || event?.name}
               </h1>
+              {landingPage?.subheadline && (
+                <p style={{ fontSize: 15, color: heroSub, margin: "6px 0 0", lineHeight: 1.5, maxWidth: 480 }}>{landingPage.subheadline}</p>
+              )}
               {/* Date · Time · Location */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 16px", marginTop: 10 }}>
                 {event?.event_date && <span style={{ fontSize: 13, color: heroSub, display: "flex", alignItems: "center", gap: 5 }}>📅 {new Date(event.event_date).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}</span>}
