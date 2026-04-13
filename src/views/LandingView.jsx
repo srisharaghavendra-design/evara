@@ -58,12 +58,44 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
   useEffect(() => {
     if (!activeEvent || !profile) return;
     supabase.from("landing_pages").select("*").eq("event_id", activeEvent.id).maybeSingle()
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (data) {
           setPage(data);
           setInfo({ title: data.title || "", tagline: data.tagline || "", description: data.description || "", headline: data.headline || "", subheadline: data.subheadline || "", about_text: data.about_text || "", brand_color: data.brand_color || brandColor, cta_text: data.cta_text || "Register Now", template: data.template || "corporate", slug: data.slug || (activeEvent?.name || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "", location_text: data.location_text || "", organiser: data.organiser || "" });
           setBlocks(data.blocks || blocks);
           setStep(2);
+          // Auto-generate AI copy if headline is missing
+          if (!data.headline && activeEvent?.name) {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+                body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 600,
+                  messages: [{ role: "user", content: `Write landing page copy for this event. Return JSON only with keys: headline, subheadline, tagline, about_text, cta_text. Event: ${activeEvent.name}. Date: ${activeEvent.event_date || "TBC"}. Location: ${activeEvent.location || "TBC"}. Type: ${activeEvent.event_type || "event"}. Description: ${activeEvent.description || "Professional event"}. Keep headline punchy (max 8 words), subheadline 1 sentence, tagline 5 words, about_text 2-3 sentences, cta_text 3 words max.` }] })
+              });
+              const d = await res.json();
+              const parsed = JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
+              setInfo(p => ({ ...p, ...parsed }));
+            } catch(_) {}
+          }
+        } else if (activeEvent?.name) {
+          // No landing page at all — auto-generate from brief
+          setLoading(false);
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+              body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 600,
+                messages: [{ role: "user", content: `Write landing page copy for this event. Return JSON only with keys: headline, subheadline, tagline, about_text, cta_text. Event: ${activeEvent.name}. Date: ${activeEvent.event_date || "TBC"}. Location: ${activeEvent.location || "TBC"}. Type: ${activeEvent.event_type || "event"}. Description: ${activeEvent.description || "Professional event"}. Keep headline punchy (max 8 words), subheadline 1 sentence, tagline 5 words, about_text 2-3 sentences, cta_text 3 words max.` }] })
+            });
+            const d = await res.json();
+            const parsed = JSON.parse((d.content?.[0]?.text || "{}").replace(/```json|```/g, "").trim());
+            setInfo(p => ({ ...p, ...parsed }));
+            fire("✨ Landing page content generated from your event brief!");
+          } catch(_) {}
+          return;
         }
         setLoading(false);
       });
@@ -136,7 +168,7 @@ function LandingView({ supabase, profile, activeEvent, fire, formShareLink }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514", max_tokens: 600,
+          model: "claude-haiku-4-5-20251001", max_tokens: 600,
           messages: [{ role: "user", content: `Write landing page copy for this event. Return JSON only with keys: headline, subheadline, tagline, about_text, cta_text. Event: ${activeEvent.name}. Date: ${activeEvent.event_date || "TBC"}. Location: ${activeEvent.location || "TBC"}. Type: ${activeEvent.event_type || "event"}. Description: ${activeEvent.description || "Professional event"}. Organiser: ${profile?.companies?.name || ""}. Keep headline punchy (max 8 words), subheadline 1 sentence, tagline 5 words, about_text 2–3 sentences, cta_text 3 words max.` }],
         })
       });
