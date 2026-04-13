@@ -55,6 +55,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
   const [eType, setEType] = useState("invitation");
   const [tmpl, setTmpl] = useState("branded");
   const [gen, setGen] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [preview, setPreview] = useState(null);
   const [sendingTest, setSendingTest] = useState(false);
   const [previewWidth, setPreviewWidth] = useState("100%");
@@ -584,6 +585,11 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             </div>
           </Sec>
 
+          <button onClick={() => setShowAdvanced(p => !p)} style={{ width:"100%", padding:"7px 10px", background:"transparent", border:`1px dashed ${C.border}`, borderRadius:7, color:C.muted, fontSize:11.5, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between", fontWeight:500, marginBottom: showAdvanced ? 8 : 0 }}>
+            <span>⚙️ Advanced options (tone, images, form link)</span>
+            <span style={{ fontSize:10 }}>{showAdvanced ? "▲ hide" : "▼ show"}</span>
+          </button>
+          {showAdvanced && (<>
           <Sec label="Tone / Extra context">
             <textarea value={info.extra} onChange={e => setInfo(p => ({ ...p, extra: e.target.value }))} rows={2} placeholder="e.g. Black tie. Partners welcome. Emphasise exclusivity." style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 5, color: C.text, padding: "7px 8px", fontSize: 12.5, outline: "none", resize: "none", lineHeight: 1.5 }} />
           </Sec>
@@ -664,6 +670,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               onClear={() => setImages(p => ({ ...p, footer: null }))}
             />
           </Sec>
+          </>)}
 
           <BrandVoiceBadge supabase={supabase} profile={profile} setView={setView} />
 
@@ -847,7 +854,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
             </div>
           </div>
 
-          <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: 500, display: "flex", flexDirection: "column" }}>
+          <div style={{ flex: 1, border: `1px solid ${preview ? C.blue + "50" : C.border}`, borderRadius: 10, background: "#EBEBEB", overflow: "auto", transition: "border-color .3s", minHeight: preview ? 0 : 500, display: "flex", flexDirection: "column" }}>
             {!preview && !gen && (
               <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, minHeight: 300, padding: 32 }}>
                 {aiBuilding ? (
@@ -936,7 +943,7 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {/* Device toggle */}
                     <div style={{ display: "flex", gap: 3 }}>
-                      {[{label:"🖥",w:"100%"},{label:"📱",w:"375px"}].map(v => (
+                      {[{label:"🖥",w:"100%"},{label:"📱",w:"375px"},{label:"Outlook",w:"outlook"}].map(v => (
                         <button key={v.w} onClick={() => setPreviewWidth(v.w)}
                           style={{ fontSize: 13, padding: "3px 8px", borderRadius: 5, border: `1px solid ${previewWidth===v.w||(!previewWidth&&v.w==="100%") ? C.blue : C.border}`, background: previewWidth===v.w||(!previewWidth&&v.w==="100%") ? C.blue+"15" : "transparent", cursor: "pointer" }}>
                           {v.label}
@@ -1006,10 +1013,11 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   )}
 
                   {/* Email body */}
-                  <div style={{ background: previewWidth === "375px" ? "#1a1a2e" : "#ffffff", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "24px 20px" : "0", height: "520px", overflowY: "auto", width: "100%" }}>
+                  <div style={{ background: previewWidth === "375px" ? "#1a1a2e" : "#ffffff", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "24px 20px" : "0", width: "100%" }}>
                     {(previewTab || "html") === "html" ? (
-                      <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
-                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "540px" : "500px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                      <iframe srcDoc={(() => { const html = (preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#'); if (previewWidth === "outlook") { return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/border-radius:[^;]+;/gi, '').replace(/box-shadow:[^;]+;/gi, ''); } return html; })()}
+                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "auto", minHeight: previewWidth === "375px" ? 0 : 400, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                        onLoad={e => { if (previewWidth !== "375px") { try { const h = e.target.contentDocument?.body?.scrollHeight; if (h) e.target.style.height = h + "px"; } catch(_){} } }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
                       <div style={{ width: "100%", background: "#fff", padding: "24px" }}>
