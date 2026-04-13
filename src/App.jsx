@@ -1374,7 +1374,7 @@ function MainApp({ session }) {
             const { data: { session: sess } } = await supabase.auth.getSession();
             const res = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
               method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${sess?.access_token}`},
-              body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:700,
+              body: JSON.stringify({ model:"claude-haiku-4-5-20251001", max_tokens:700,
                 messages:[{ role:"user", content:`Parse this event brief and extract structured data. Return ONLY valid JSON, no markdown.\n\nBrief: "${briefText}"\n\nReturn JSON:\n{"name":"event name (concise, professional)","event_date":"YYYY-MM-DD or null","event_time":"readable time like 6:30 PM or null","location":"venue name and city or null","event_type":"conference|dinner|workshop|webinar|networking|gala|launch|training|awards|other","description":"2-3 sentence summary of purpose, audience and tone","audience":"who is attending","tone":"formal|semi-formal|casual|energetic|intimate","capacity":null}` }]
               })
             });
