@@ -949,28 +949,33 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                           {v.label}
                         </button>
                       ))}
-                      <button onClick={() => {
-                        const subject = preview.subject || "Email Preview";
-                        const from = "hello@evarahq.com";
-                        const emlContent = [
-                          "MIME-Version: 1.0",
-                          `Date: ${new Date().toUTCString()}`,
-                          `From: ${from}`,
-                          "To: test@example.com",
-                          `Subject: ${subject}`,
-                          "Content-Type: text/html; charset=UTF-8",
-                          "",
-                          preview.html || ""
-                        ].join("\r\n");
-                        const blob = new Blob([emlContent], { type: "message/rfc822" });
-                        const a = Object.assign(document.createElement("a"), {
-                          href: URL.createObjectURL(blob),
-                          download: subject.slice(0,40).replace(/[^a-z0-9]/gi,"-") + ".eml"
-                        });
-                        a.click(); URL.revokeObjectURL(a.href);
-                      }} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                        ⬇ .eml
-                      </button>
+                      {[
+                        { label: "⬇ Outlook iOS", suffix: "-ios",
+                          transform: h => h },
+                        { label: "⬇ Outlook Win", suffix: "-win",
+                          transform: h => h.replace(/border-radius:[^;]+;/gi,"").replace(/box-shadow:[^;]+;/gi,"").replace(/background-image:[^;]+;/gi,"").replace(/linear-gradient[^;]+;/gi,"") }
+                      ].map(({ label, suffix, transform }) => (
+                        <button key={suffix} onClick={() => {
+                          const subject = preview.subject || "Email Preview";
+                          const emlContent = [
+                            "MIME-Version: 1.0",
+                            `Date: ${new Date().toUTCString()}`,
+                            "From: hello@evarahq.com",
+                            "To: test@example.com",
+                            `Subject: ${subject}`,
+                            "Content-Type: text/html; charset=UTF-8",
+                            "",
+                            transform(preview.html || "")
+                          ].join("\r\n");
+                          const a = Object.assign(document.createElement("a"), {
+                            href: URL.createObjectURL(new Blob([emlContent], { type: "message/rfc822" })),
+                            download: subject.slice(0,40).replace(/[^a-z0-9]/gi,"-") + suffix + ".eml"
+                          });
+                          a.click(); URL.revokeObjectURL(a.href);
+                        }} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                          {label}
+                        </button>
+                      ))}
                     </div>
                     {/* Spam score */}
                     {(() => {
