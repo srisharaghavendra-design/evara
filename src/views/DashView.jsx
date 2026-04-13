@@ -394,8 +394,12 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
         const openRate = metrics?.total_sent > 0 ? Math.round((metrics.total_opened / metrics.total_sent) * 100) : 0;
 
         // Smart insight
+        const approvedCount = campaigns.filter(c => c.status === "approved" || c.status === "sent" || c.status === "scheduled").length;
+        const draftCount = campaigns.filter(c => c.status === "draft").length;
         let insight = null;
-        if (sentCount === 0 && campaigns.length > 0) insight = { msg: `You have ${campaigns.length} email draft${campaigns.length>1?"s":""} ready — approve them in Step 1 then schedule.`, cta: null, color: C.blue };
+        if (sentCount === 0 && draftCount > 0 && approvedCount === 0) insight = { msg: `You have ${draftCount} email draft${draftCount>1?"s":""} ready — approve them in Step 1 then schedule.`, cta: "Go to Step 1 →", action: () => setView("edm"), color: C.blue };
+        else if (sentCount === 0 && approvedCount > 0 && draftCount > 0) insight = { msg: `${approvedCount} email${approvedCount>1?"s":""} approved, ${draftCount} still need approval in Step 1.`, cta: "Finish Step 1 →", action: () => setView("edm"), color: C.amber };
+        else if (sentCount === 0 && approvedCount > 0 && draftCount === 0) insight = { msg: `All ${approvedCount} email${approvedCount>1?"s":""} approved ✓ — now set up your landing page and form.`, cta: "Go to Step 2 →", action: () => setView("landing"), color: C.green };
         else if (pendingCount > 5 && daysLeft !== null && daysLeft < 14) insight = { msg: `${pendingCount} contacts haven't responded yet — ${daysLeft} days to go.`, cta: null, color: C.amber };
         else if (openRate > 0 && openRate < 30) insight = { msg: `${openRate}% open rate is below average. Consider updating your subject line in Step 1.`, cta: null, color: C.red };
         else if (openRate >= 60) insight = { msg: `${openRate}% open rate — that's exceptional. Your subject line is working.`, cta: null, color: C.green };
