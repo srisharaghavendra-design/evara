@@ -1306,7 +1306,7 @@ function MainApp({ session }) {
         <main className="main-padding" style={{ flex: 1, overflow: "auto", padding: "22px" }}>
           {view === "dashboard" && <DashView key={`dash-${contactsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} events={events} setActiveEvent={setActiveEvent} showMorningBrief={showMorningBrief} setShowMorningBrief={setShowMorningBrief} setShowNewEvent={setShowNewEvent} />}
           {view === "edm" && profile && <EdmView key={`edm-${campaignsVersion}`} supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} setView={setView} />}
-          {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} />}
+          {view === "landing" && profile && <LandingView key="landing" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} formShareLink={formShareLink} setLpPublished={setLpPublished} setView={setView} />}
           {view === "forms" && profile && <FormsView key="forms" supabase={supabase} profile={profile} activeEvent={activeEvent} fire={fire} onFormSaved={() => {
             if (!activeEvent?.id) return;
             supabase.from("forms").select("share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
