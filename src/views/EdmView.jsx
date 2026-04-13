@@ -1073,132 +1073,54 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
               </div>
             )}
           </div>
-          {preview && <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-            {/* ── APPROVE BUTTON — primary action ── */}
-            {preview.campaign_id && (() => {
-              const cam = campaigns.find(c => c.id === preview.campaign_id);
-              const isApproved = cam?.status === "approved" || cam?.status === "sent";
-              return isApproved ? (
-                <div style={{ display:"flex", alignItems:"center", gap:6, padding:"9px 16px", background:`${C.green}15`, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:13, fontWeight:600, color:C.green }}>
-                  ✓ Approved
-                </div>
-              ) : (
-                <button onClick={async () => {
-                  if (!preview.campaign_id) return;
-                  const { error } = await supabase.from("email_campaigns").update({ status: "approved" }).eq("id", preview.campaign_id);
-                  if (!error) {
-                    setCampaigns(p => p.map(c => c.id === preview.campaign_id ? { ...c, status: "approved" } : c));
-                    fire("✅ Email approved! Move to Step 2 when all emails are done.");
-                  }
-                }} style={{ padding:"9px 20px", background:C.green, color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
-                  ✓ Approve this email
-                </button>
-              );
-            })()}
-            <button onClick={() => {
-              const win = window.open("", "_blank");
-              win.document.write(preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"));
-              win.document.close();
-            }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-              🌐 Open in browser
-            </button>
-            <button onClick={async () => {
-              const testEmail = (document.getElementById("test-email-input")?.value || profile?.email || "").trim();
-              if (!testEmail) { fire("Enter a test email address below", "err"); return; }
-              const { data: { session } } = await supabase.auth.getSession();
-              setSendingTest(true);
-              const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: `[TEST] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
-              });
-              setSendingTest(false);
-              const d = await res.json();
-              fire(d.sent > 0 ? `✅ Test sent to ${testEmail}` : "Send failed — check email address", d.sent > 0 ? "ok" : "err");
-            }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-              {sendingTest ? "Sending…" : "📤 Send test"}
-            </button>
-            {profile?.email && (
-              <button onClick={async () => {
-                const { data: { session } } = await supabase.auth.getSession();
-                setSendingTest(true);
-                const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                  body: JSON.stringify({ contacts: [{ email: profile.email, first_name: profile.full_name?.split(" ")[0]||"Test" }], subject: `[PREVIEW] ${preview.subject}`, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), ...getSender(profile) }),
-                });
-                setSendingTest(false);
-                const d = await res.json();
-                fire(d.sent > 0 ? `✅ Preview sent to ${profile.email}` : "Send failed", d.sent > 0 ? "ok" : "err");
-              }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.blue}40`, background: `${C.blue}10`, color: C.blue, cursor: "pointer" }}
-                title={`Send preview to ${profile.email}`}>
-                ⚡ Send to me
+          {preview && <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+            {/* Row 1: secondary actions */}
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {preview.campaign_id && (() => {
+                const cam = campaigns.find(c => c.id === preview.campaign_id);
+                const isApproved = cam?.status === "approved" || cam?.status === "sent";
+                return isApproved ? (
+                  <div style={{ display:"flex", alignItems:"center", gap:6, padding:"9px 16px", background:`${C.green}15`, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:13, fontWeight:700, color:C.green }}>
+                    ✓ Approved
+                  </div>
+                ) : (
+                  <button onClick={async () => {
+                    if (!preview.campaign_id) return;
+                    const { error } = await supabase.from("email_campaigns").update({ status: "approved" }).eq("id", preview.campaign_id);
+                    if (!error) {
+                      setCampaigns(p => p.map(c => c.id === preview.campaign_id ? { ...c, status: "approved" } : c));
+                      fire("✅ Email approved! Select the next email above to approve it too.");
+                    } else {
+                      fire("❌ Approval failed: " + error.message, "err");
+                    }
+                  }} style={{ padding:"9px 20px", background:C.green, color:"#fff", border:"none", borderRadius:7, fontSize:13, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, boxShadow:`0 2px 10px ${C.green}40` }}>
+                    ✓ Approve this email
+                  </button>
+                );
+              })()}
+              <button onClick={() => {
+                const win = window.open("", "_blank");
+                win.document.write(preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"));
+                win.document.close();
+              }} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
+                🌐 Open in browser
               </button>
-            )}
-
-            <button onClick={saveAsTemplate} disabled={!preview?.html || savingTemplate}
-              style={{ padding:"9px 14px", background:"transparent", color:C.green, border:`1px solid ${C.green}40`, borderRadius:7, fontSize:12, cursor:"pointer" }}>
-              {savingTemplate ? "Saving…" : "💾 Save as template"}
-            </button>
-            <button onClick={() => setShowTemplateLib(p => !p)}
-              style={{ padding:"9px 14px", background:showTemplateLib?`${C.blue}15`:"transparent", color:C.blue, border:`1px solid ${C.blue}40`, borderRadius:7, fontSize:12, cursor:"pointer" }}>
-              📂 Templates {savedTemplates.length > 0 && `(${savedTemplates.length})`}
-            </button>
-            <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied to clipboard"); }}
-              style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
-              📋 Copy HTML
-            </button>
-            <button onClick={() => { navigator.clipboard?.writeText(preview.plain_text || preview.html?.replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim() || ""); fire("✅ Plain text copied"); }}
-              style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
-              📄 Copy text
-            </button>
-            <button onClick={() => {
-              const name = preview.subject || "Email template";
-              const templates = JSON.parse(localStorage.getItem("evara_templates") || "[]");
-              templates.unshift({ name, subject: preview.subject, html: preview.html, plain_text: preview.plain_text, savedAt: new Date().toISOString() });
-              localStorage.setItem("evara_templates", JSON.stringify(templates.slice(0, 20)));
-              fire(`✅ Template "${name}" saved — available in Email Type → Saved Templates`);
-            }} style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>
-              💾 Save template
-            </button>
-            <button onClick={() => setPreview(null)} style={{ padding: "9px 14px", background: C.raised, color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 13, cursor: "pointer" }}>Clear</button>
-            <button onClick={() => {
-              const w = window.open("", "_blank");
-              w.document.write(preview.html);
-              w.document.close();
-            }} style={{ padding: "9px 14px", background: "transparent", color: C.muted, border: `1px solid ${C.border}`, borderRadius: 7, fontSize: 12, cursor: "pointer" }}>
-              🔍 Full View
-            </button>
-            <button onClick={async () => {
-              if (!profile || !activeEvent) { fire("Select an event first", "err"); return; }
-              const { data: { session } } = await supabase.auth.getSession();
-              const { data: ecs } = await supabase.from("event_contacts").select("contacts(email,first_name)").eq("event_id", activeEvent.id);
-              const contacts = (ecs || []).map(ec => ec.contacts).filter(c => c?.email);
-              if (!contacts.length) { fire("No contacts in this event yet", "err"); return; }
-              // confirmed
-              const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                body: JSON.stringify({ contacts, subject: preview.subject, htmlContent: preview.html, plainText: preview.plain_text, campaignId: preview.campaign_id, ...getSender(profile) })
-              }).then(r => r.json()).catch(e => ({ error: e.message }));
-              if (res.success) {
-              fire(`✅ Sent to ${res.sent} contacts! Dashboard will update.`);
-            } else {
-              const msg = res.error?.includes("SENDGRID") ? "❌ SendGrid API key not configured"
-                : res.error?.includes("Forbidden") ? "❌ Sender not verified in SendGrid"
-                : `❌ ${res.error || "Send failed"}`;
-              fire(msg, "err");
-            }
-            }} style={{ padding: "9px 16px", background: C.green + "15", color: C.green, border: `1px solid ${C.green}40`, borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
-              <Send size={13} />Send Now
-            </button>
-            <button onClick={() => { fire("Saved! Opening Scheduling…"); setView("schedule"); }} style={{ flex: 1, padding: "9px", background: C.blue, color: "#fff", border: "none", borderRadius: 7, fontSize: 13, fontWeight: 500, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-              <Calendar size={13} />Schedule →
-            </button>
-          </div>}
-          {preview && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, padding: "8px 12px", background: C.raised, borderRadius: 7, border: `1px solid ${C.border}` }}>
-              <span style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>📧 Test to:</span>
+              <button onClick={() => { navigator.clipboard?.writeText(preview.html); fire("✅ HTML copied"); }}
+                style={{ padding:"6px 14px", background:"transparent", color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, fontSize:12, cursor:"pointer" }}>
+                📋 Copy HTML
+              </button>
+              <button onClick={saveAsTemplate} disabled={!preview?.html || savingTemplate}
+                style={{ padding:"6px 14px", background:"transparent", color:C.green, border:`1px solid ${C.green}40`, borderRadius:6, fontSize:12, cursor:"pointer" }}>
+                {savingTemplate ? "Saving…" : "💾 Save template"}
+              </button>
+              <button onClick={() => setPreview(null)}
+                style={{ padding:"6px 14px", background:C.raised, color:C.muted, border:`1px solid ${C.border}`, borderRadius:6, fontSize:12, cursor:"pointer" }}>
+                Clear
+              </button>
+            </div>
+            {/* Row 2: test send */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", background: C.raised, borderRadius: 7, border: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap" }}>📧 Send test to:</span>
               <input
                 id="test-email-input"
                 defaultValue={profile?.email || ""}
@@ -1209,26 +1131,29 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                 const testEmail = document.getElementById("test-email-input")?.value?.trim() || profile?.email;
                 if (!testEmail?.includes("@")) { fire("Enter a valid email address", "err"); return; }
                 const { data: { session } } = await supabase.auth.getSession();
+                setSendingTest(true);
                 const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-                  body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html, plainText: preview.plain_text, ...getSender(profile) })
+                  body: JSON.stringify({ contacts: [{ email: testEmail, first_name: "Test" }], subject: "[TEST] " + preview.subject, htmlContent: preview.html.replace(/{{REGISTRATION_URL}}/g, landingUrl||formLink||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), plainText: preview.plain_text, ...getSender(profile) })
                 }).then(r => r.json()).catch(e => ({ error: e.message }));
-                if (r.success) {
-                  fire(`✅ Test sent to ${testEmail}! Check your inbox.`);
-                } else {
-                  const msg = r.error?.includes("SENDGRID") ? "❌ SendGrid API key not configured in Supabase secrets"
-                    : r.error?.includes("Forbidden") ? "❌ Sender not verified — check SendGrid"
-                    : r.error?.includes("Unauthorized") ? "❌ Session expired — please refresh"
-                    : `❌ ${r.error || "Send failed"}`;
-                  fire(msg, "err");
-                }
-              }} style={{ fontSize: 11, padding: "4px 14px", background: C.blue, color: "#fff", border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 500, whiteSpace: "nowrap" }}>
-                Send Test
+                setSendingTest(false);
+                fire(r.sent > 0 ? `✅ Test sent to ${testEmail}!` : `❌ ${r.error || "Send failed"}`, r.sent > 0 ? "ok" : "err");
+              }} style={{ fontSize: 11, padding: "4px 14px", background: C.blue, color: "#fff", border: "none", borderRadius: 5, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
+                {sendingTest ? "Sending…" : "Send Test"}
               </button>
             </div>
-          )}
-        </div>
+            {/* Row 3: Schedule — only show when approved */}
+            {(() => {
+              const cam = campaigns.find(c => c.id === preview?.campaign_id);
+              const isApproved = cam?.status === "approved" || cam?.status === "sent";
+              return isApproved ? (
+                <button onClick={() => setView("schedule")} style={{ width:"100%", padding:"11px", background:C.blue, color:"#fff", border:"none", borderRadius:8, fontSize:14, fontWeight:600, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow:`0 4px 16px ${C.blue}40` }}>
+                  <Calendar size={14} />Schedule this email →
+                </button>
+              ) : null;
+            })()}
+          </div>}        </div>
       </div>
 
       {/* Template Library slide-in */}
