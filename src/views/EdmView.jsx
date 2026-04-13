@@ -943,12 +943,26 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   <div style={{ background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "6px 14px", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {/* Device toggle */}
                     <div style={{ display: "flex", gap: 3 }}>
-                      {[{label:"🖥",w:"100%"},{label:"📱",w:"375px"},{label:"Outlook",w:"outlook"}].map(v => (
+                      {[{label:"🖥",w:"100%"},{label:"📱",w:"375px"}].map(v => (
                         <button key={v.w} onClick={() => setPreviewWidth(v.w)}
                           style={{ fontSize: 13, padding: "3px 8px", borderRadius: 5, border: `1px solid ${previewWidth===v.w||(!previewWidth&&v.w==="100%") ? C.blue : C.border}`, background: previewWidth===v.w||(!previewWidth&&v.w==="100%") ? C.blue+"15" : "transparent", cursor: "pointer" }}>
                           {v.label}
                         </button>
                       ))}
+                      <button onClick={() => {
+                        const html = (preview.html||"").replace(/border-radius:[^;]+;/gi,"").replace(/box-shadow:[^;]+;/gi,"");
+                        const a = Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([html],{type:"text/html"})),download:"email-outlook-ios.html"});
+                        a.click();
+                      }} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                        ⬇ iOS
+                      </button>
+                      <button onClick={() => {
+                        const html = (preview.html||"").replace(/border-radius:[^;]+;/gi,"").replace(/box-shadow:[^;]+;/gi,"").replace(/background-image:[^;]+;/gi,"");
+                        const a = Object.assign(document.createElement("a"),{href:URL.createObjectURL(new Blob([html],{type:"text/html"})),download:"email-outlook-win.html"});
+                        a.click();
+                      }} style={{ fontSize:11, padding:"3px 9px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
+                        ⬇ Win
+                      </button>
                     </div>
                     {/* Spam score */}
                     {(() => {
@@ -1015,9 +1029,9 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                   {/* Email body */}
                   <div style={{ background: previewWidth === "375px" ? "#1a1a2e" : "#ffffff", display: "flex", justifyContent: "center", padding: previewWidth === "375px" ? "24px 20px" : "0", width: "100%" }}>
                     {(previewTab || "html") === "html" ? (
-                      <iframe srcDoc={(() => { const html = (preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#'); if (previewWidth === "outlook") { return html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '').replace(/border-radius:[^;]+;/gi, '').replace(/box-shadow:[^;]+;/gi, ''); } return html; })()}
-                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "auto", minHeight: previewWidth === "375px" ? 0 : 400, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
-                        onLoad={e => { if (previewWidth !== "375px") { try { const h = e.target.contentDocument?.body?.scrollHeight; if (h) e.target.style.height = h + "px"; } catch(_){} } }}
+                      <iframe srcDoc={(preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#')}
+                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "auto", minHeight: previewWidth === "375px" ? 0 : 200, transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                        onLoad={e => { setTimeout(() => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.body?.scrollHeight || d?.documentElement?.scrollHeight; if (h > 100) e.target.style.height = h + 'px'; } catch(_){} }, 150); }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
                       <div style={{ width: "100%", background: "#fff", padding: "24px" }}>
