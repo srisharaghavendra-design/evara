@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY, ANON_KEY, getSender } from "../lib/evara";
 import { buildEmailHtml } from "../lib/utils";
-import { Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone } from "../components/Shared";
+import {Spin, Alert, Inp, ViewHint, ScoreBadge, ImageUploadZone, C} from "../components/Shared";
 
 // LifecycleView
 function LifecycleView({ supabase, profile, activeEvent, fire }) {
