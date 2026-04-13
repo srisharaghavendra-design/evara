@@ -103,7 +103,7 @@ function EmailActivityTimeline({ supabase, contactId, eventId, contact, eventCon
 }
 
 // ─── DASHBOARD ───────────────────────────────────────────────
-function DashView({ supabase, profile, activeEvent, fire, setView, events = [], setActiveEvent, showMorningBrief, setShowMorningBrief }) {
+function DashView({ supabase, profile, activeEvent, fire, setView, events = [], setActiveEvent, showMorningBrief, setShowMorningBrief, setShowNewEvent }) {
   const [contacts, setContacts] = useState([]);
   const [metrics, setMetrics] = useState(null);
   const [scores, setScores] = useState({});
