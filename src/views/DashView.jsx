@@ -1284,7 +1284,7 @@ function DashView({ supabase, profile, activeEvent, fire, setView, events = [], 
           </div>
         </div>
       )}
-      {/* ─── EDIT EVENT MODAL ─── */}}
+      {/* ─── EDIT EVENT MODAL ─── */}
       {showEditEvent && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99 }}>
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, padding: 28, width: 480, animation: "fadeUp .2s ease" }}>
