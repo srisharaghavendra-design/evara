@@ -1,5 +1,5 @@
 import { LayoutDashboard, Calendar, BarChart2, Layout, UserCheck2, ClipboardList, Megaphone, Users, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 
 // ViewHint
 export function ViewHint({ id, icon, title, steps, color = "#0A84FF" }) {
