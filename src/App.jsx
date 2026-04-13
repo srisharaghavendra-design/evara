@@ -774,6 +774,23 @@ function MainApp({ session }) {
       const { data: evts } = await supabase.from("events").select("*").eq("company_id", prof?.company_id).order("event_date", { ascending: true });
       setEvents(evts || []);
       setActiveEvent(prev => prev || evts?.[0] || null);
+
+      // Smart default view — pick up where user left off
+      if (evts?.[0]?.id) {
+        const { data: cams } = await supabase.from("email_campaigns").select("id,status,html_content").eq("event_id", evts[0].id);
+        const { data: lp } = await supabase.from("landing_pages").select("id,is_published").eq("event_id", evts[0].id).limit(1).maybeSingle();
+        const hasCampaigns = (cams || []).some(c => c.html_content);
+        const allApproved = hasCampaigns && (cams || []).filter(c => c.html_content).every(c => c.status === "approved" || c.status === "scheduled" || c.status === "sent");
+        const lpPublishedNow = lp?.is_published;
+        if (!hasCampaigns) {
+          setView("edm"); // No emails yet — go to Step 1
+        } else if (hasCampaigns && !allApproved) {
+          setView("edm"); // Has drafts but not all approved — stay in Step 1
+        } else if (allApproved && !lpPublishedNow) {
+          setView("landing"); // All approved, no landing page — go to Step 2
+        }
+        // If landing page published too, stay on dashboard (they're in schedule/send phase)
+      }
     };
     load();
   }, [session]);
