@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard, Mail, Globe, FileText, Users, Calendar,
   Settings, Bell, Search, Download, Share2, Plus, Zap,
@@ -21,7 +20,6 @@ function PublicLandingPage({ slug }) {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState({ days:0, hours:0, mins:0, secs:0 });
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   useEffect(() => {
     supabase.from("landing_pages").select("*, events(*)").eq("slug", slug).maybeSingle()

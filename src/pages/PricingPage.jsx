@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createClient } from "@supabase/supabase-js";
 import {
   LayoutDashboard, Mail, Globe, FileText, Users, Calendar,
   Settings, Bell, Search, Download, Share2, Plus, Zap,
@@ -24,7 +23,6 @@ function PricingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
   const [annual, setAnnual] = useState(false);
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const PLANS = [
     { name:"Starter", monthly:49, desc:"Small businesses, 1–2 events/month", color:"#0A84FF", features:["500 contacts","3 events/month","AI email generation","Registration forms","Basic analytics","Email support"] },
