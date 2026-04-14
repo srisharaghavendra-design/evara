@@ -285,7 +285,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
       const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-        body: JSON.stringify({ campaignId: sendModal.id, contacts, subject: sendModal.subject, htmlContent: sendModal.html_content, plainText: sendModal.plain_text, companyId: profile.company_id, fromEmail: "hello@evarahq.com", fromName: profile?.companies?.from_name || profile?.companies?.name || "evara" })
+        body: JSON.stringify({ campaignId: sendModal.id, contacts, subject: sendModal.subject, htmlContent: (sendModal.html_content||"").replace(/{{REGISTRATION_URL}}/g, lpUrl||formUrl||"#").replace(/{{UNSUBSCRIBE_URL}}/g, "#"), plainText: sendModal.plain_text, companyId: profile.company_id, fromEmail: "hello@evarahq.com", fromName: profile?.companies?.from_name || profile?.companies?.name || "evara" })
       });
       const data = await res.json();
       if (data.success) {
@@ -704,7 +704,10 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
               <div>
                 <div style={{ fontSize: 11, color: C.muted, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.5px" }}>Send to</div>
                 <select value={newCam.segment} onChange={e => setNewCam(p => ({ ...p, segment: e.target.value }))} style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "9px 10px", fontSize: 13, outline: "none", cursor: "pointer" }}>
-                  {["all", "confirmed", "pending", "declined", "attended"].map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)} contacts ({segmentCounts[s] ?? 0})</option>)}
+                  {(["save_the_date","invitation","reminder","byo","day_of_details"].includes(sendModal?.email_type)
+                      ? [["all","All contacts"]]
+                      : [["all","All contacts"],["confirmed","Confirmed"],["attended","Attended"]]
+                    ).map(([val,label]) => <option key={val} value={val}>{label} ({segmentCounts[val]??0})</option>)}
                 </select>
               </div>
             </div>
