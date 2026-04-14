@@ -117,7 +117,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
       if (!contactId) continue;
       // Link to event
       await supabase.from("event_contacts").upsert({
-        event_id: activeEvent.id, contact_id: contactId, status: "pending"
+        event_id: activeEvent.id, contact_id: contactId, company_id: profile.company_id, status: "pending"
       }, { onConflict: "event_id,contact_id" });
       added++;
     }
