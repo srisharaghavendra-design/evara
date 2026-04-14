@@ -345,890 +345,164 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   return (
     <div style={{ animation: "fadeUp .2s ease" }}>
 
-      {/* ── STEP 4: PRE-SEND REVIEW PANEL ── */}
-      {reviewMode && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
-            <div>
-              <div style={{ fontSize:16, fontWeight:700, color:C.text }}>Review before you send</div>
-              <div style={{ fontSize:12, color:C.muted, marginTop:2 }}>Check all 3 below, then set your schedule</div>
-            </div>
-            <button onClick={() => setReviewMode(false)}
-              style={{ fontSize:12, padding:"6px 14px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-              Skip to schedule →
-            </button>
+      {/* ── STATUS PILLS ── */}
+      <div style={{ display:"flex", gap:8, marginBottom:20, flexWrap:"wrap" }}>
+        {[
+          { ok: hasApprovedEmails, label: `${approvedEmails.length} email${approvedEmails.length!==1?"s":""} approved`, onClick: () => setView("edm") },
+          { ok: lpPublished, label: `Landing page ${lpPublished?"live":"not approved"}`, link: lpUrl, onClick: () => setView("landing") },
+          { ok: formActive, label: `Form ${formActive?"active":"inactive"}`, link: formUrl, onClick: () => setView("landing") },
+          { ok: hasContacts, label: `${contactCount} contact${contactCount!==1?"s":""}`, onClick: () => setShowInlineContacts(p=>!p) },
+        ].map((p,i) => (
+          <div key={i} onClick={p.onClick} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", background:p.ok?`${C.green}12`:C.raised, border:`1px solid ${p.ok?C.green+"40":C.border}`, borderRadius:20, fontSize:12, cursor:"pointer" }}>
+            <span>{p.ok?"✅":"○"}</span>
+            <span style={{ color:p.ok?C.green:C.muted, fontWeight:500 }}>{p.label}</span>
+            {p.link && <a href={p.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{ fontSize:10, color:C.blue, textDecoration:"none" }}>View ↗</a>}
           </div>
+        ))}
+      </div>
 
-          {/* ── SECTION 1: Emails ── */}
-          <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, overflow:"hidden" }}>
-            <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:13, fontWeight:600, color:C.text }}>✉️ Emails</span>
-                {hasApprovedEmails
-                  ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ {approvedEmails.length} approved</span>
-                  : <span style={{ fontSize:11, color:C.amber }}>No approved emails yet — go to Step 1</span>}
-              </div>
-              <button onClick={() => setView("edm")} style={{ fontSize:11, color:C.blue, background:"none", border:"none", cursor:"pointer" }}>
-                {hasApprovedEmails ? "Edit →" : "Go to Step 1 →"}
-              </button>
-            </div>
-            {approvedEmails.length > 0 ? (
-              <div>
-                {/* Email type tabs */}
-                <div style={{ display:"flex", gap:4, padding:"10px 14px 0", flexWrap:"wrap" }}>
-                  {approvedEmails.map((cam, i) => (
-                    <button key={cam.id} onClick={() => setReviewEmailIdx(i)}
-                      style={{ fontSize:11.5, padding:"5px 12px", borderRadius:7, border:`1.5px solid ${reviewEmailIdx===i ? C.blue : C.border}`, background:reviewEmailIdx===i ? `${C.blue}15` : "transparent", color:reviewEmailIdx===i ? C.blue : C.muted, cursor:"pointer", fontWeight:reviewEmailIdx===i ? 600 : 400 }}>
-                      {TYPE_LABEL[cam.email_type] || cam.email_type}
-                    </button>
-                  ))}
-                </div>
-                {/* Subject line */}
-                <div style={{ padding:"8px 16px 4px", fontSize:12, color:C.muted }}>
-                  Subject: <span style={{ color:C.text, fontWeight:500 }}>{approvedEmails[reviewEmailIdx]?.subject}</span>
-                </div>
-                {/* Email iframe */}
-                <div style={{ padding:"0 14px 14px" }}>
-                  <iframe
-                    srcDoc={(approvedEmails[reviewEmailIdx]?.html_content || "").replace(/\{\{REGISTRATION_URL\}\}/g, lpUrl||formUrl||"#").replace(/\{\{UNSUBSCRIBE_URL\}\}/g, "#")}
-                    style={{ width:"100%", height:400, border:`1px solid ${C.border}`, borderRadius:8 }}
-                    sandbox="allow-same-origin" title="Email preview" />
-                </div>
-              </div>
-            ) : (
-              <div style={{ padding:"24px 16px", textAlign:"center", fontSize:13, color:C.muted }}>
-                No approved emails yet. Go to Step 1 and click <strong>Approve this email</strong> on each one.
-              </div>
-            )}
+      {/* ── CONTACTS PANEL ── */}
+      {(!hasContacts || showInlineContacts) && (
+        <div style={{ marginBottom:20, background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"16px 18px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
+            <div style={{ fontSize:14, fontWeight:600, color:C.text }}>👥 {hasContacts ? `${contactCount} contacts · manage list` : "Add contacts to send emails"}</div>
+            {hasContacts && showInlineContacts && <button onClick={() => setShowInlineContacts(false)} style={{ fontSize:11, color:C.muted, background:"none", border:"none", cursor:"pointer" }}>✕ Close</button>}
           </div>
-
-          {/* ── SECTION 2: Landing Page — compact, no iframe ── */}
-          {(() => {
-            const isSaveTheDate = approvedEmails[reviewEmailIdx]?.email_type === "save_the_date";
-            const pageLabel = isSaveTheDate ? "📅 Save the Date Page" : "🌐 Invite Landing Page";
-            return (
-              <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:12, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{pageLabel}</span>
-                  {lpPublished
-                    ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Approved & live</span>
-                    : <span style={{ fontSize:11, color:C.amber }}>Not approved yet</span>}
-                  {lpUrl && <span style={{ fontSize:10, color:C.muted, fontFamily:"monospace" }}>{lpUrl.replace("http://localhost:5173","")}</span>}
-                </div>
-                <div style={{ display:"flex", gap:6 }}>
-                  {lpUrl && <a href={lpUrl} target="_blank" rel="noreferrer" style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, color:C.muted, textDecoration:"none" }}>Preview ↗</a>}
-                  <button onClick={() => setView("landing")} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.blue}30`, color:C.blue, background:"none", cursor:"pointer" }}>
-                    {lpPublished ? "Edit" : "Go to Step 2"} →
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* ── SECTION 3: Form — only for invite/reminder, compact ── */}
-          {approvedEmails[reviewEmailIdx]?.email_type !== "save_the_date" && (
-            <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, marginBottom:16, padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                <span style={{ fontSize:13, fontWeight:600, color:C.text }}>📋 Registration Form</span>
-                {formActive
-                  ? <span style={{ fontSize:11, color:C.green, fontWeight:500 }}>✓ Active</span>
-                  : <span style={{ fontSize:11, color:C.amber }}>Not active yet</span>}
-                {formUrl && <span style={{ fontSize:10, color:C.muted, fontFamily:"monospace" }}>{formUrl.replace("http://localhost:5173","")}</span>}
-              </div>
-              <div style={{ display:"flex", gap:6 }}>
-                {formUrl && <a href={formUrl} target="_blank" rel="noreferrer" style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.border}`, color:C.muted, textDecoration:"none" }}>Preview ↗</a>}
-                <button onClick={() => setView("forms")} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:`1px solid ${C.blue}30`, color:C.blue, background:"none", cursor:"pointer" }}>
-                  {formActive ? "Edit" : "Activate"} →
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ── BOTTOM CTA ── */}
-          <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px 18px", background:hasApprovedEmails && lpPublished && formActive ? `${C.green}10` : C.raised, border:`1px solid ${hasApprovedEmails && lpPublished && formActive ? C.green+"40" : C.border}`, borderRadius:12 }}>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:C.text, marginBottom:3 }}>
-                {hasApprovedEmails && lpPublished && formActive ? "✅ Everything looks good!" : "⚡ Complete the steps above first"}
-              </div>
-              <div style={{ fontSize:11.5, color:C.muted }}>
-                {`${approvedEmails.length} email${approvedEmails.length!==1?"s":""} approved · Landing page ${lpPublished?"live":"not published"} · Form ${formActive?"active":"not active"} · ${contactCount} contact${contactCount!==1?"s":""}`}
-              </div>
-            </div>
-            <button onClick={() => setReviewMode(false)}
-              style={{ padding:"10px 22px", background:hasApprovedEmails ? C.blue : C.border, color:hasApprovedEmails ? "#fff" : C.muted, border:"none", borderRadius:8, fontSize:13, fontWeight:600, cursor:hasApprovedEmails ? "pointer" : "not-allowed" }}>
-              Set schedule →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ── TOGGLE BACK TO REVIEW ── */}
-      {!reviewMode && (
-        <button onClick={() => setReviewMode(true)}
-          style={{ marginBottom:14, fontSize:12, padding:"7px 14px", borderRadius:7, border:`1px solid ${C.blue}40`, background:`${C.blue}10`, color:C.blue, cursor:"pointer" }}>
-          ← Back to review
-        </button>
-      )}
-
-      {/* ── Ready-to-send gate ── */}
-      {!allReady && campaigns.length > 0 && (
-        <div style={{ marginBottom: 16, padding: "12px 16px", background: C.amber + "10", border: `1px solid ${C.amber}35`, borderRadius: 10, display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-          <span style={{ fontSize: 14 }}>⚡</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 12.5, fontWeight: 600, color: C.amber, marginBottom: 5 }}>Before you send — check these off</div>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              {readyChecks.map(c => (
-                <div key={c.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: c.done ? C.green : C.muted }}>
-                  <span style={{ fontSize: 13 }}>{c.done ? "✅" : "○"}</span>
-                  <span style={{ fontWeight: c.done ? 500 : 400 }}>{c.label}</span>
-                  {!c.done && (
-                    c.onClick
-                      ? <span onClick={c.onClick} style={{ fontSize: 11, color: C.blue, cursor: "pointer", textDecoration: "underline" }}>— {c.action}</span>
-                      : <span style={{ fontSize: 11, color: C.amber }}>— {c.action}</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-      {allReady && campaigns.length > 0 && (
-        <div style={{ marginBottom: 16, padding: "10px 16px", background: C.green + "10", border: `1px solid ${C.green}30`, borderRadius: 10, display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 14 }}>✅</span>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.green }}>You're ready to send — set your dates below and hit Send</span>
-        </div>
-      )}
-      {/* ── Inline Contacts Panel ── */}
-      {(!hasContacts || showInlineContacts) && campaigns.length > 0 && (
-        <div style={{ marginBottom: 16, padding: "14px 16px", background: C.raised, border: `1px solid ${C.border}`, borderRadius: 10 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: C.text }}>👥 Add contacts for this event</div>
-            {showInlineContacts && hasContacts && (
-              <button onClick={() => setShowInlineContacts(false)} style={{ fontSize: 11, color: C.muted, background: "none", border: "none", cursor: "pointer" }}>✕ Close</button>
-            )}
-          </div>
-          {/* Tab switcher */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 12, background: C.bg, borderRadius: 7, padding: 3, border: `1px solid ${C.border}` }}>
-            {[{ id: "import", label: "📎 Upload / Paste" }, { id: "pool", label: "👥 From my contacts" }].map(t => (
-              <button key={t.id} onClick={() => { setContactTab(t.id); if (t.id === "pool") loadContactPool(); }}
-                style={{ flex: 1, padding: "5px 10px", borderRadius: 5, border: "none", fontSize: 12, fontWeight: contactTab === t.id ? 600 : 400, background: contactTab === t.id ? C.blue : "transparent", color: contactTab === t.id ? "#fff" : C.muted, cursor: "pointer" }}>
-                {t.label}
+          {/* Tabs */}
+          <div style={{ display:"flex", gap:0, marginBottom:12, background:C.raised, borderRadius:8, padding:3, alignSelf:"flex-start", width:"fit-content" }}>
+            {["import","pool"].map(t => (
+              <button key={t} onClick={() => { setContactTab(t); if(t==="pool") loadContactPool(); }}
+                style={{ padding:"5px 14px", borderRadius:6, border:"none", background:contactTab===t?C.blue:"transparent", color:contactTab===t?"#fff":C.muted, fontSize:12, fontWeight:contactTab===t?600:400, cursor:"pointer" }}>
+                {t==="import"?"Paste / Upload":"From Contact Pool"}
               </button>
             ))}
           </div>
-          {/* Pool tab */}
-          {contactTab === "pool" && (
-            <div>
-              <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                <input value={poolSearch} onChange={e => setPoolSearch(e.target.value)} placeholder="Search contacts…"
-                  style={{ flex: 1, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 6, color: C.text, padding: "6px 10px", fontSize: 12, outline: "none" }} />
-                <button onClick={() => {
-                  const filtered = contactPool.filter(c =>
-                    `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(poolSearch.toLowerCase())
-                  );
-                  addFromPool(filtered.map(c => c.id));
-                }} disabled={addingFromPool || !contactPool.length}
-                  style={{ fontSize: 12, padding: "6px 12px", borderRadius: 6, border: "none", background: C.blue, color: "#fff", cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {addingFromPool ? "Adding…" : "Add all"}
+          {contactTab === "import" ? (
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              <textarea value={inlineImportText} onChange={e => setInlineImportText(e.target.value)}
+                placeholder="Paste emails or CSV: john@company.com or First Last, email@company.com"
+                rows={4} style={{ width:"100%", background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, color:C.text, padding:"10px 12px", fontSize:12.5, outline:"none", resize:"vertical", lineHeight:1.5, boxSizing:"border-box" }} />
+              <div style={{ display:"flex", gap:8 }}>
+                <button onClick={() => inlineFileRef.current?.click()} style={{ padding:"8px 16px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:12, cursor:"pointer" }}>📎 Upload CSV</button>
+                <input ref={inlineFileRef} type="file" accept=".csv,.txt" style={{ display:"none" }} onChange={async e => {
+                  const file = e.target.files?.[0]; if (!file) return;
+                  const text = await file.text(); setInlineImportText(text);
+                }} />
+                <button onClick={() => doInlineImport(inlineImportText)} disabled={!inlineImportText.trim() || inlineImporting}
+                  style={{ flex:1, padding:"8px 16px", borderRadius:7, border:"none", background:C.blue, color:"#fff", fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                  {inlineImporting ? "Importing…" : "Import →"}
                 </button>
               </div>
-              {poolLoading ? (
-                <div style={{ fontSize: 12, color: C.muted, padding: 8, display: "flex", gap: 6 }}><Spin size={10} />Loading…</div>
-              ) : contactPool.length === 0 ? (
-                <div style={{ fontSize: 12, color: C.muted, padding: 8 }}>
-                  {contactPool.length === 0 ? "All your contacts are already added to this event — or upload new ones via the other tab." : "No contacts found."}
-                </div>
-              ) : (
-                <div style={{ maxHeight: 180, overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
-                  {contactPool
-                    .filter(c => `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(poolSearch.toLowerCase()))
-                    .map(c => (
-                      <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderBottom: `1px solid ${C.border}`, fontSize: 12 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ color: C.text, fontWeight: 500 }}>{[c.first_name, c.last_name].filter(Boolean).join(" ") || "—"}</span>
-                          <span style={{ color: C.muted, marginLeft: 8, fontSize: 11 }}>{c.email}</span>
-                          {c.company_name && <span style={{ color: C.muted, marginLeft: 6, fontSize: 10 }}>· {c.company_name}</span>}
-                        </div>
-                        <button onClick={() => addFromPool([c.id])} disabled={addingFromPool}
-                          style={{ fontSize: 11, padding: "3px 10px", borderRadius: 5, border: `1px solid ${C.blue}40`, background: `${C.blue}12`, color: C.blue, cursor: "pointer", fontWeight: 500, flexShrink: 0 }}>
-                          + Add
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          )}
-          {/* ── Existing contacts list ── */}
-          {showInlineContacts && (
-            <div style={{ marginBottom: 12 }}>
-              {contactsListLoading ? (
-                <div style={{ fontSize: 12, color: C.muted, padding: "8px 0", display: "flex", alignItems: "center", gap: 6 }}><Spin size={10} />Loading contacts…</div>
-              ) : eventContactsList.length === 0 ? (
-                <div style={{ fontSize: 12, color: C.muted, padding: "6px 0" }}>No contacts yet — import below.</div>
-              ) : (
-                <div style={{ maxHeight: 200, overflowY: "auto", border: `1px solid ${C.border}`, borderRadius: 8, background: C.bg }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 10px", borderBottom: `1px solid ${C.border}`, background: C.raised }}>
-                    <span style={{ fontSize: 10.5, fontWeight: 600, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                      {eventContactsList.length} contact{eventContactsList.length !== 1 ? "s" : ""}
-                    </span>
-                    <span style={{ fontSize: 10.5, color: C.muted, textTransform: "uppercase", letterSpacing: "0.5px" }}>Status</span>
-                  </div>
-                  {eventContactsList.map(ec => {
-                    const c = ec.contacts;
-                    const name = [c?.first_name, c?.last_name].filter(Boolean).join(" ") || "—";
-                    const statusColor = ec.status === "confirmed" ? C.green : ec.status === "declined" ? C.red : ec.status === "attended" ? C.teal : C.muted;
-                    return (
-                      <div key={ec.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderBottom: `1px solid ${C.border}`, fontSize: 12 }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <span style={{ color: C.text, fontWeight: 500 }}>{name}</span>
-                          <span style={{ color: C.muted, marginLeft: 8, fontSize: 11 }}>{c?.email}</span>
-                        </div>
-                        <span style={{ fontSize: 10.5, color: statusColor, fontWeight: 600, textTransform: "capitalize", flexShrink: 0 }}>{ec.status}</span>
-                        <button onClick={() => removeEventContact(ec.id)}
-                          style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", flexShrink: 0 }}>
-                          Remove
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-          {contactTab === "import" && <><textarea
-            value={inlineImportText}
-            onChange={e => setInlineImportText(e.target.value)}
-            placeholder={"Paste emails or CSV rows here, one per line:\nemail@example.com\nJane Doe, jane@example.com\nJohn, Smith, john@example.com"}
-            style={{ width: "100%", minHeight: 90, fontSize: 12, fontFamily: "monospace", padding: "8px 10px", borderRadius: 7, border: `1px solid ${C.border}`, background: C.bg, color: C.text, resize: "vertical", boxSizing: "border-box" }}
-          />
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-            <button onClick={() => inlineFileRef.current?.click()} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-              📎 Upload CSV
-            </button>
-            <input ref={inlineFileRef} type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={e => {
-              const file = e.target.files?.[0]; if (!file) return;
-              const reader = new FileReader();
-              reader.onload = ev => setInlineImportText(ev.target.result);
-              reader.readAsText(file);
-              e.target.value = "";
-            }} />
-            <button onClick={() => doInlineImport(inlineImportText)} disabled={inlineImporting || !inlineImportText.trim()}
-              style={{ fontSize: 12, padding: "6px 14px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", cursor: inlineImporting || !inlineImportText.trim() ? "not-allowed" : "pointer", opacity: inlineImporting || !inlineImportText.trim() ? 0.6 : 1, fontWeight: 600 }}>
-              {inlineImporting ? "Importing…" : "Import"}
-            </button>
-            {setView && (
-              <button onClick={() => setView("contacts")} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.blue, cursor: "pointer", marginLeft: "auto" }}>
-                Manage all contacts →
-              </button>
-            )}
-          </div></>}
-        </div>
-      )}
-      {hasContacts && !showInlineContacts && (
-        <div style={{ marginBottom: 16, display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 12px", background: C.green + "12", border: `1px solid ${C.green}30`, borderRadius: 20 }}>
-          <span style={{ fontSize: 13 }}>👥</span>
-          <span style={{ fontSize: 12.5, fontWeight: 600, color: C.green }}>{contactCount} contacts</span>
-          <span onClick={() => setShowInlineContacts(true)} style={{ fontSize: 11, color: C.blue, cursor: "pointer", textDecoration: "underline" }}>Edit</span>
-          {setView && <span onClick={() => setView("contacts")} style={{ fontSize: 11, color: C.blue, cursor: "pointer", textDecoration: "underline" }}>Manage →</span>}
-        </div>
-      )}
-      <div style={{ marginBottom: 20, display: "flex", alignItems: "flex-end", justifyContent: "space-between" }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <h1 style={{ fontSize: 24, fontWeight: 600, letterSpacing: "-0.6px", color: C.text }}>Email Scheduling</h1>
-            {campaigns.length > 0 && (
-              <span style={{ fontSize:11, padding:"2px 8px", borderRadius:4,
-                background: campaigns.filter(c=>c.status==="sent").length===campaigns.length ? C.green+"15" : campaigns.filter(c=>c.status==="sent").length>0 ? C.blue+"15" : C.raised,
-                color: campaigns.filter(c=>c.status==="sent").length===campaigns.length ? C.green : campaigns.filter(c=>c.status==="sent").length>0 ? C.blue : C.muted }}>
-                {campaigns.filter(c=>c.status==="sent").length}/{campaigns.length} sent
-              </span>
-            )}
-            {activeEvent?.event_date && campaigns.filter(c => c.status === "draft").length > 0 && (
-              <button onClick={async () => {
-                if (!activeEvent?.event_date) { fire("Set an event date first", "err"); return; }
-                setAutoScheduling(true);
-                const eventDate = new Date(activeEvent.event_date);
-                const now = new Date();
-                const daysLeft = Math.ceil((eventDate - now) / (1000*60*60*24));
-                
-                // Smart schedule: assign send dates based on email type
-                const scheduleMap = {
-                  save_the_date: -56, invitation: -28, reminder: -7,
-                  day_of_details: -1, thank_you: 1,
-                };
-                const drafts = campaigns.filter(c => c.status === "draft");
-                let scheduled = 0;
-                for (const draft of drafts) {
-                  const offsetDays = scheduleMap[draft.email_type] || -14;
-                  const sendDate = new Date(eventDate);
-                  sendDate.setDate(sendDate.getDate() + offsetDays);
-                  if (sendDate < now) sendDate.setDate(now.getDate() + 1); // don't schedule in past
-                  await supabase.from("email_campaigns").update({ 
-                    scheduled_at: sendDate.toISOString(), status: "scheduled" 
-                  }).eq("id", draft.id);
-                  scheduled++;
-                }
-                // Refresh
-                const { data } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: true });
-                setCampaigns(data || []);
-                setAutoScheduling(false);
-                fire(`✅ ${scheduled} emails auto-scheduled based on your event date!`);
-              }} disabled={autoScheduling} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, padding: "6px 12px", background: C.blue + "15", border: `1px solid ${C.blue}40`, borderRadius: 7, color: C.blue, cursor: "pointer", fontWeight: 500 }}>
-                {autoScheduling ? <><Spin />Scheduling…</> : <><Sparkles size={11} />Auto-schedule {campaigns.filter(c=>c.status==="draft").length} drafts</>}
-              </button>
-            )}
-          </div>
-          <p style={{ color: C.muted, fontSize: 13, marginTop: 4 }}>
-            {campaigns.length > 0 ? (
-              <span>
-                {campaigns.filter(c=>c.status==="sent").length} sent ·{" "}
-                <span style={{ color: C.blue }}>{campaigns.filter(c=>c.status==="scheduled").length} scheduled</span> ·{" "}
-                {campaigns.filter(c=>c.status==="draft").length} drafts
-                {(() => {
-                  const next = campaigns.filter(c=>c.status==="scheduled"&&c.scheduled_at&&new Date(c.scheduled_at)>new Date()).sort((a,b)=>new Date(a.scheduled_at)-new Date(b.scheduled_at))[0];
-                  if (!next) return null;
-                  const h = Math.round((new Date(next.scheduled_at)-new Date())/(1000*60*60));
-                  return <span style={{ marginLeft:8, color:h<24?C.amber:C.muted }}>· 📅 next in {h<24?`${h}h`:`${Math.round(h/24)}d`}</span>;
-                })()}
-                {(() => {
-                  const sent = campaigns.filter(c=>c.status==="sent");
-                  const totalSent = sent.reduce((s,c)=>s+(c.total_sent||0),0);
-                  const totalOpened = sent.reduce((s,c)=>s+(c.total_opened||0),0);
-                  const openRate = totalSent > 0 ? Math.round(totalOpened/totalSent*100) : null;
-                  return openRate !== null ? <span style={{ marginLeft: 8, color: openRate >= 30 ? C.green : openRate >= 20 ? C.amber : C.muted }}>· {openRate}% open rate {openRate >= 30 ? "🟢 On target!" : openRate >= 20 ? "🟡 Almost" : "🔴 Aim 30%+"}</span> : null;
-                })()}
-              </span>
-            ) : "Create and send email campaigns for this event."}
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={() => {
-            if (!campaigns.length) return;
-            const hdr = ["Campaign","Type","Status","Sent","Opened","Clicked","Open Rate"];
-            const rows = campaigns.map(c => [
-              c.name, c.email_type, c.status, c.total_sent||0, c.total_opened||0, c.total_clicked||0,
-              c.total_sent ? Math.round((c.total_opened||0)/c.total_sent*100)+"%" : "—"
-            ].map(v=>`"${v}"`).join(","));
-            const csv = [hdr.join(","), ...rows].join("\n");
-            const a = document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download=`${activeEvent?.name||"event"}-campaigns.csv`; a.click();
-            fire("✅ Campaign data exported");
-          }} style={{ fontSize: 12, padding:"7px 12px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-            ⬇ Export CSV
-          </button>
-          <button onClick={async () => {
-            const latestWithHtml = campaigns.find(c => c.html_content && c.status !== "sent");
-            if (!latestWithHtml) { fire("No draft with content found — generate one in eDM Builder first", "err"); return; }
-            openSendModal(latestWithHtml);
-          }} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-            Quick Send Latest →
-          </button>
-          <button onClick={async () => {
-            // Send test email to self
-            const latest = campaigns.find(c => c.html_content);
-            if (!latest) { fire("No draft with content yet — generate one in eDM Builder first", "err"); return; }
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
-              body: JSON.stringify({
-                contacts: [{ email: profile?.email, first_name: profile?.full_name?.split(" ")[0] || "Test", unsubscribed: false }],
-                subject: "[TEST] " + latest.subject,
-                htmlContent: latest.html_content,
-                plainText: latest.plain_text || latest.subject,
-              })
-            }).then(r => r.json()).catch(e => ({ error: e.message }));
-            res.success ? fire(`✅ Test email sent to ${profile?.email}!`) : fire(res.error || "Send failed", "err");
-          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-            ✉️ Test Email
-          </button>
-          <button onClick={async () => {
-            // Auto-schedule all draft campaigns with intelligent timing
-            const drafts = campaigns.filter(c => c.status === "draft" && !c.send_at);
-            if (drafts.length === 0) { fire("No unscheduled drafts found — generate a campaign first", "err"); return; }
-            const now = new Date();
-            const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date) : null;
-            const SCHEDULE_MAP = {
-              save_the_date: -56, invitation: -42, reminder: -14,
-              byo: -3, day_of: 0, thank_you: 1, confirmation: 7,
-            };
-            let scheduled = 0;
-            for (const draft of drafts) {
-              const dayOffset = SCHEDULE_MAP[draft.email_type] ?? -7;
-              let sendAt;
-              if (eventDate) {
-                sendAt = new Date(eventDate);
-                sendAt.setDate(sendAt.getDate() + dayOffset);
-                sendAt.setHours(9, 0, 0, 0); // 9am
-              } else {
-                sendAt = new Date(now);
-                sendAt.setDate(sendAt.getDate() + scheduled);
-              }
-              if (sendAt < now) sendAt = new Date(now.getTime() + 300000 * (scheduled + 1));
-              await supabase.from("email_campaigns")
-                .update({ send_at: sendAt.toISOString() })
-                .eq("id", draft.id);
-              scheduled++;
-            }
-            const { data } = await supabase.from("email_campaigns").select("*")
-              .eq("event_id", activeEvent.id).order("created_at", { ascending: false });
-            setCampaigns(data || []);
-            fire(`✅ ${scheduled} campaigns auto-scheduled based on event date!`);
-          }} style={{ fontSize: 13, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-            📅 Auto-Schedule
-          </button>
-          <button onClick={async () => {
-            const types = {};
-            const toDelete = [];
-            campaigns.forEach(c => {
-              if (!types[c.email_type]) { types[c.email_type] = c.id; }
-              else { toDelete.push(c.id); }
-            });
-            if (!toDelete.length) { fire("No duplicates found ✅"); return; }
-            // confirmed
-            for (const id of toDelete) {
-              await supabase.from("email_campaigns").delete().eq("id", id);
-            }
-            setCampaigns(p => p.filter(c => !toDelete.includes(c.id)));
-            fire(`✅ Removed ${toDelete.length} duplicate(s)`);
-          }} style={{ fontSize: 12, padding: "6px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-            🧹 Remove duplicates
-          </button>
-          <button onClick={async () => {
-            fire("⚡ Running scheduler…");
-            const { data: { session } } = await supabase.auth.getSession();
-            const res = await fetch(`${SUPABASE_URL}/functions/v1/send-scheduled`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-            });
-            const data = await res.json();
-            if (data.fired > 0) {
-              fire(`✅ ${data.fired} scheduled email${data.fired !== 1 ? "s" : ""} sent!`);
-              // Refresh campaigns
-              const { data: cams } = await supabase.from("email_campaigns").select("*").eq("event_id", activeEvent.id).order("created_at", { ascending: false });
-              setCampaigns(cams || []);
-            } else {
-              fire(data.message || "No campaigns due to send right now");
-            }
-          }} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-            ⚡ Run Scheduler
-          </button>
-          {activeEvent?.event_date && new Date(activeEvent.event_date) < new Date() && (
-            <button onClick={generateFollowUpSequence} disabled={followUpGenerating}
-              style={{ fontSize: 12, padding: "7px 14px", borderRadius: 7, border: `1px solid ${C.teal}40`, background: C.teal+"12", color: C.teal, cursor: "pointer", fontWeight: 500, display: "flex", alignItems: "center", gap: 5 }}>
-              {followUpGenerating ? <><Spin size={11}/>Creating…</> : <>🎉 Post-event Follow-ups</>}
-            </button>
-          )}
-          <button onClick={async () => {
-            const drafts = campaigns.filter(c => c.status === "draft" && !c.html_content);
-            if (!drafts.length) { fire("No empty drafts to clear"); return; }
-            // confirmed
-            for (const d of drafts) await supabase.from("email_campaigns").delete().eq("id", d.id);
-            setCampaigns(p => p.filter(c => c.status !== "draft" || c.html_content));
-            fire(`✅ ${drafts.length} empty draft${drafts.length > 1 ? "s" : ""} removed`);
-          }} style={{ fontSize: 11, padding: "7px 12px", borderRadius: 7, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-            🗑 Clear empty drafts
-          </button>
-          <button onClick={() => {
-            const drafts = campaigns.filter(c => c.status === "draft" && c.subject);
-            if (!drafts.length) { fire("No draft emails with subjects"); return; }
-            navigator.clipboard?.writeText(drafts.map(c => `${c.name}: ${c.subject}`).join("\n"));
-            fire(`📋 ${drafts.length} draft subjects copied`);
-          }} style={{ fontSize:12, padding:"5px 11px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-            📋 Copy subjects
-          </button>
-          <button onClick={() => setShowNew(true)} style={{ fontSize: 13, padding: "7px 16px", borderRadius: 7, border: "none", background: C.blue, color: "#fff", fontWeight: 500, cursor: "pointer" }}>+ New campaign</button>
-        </div>
-      </div>
-
-      {loading ? <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, padding: "40px", color: C.muted }}><Spin />Loading campaigns…</div> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {/* ── VISUAL DRIP SEQUENCE TIMELINE ── */}
-          {campaigns.length > 0 && (() => {
-            const ORDER = ["save_the_date","invitation","reminder","byo","day_of_details","confirmation","thank_you"];
-            const sorted = ORDER.map(type => campaigns.find(c => c.email_type === type)).filter(Boolean);
-            const extra = campaigns.filter(c => !ORDER.includes(c.email_type));
-            const all = [...sorted, ...extra];
-            const eventDate = activeEvent?.event_date ? new Date(activeEvent.event_date) : null;
-            const missingTypes = (() => {
-              const types = new Set(campaigns.map(c => c.email_type));
-              return ["save_the_date","invitation","reminder","confirmation","thank_you","byo"].filter(t => !types.has(t));
-            })();
-            return (
-              <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-              {/* Best send time tip */}
-              <div style={{ background:C.raised, borderRadius:9, border:`1px solid ${C.border}`, padding:"10px 14px", display:"flex", alignItems:"center", gap:10 }}>
-                <span style={{ fontSize:16 }}>⏰</span>
-                <div style={{ flex:1 }}>
-                  <span style={{ fontSize:12, fontWeight:600, color:C.text }}>Best send times for B2B events: </span>
-                  <span style={{ fontSize:12, color:C.sec }}>Tuesday–Thursday · 9–10am or 2–3pm recipient time. Avoid Mondays, Fridays, and public holidays.</span>
-                </div>
-                <span style={{ fontSize:10, padding:"2px 7px", background:`${C.green}15`, color:C.green, borderRadius:3, fontWeight:600, flexShrink:0 }}>Auto-applied</span>
-              </div>
-              {/* Sequence strip */}
-              <div style={{ background:C.card, borderRadius:12, border:`1px solid ${C.border}`, padding:"16px 20px", marginBottom:4, overflowX:"auto" }}>
-                <div style={{ fontSize:11, fontWeight:600, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:14 }}>Email Sequence — {all.length} email{all.length!==1?"s":""}</div>
-                <div style={{ display:"flex", alignItems:"flex-start", gap:0, minWidth: all.length * 110 }}>
-                  {all.map((cam, i) => {
-                    const isLast = i === all.length - 1;
-                    const statusColor = cam.status==="sent" ? C.green : cam.status==="scheduled" ? C.blue : C.muted;
-                    const statusBg = cam.status==="sent" ? C.green+"20" : cam.status==="scheduled" ? C.blue+"20" : C.raised;
-                    const icon = {save_the_date:"📅",invitation:"✉️",reminder:"⏰",day_of_details:"📍",thank_you:"🙏",confirmation:"✅",byo:"🎒"}[cam.email_type] || "📧";
-                    const sendDate = cam.scheduled_at || cam.send_at || cam.sent_at;
-                    const daysFromEvent = sendDate && eventDate ? Math.round((new Date(sendDate) - eventDate)/(1000*60*60*24)) : null;
-                    return (
-                      <div key={cam.id} style={{ display:"flex", alignItems:"flex-start", flex:1 }}>
-                        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", flex:1, gap:6 }}>
-                          <div style={{ width:40, height:40, borderRadius:"50%", background:statusBg, border:`2px solid ${statusColor}`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, cursor:cam.html_content?"pointer":"default", transition:"transform .15s" }}
-                            onClick={() => cam.html_content && setPreviewCam(cam)}
-                            title={cam.name}
-                            onMouseEnter={e=>cam.html_content&&(e.currentTarget.style.transform="scale(1.1)")}
-                            onMouseLeave={e=>(e.currentTarget.style.transform="scale(1)")}>
-                            {cam.status==="sent" ? "✓" : icon}
-                          </div>
-                          <div style={{ textAlign:"center", width:"100%" }}>
-                            <div style={{ fontSize:10.5, fontWeight:600, color:cam.status==="sent"?C.green:cam.status==="scheduled"?C.blue:C.sec, lineHeight:1.2 }}>
-                              {cam.email_type?.replace(/_/g," ").replace("save the date","STD").replace("day of details","Day-of").replace("thank you","TY").replace("confirmation","Confirm").replace("invitation","Invite") || cam.name?.split("—")[0]?.trim()?.slice(0,10)}
-                            </div>
-                            {sendDate && (
-                              <div style={{ fontSize:9.5, color:C.muted, marginTop:2 }}>
-                                {new Date(sendDate).toLocaleDateString("en-AU",{day:"numeric",month:"short"})}
-                                {daysFromEvent !== null && <span style={{ color:daysFromEvent<0?C.amber:daysFromEvent===0?"#FF9F0A":C.teal }}> ({daysFromEvent===0?"event day":daysFromEvent>0?`+${daysFromEvent}d`:`${daysFromEvent}d`})</span>}
-                              </div>
-                            )}
-                            <div style={{ fontSize:9, color:statusColor, marginTop:1, fontWeight:600, textTransform:"uppercase" }}>{cam.status}</div>
-                          </div>
-                        </div>
-                        {!isLast && (
-                          <div style={{ display:"flex", alignItems:"center", paddingTop:18, flexShrink:0 }}>
-                            <div style={{ width:20, height:2, background: cam.status==="sent"?C.green+"60":C.border, borderRadius:1 }} />
-                            <div style={{ fontSize:9, color:C.border }}>›</div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                <div style={{ display:"flex", gap:16, marginTop:14, paddingTop:10, borderTop:`1px solid ${C.border}` }}>
-                  {[
-                    { label:"Sent", val:campaigns.filter(c=>c.status==="sent").length, color:C.green },
-                    { label:"Scheduled", val:campaigns.filter(c=>c.status==="scheduled").length, color:C.blue },
-                    { label:"Draft", val:campaigns.filter(c=>c.status==="draft").length, color:C.muted },
-                    { label:"Total contacts", val:contactCount, color:C.text },
-                  ].map(m => (
-                    <div key={m.label} style={{ display:"flex", alignItems:"center", gap:5, fontSize:11 }}>
-                      <span style={{ fontWeight:700, color:m.color }}>{m.val}</span>
-                      <span style={{ color:C.muted }}>{m.label}</span>
+              {eventContactsList.length > 0 && (
+                <div style={{ maxHeight:160, overflowY:"auto", border:`1px solid ${C.border}`, borderRadius:8, marginTop:4 }}>
+                  {eventContactsList.map(ec => (
+                    <div key={ec.id} style={{ display:"flex", alignItems:"center", padding:"7px 12px", borderBottom:`1px solid ${C.border}`, fontSize:12 }}>
+                      <span style={{ flex:1, color:C.text }}>{ec.contacts?.first_name} {ec.contacts?.last_name} <span style={{ color:C.muted }}>· {ec.contacts?.email}</span></span>
+                      <button onClick={() => removeEventContact(ec.id)} style={{ background:"none", border:"none", color:C.muted, cursor:"pointer", fontSize:13 }}>×</button>
                     </div>
                   ))}
                 </div>
-              </div>
-              {/* Missing types nudge */}
-              {missingTypes.length > 0 && (
-                <div style={{ fontSize: 11, color: C.amber }}>
-                  💡 Missing email types: {missingTypes.map(t => t.replace(/_/g," ")).join(", ")} — click + New campaign to add
-                </div>
               )}
-              </div>
-            );
-          })()}
-          {campaigns.length === 0 && (
-            <EmptySchedule onGoToEdm={() => setView("edm")} onGoToCampaign={() => setView("campaign")} />
-          )}
-          {[...campaigns].sort((a, b) => {
-                const order = {"save_the_date":0,"invitation":1,"reminder":2,"day_of_details":3,"confirmation":4,"byo":5,"thank_you":6};
-                return (order[a.email_type] ?? 9) - (order[b.email_type] ?? 9);
-              }).map(cam => (
-            <div key={cam.id} className="metric-card" style={{ background: C.card, borderRadius: 10, border: `1px solid ${cam.status === "sent" ? C.green + "28" : cam.status === "scheduled" ? C.blue + "35" : cam.status === "paused" ? C.amber + "28" : C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14, position: "relative", overflow: "hidden" }}>
-              {/* Left accent */}
-              <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : cam.status === "paused" ? C.amber : C.border, borderRadius: "3px 0 0 3px" }} />
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : C.raised}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>
-              {cam.email_type === "save_the_date" ? "📅" : cam.email_type === "invitation" ? "✉️" : cam.email_type === "reminder" ? "⏰" : cam.email_type === "day_of_details" ? "📍" : cam.email_type === "thank_you" ? "🙏" : cam.email_type === "confirmation" ? "✅" : "📧"}
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: C.text, cursor: cam.html_content ? "pointer" : "default" }} onClick={() => cam.html_content && setPreviewCam(cam)}>{cam.name}{cam.html_content && <span style={{ fontSize: 9, color: C.blue, marginLeft: 5 }}>👁</span>}</span>
-                  {cam.subject && <div style={{ fontSize: 11, color: C.muted, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 320 }}>{editingSubjectId === cam.id ? null : `"${cam.subject}"`}</div>}
-                  <span style={{ fontSize: 10.5, fontWeight: 500, padding: "2px 7px", borderRadius: 4, textTransform: "uppercase", background: cam.status === "sent" ? `${C.green}15` : cam.status === "scheduled" ? `${C.blue}15` : cam.status === "paused" ? `${C.amber}15` : `${C.raised}`, color: cam.status === "sent" ? C.green : cam.status === "scheduled" ? C.blue : cam.status === "paused" ? C.amber : C.muted }}>
-                    {cam.status}{cam.status === "scheduled" && cam.scheduled_at ? ` · ${new Date(cam.scheduled_at).toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : ""}
-                  </span>
-                </div>
-                <div style={{ fontSize: 12, color: C.muted }}>
-                  {cam.status === "scheduled" && cam.scheduled_at ? (() => {
-                    const d = new Date(cam.scheduled_at);
-                    const daysLeft = Math.ceil((d - new Date()) / (1000*60*60*24));
-                    const day = d.getDay(); const hour = d.getHours();
-                    const isOptimal = day >= 1 && day <= 4 && (hour >= 9 && hour <= 11 || hour >= 14 && hour <= 16);
-                    return (
-                      <span>
-                        {daysLeft <= 0 ? `⚡ Sending today!` : daysLeft === 1 ? `⏰ Tomorrow · ${d.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit" })}` : daysLeft <= 7 ? `🔶 In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}` : `⏰ In ${daysLeft} days · ${d.toLocaleDateString("en-AU", { day: "numeric", month: "short" })}`}
-                        {isOptimal ? <span style={{ color: C.green, marginLeft: 6, fontSize: 10 }}>✓ Optimal time</span> : <span style={{ color: C.amber, marginLeft: 6, fontSize: 10 }}>💡 Tue–Thu 9–11am gets best opens</span>}
-                      </span>
-                    );
-                  })() : cam.send_at ? new Date(cam.send_at).toLocaleString("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "No send time set"}
-                  {" · "}Segment: <span style={{ color: cam.segment !== "all" ? C.amber : C.muted }}>{ {"all":`Everyone (${segmentCounts.all})`,"confirmed":`✅ Confirmed (${segmentCounts.confirmed})`,"pending":`⏳ Pending (${segmentCounts.pending})`,"attended":`📍 Attended (${segmentCounts.attended})`,"declined":`❌ Declined (${segmentCounts.declined})`,"vip":`⭐ VIP`}[cam.segment] || cam.segment.charAt(0).toUpperCase() + cam.segment.slice(1) }</span>
-                  {cam.status === "sent" && (
-                    <span>
-                      {` · ✅ ${cam.total_sent || 0} sent`}
-                      {cam.total_sent > 0 && (() => {
-                        const pct = Math.round(((cam.total_opened||0)/cam.total_sent)*100);
-                        return <span style={{ marginLeft:4 }}>
-                          <span style={{ color:pct>=30?C.green:pct>=20?C.amber:C.red }}>{pct}% opened</span>
-                          <span style={{ display:"inline-block", width:32, height:3, background:C.raised, borderRadius:2, marginLeft:4, verticalAlign:"middle" }}>
-                            <span style={{ display:"block", width:`${Math.min(pct,100)}%`, height:"100%", background:pct>=30?C.green:pct>=20?C.amber:C.red, borderRadius:2 }}/>
-                          </span>
-                        </span>;
-                      })()}
-                      {cam.total_clicked > 0 && ` · ${cam.total_clicked} clicks`}
-                      {cam.sent_at && (() => {
-                        const d = new Date(cam.sent_at);
-                        const day = d.getDay(); const h = d.getHours();
-                        const optimal = day>=2 && day<=4 && h>=9 && h<=11;
-                        const daysAgo = Math.round((new Date()-d)/(1000*60*60*24));
-                        return <span style={{ marginLeft:4, color:C.muted }}>
-                          · {daysAgo===0?"today":`${daysAgo}d ago`}
-                          {optimal && <span style={{ marginLeft:4, color:C.green }}>✓ optimal</span>}
-                        </span>;
-                      })()}
-                    </span>
-                  )}
-                </div>
-                {/* Inline subject editor */}
-                {cam.subject && (
-                  <div style={{ marginTop: 6 }}>
-                    {editingSubjectId === cam.id ? (
-                      <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-                        <input autoFocus value={editingSubjectVal}
-                          onChange={e => setEditingSubjectVal(e.target.value)}
-                          onKeyDown={e => { if(e.key==="Enter") saveSubject(cam.id, editingSubjectVal); if(e.key==="Escape") setEditingSubjectId(null); }}
-                          style={{ flex:1, background:C.bg, border:`1px solid ${C.blue}60`, borderRadius:6, color:C.text, padding:"5px 9px", fontSize:12, outline:"none" }} />
-                        <button onClick={() => saveSubject(cam.id, editingSubjectVal)} style={{ padding:"4px 10px", borderRadius:5, border:"none", background:C.blue, color:"#fff", fontSize:11, cursor:"pointer", fontWeight:600 }}>Save</button>
-                        <button onClick={() => setEditingSubjectId(null)} style={{ padding:"4px 8px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:11, cursor:"pointer" }}>✕</button>
-                      </div>
-                    ) : (
-                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
-                        <span style={{ fontSize:11.5, color:C.muted, fontStyle:"italic", cursor:"pointer" }}
-                          onClick={() => { setEditingSubjectId(cam.id); setEditingSubjectVal(cam.subject); setAiSubjectOptions(p=>({...p,[cam.id]:null})); }}
-                          title="Click to edit subject line">
-                          "{cam.subject}" <span style={{ fontSize:10, color:C.blue }}>✏️</span>
-                        </span>
-                        {cam.status !== "sent" && (
-                          <button onClick={() => generateAiSubjects(cam)} disabled={aiSubjectLoading === cam.id}
-                            style={{ fontSize:10, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.blue}30`, background:`${C.blue}08`, color:C.blue, cursor:"pointer", display:"flex", alignItems:"center", gap:3 }}>
-                            {aiSubjectLoading === cam.id ? <Spin size={8}/> : "✨"} AI alternatives
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {/* AI subject alternatives */}
-                    {aiSubjectOptions[cam.id]?.length > 0 && editingSubjectId !== cam.id && (
-                      <div style={{ marginTop:8, background:C.raised, borderRadius:8, border:`1px solid ${C.border}`, padding:"10px 12px" }}>
-                        <div style={{ fontSize:10, color:C.muted, marginBottom:6, fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>✨ AI Subject Alternatives</div>
-                        {aiSubjectOptions[cam.id].map((s, i) => (
-                          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"4px 0", borderBottom: i < aiSubjectOptions[cam.id].length-1 ? `1px solid ${C.border}` : "none" }}>
-                            <span style={{ flex:1, fontSize:12, color:C.sec }}>{s}</span>
-                            <button onClick={() => saveSubject(cam.id, s)}
-                              style={{ fontSize:10, padding:"2px 8px", borderRadius:4, border:`1px solid ${C.green}40`, background:`${C.green}08`, color:C.green, cursor:"pointer", flexShrink:0 }}>Use</button>
-                          </div>
-                        ))}
-                        <button onClick={() => setAiSubjectOptions(p=>({...p,[cam.id]:null}))} style={{ marginTop:6, fontSize:10, color:C.muted, background:"none", border:"none", cursor:"pointer" }}>Dismiss</button>
-                      </div>
-                    )}
-                  </div>
-                )}
-                {cam.html_content && (() => {
-                  const words = cam.html_content.replace(/<[^>]+>/g, " ").split(/\s+/).filter(w => w.length > 1).length;
-                  return <div style={{ fontSize: 10, color: C.muted, marginTop: 2 }}>{words} words · ~{Math.max(1, Math.round(words/200))} min read</div>;
-                })()}
-              </div>
-              <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                {/* ← NEW: Preview button */}
-                {cam.html_content && (
-                  <button onClick={() => setPreviewCam(cam)}
-                    style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.borderHi}`, background: "transparent", color: C.sec, cursor: "pointer" }}>
-                    <Eye size={11} />Preview
-                  </button>
-                )}
-                {cam.html_content && (
-                  <button onClick={() => {
-                    const blob = new Blob([cam.html_content], { type: "text/html" });
-                    const a = document.createElement("a");
-                    a.href = URL.createObjectURL(blob);
-                    a.download = `${(cam.name || cam.email_type || "email").replace(/[^a-z0-9]/gi, "-").toLowerCase()}.html`;
-                    a.click();
-                    URL.revokeObjectURL(a.href);
-                    fire("📥 HTML downloaded — open in any browser or email client");
-                  }} title="Download HTML file"
-                    style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.borderHi}`, background: "transparent", color: C.sec, cursor: "pointer" }}>
-                    <Download size={11} />Download
-                  </button>
-                )}
-                {cam.html_content && cam.status !== "sent" && (
-                  <button onClick={async () => {
-                    const testEmail = (document.getElementById("sched-test-email")?.value || profile?.email || "").trim();
-                    if (!testEmail?.includes("@")) { fire("Enter a test email address", "err"); return; }
-                    fire("📨 Sending test…");
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-                      body: JSON.stringify({
-                        contacts: [{ email: testEmail, first_name: "Test" }],
-                        subject: `[TEST] ${cam.subject}`,
-                        htmlContent: cam.html_content,
-                        plainText: cam.plain_text || cam.subject,
-                      })
-                    });
-                    const d = await res.json();
-                    fire(d.sent > 0 ? `✅ Test sent to ${testEmail}` : `Failed: ${d.error || "unknown"}`, d.sent > 0 ? "ok" : "err");
-                  }} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 12px", borderRadius: 6, border: `1px solid ${C.blue}40`, background: C.blue + "10", color: C.blue, cursor: "pointer" }}>
-                    <Send size={11} />Test
-                  </button>
-                )}
-                {cam.status !== "sent" && cam.html_content && (
-                  <>
-                    <button onClick={() => openSendModal(cam)} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, padding: "6px 14px", borderRadius: 6, border: `1px solid ${C.green}50`, background: `${C.green}12`, color: C.green, cursor: "pointer", fontWeight: 500 }}>
-                      <Send size={11} />Send Now
-                    </button>
-                    {cam.status !== "scheduled" && (
-                      schedPickerCam?.id === cam.id ? (
-                        <div style={{ display:"flex", alignItems:"center", gap:5 }}>
-                          <input type="datetime-local" value={schedPickerVal}
-                            onChange={e => setSchedPickerVal(e.target.value)}
-                            min={new Date().toISOString().slice(0,16)}
-                            style={{ fontSize:11, padding:"4px 7px", borderRadius:5, border:`1px solid ${C.blue}60`, background:C.bg, color:C.text, outline:"none" }} />
-                          <button onClick={async () => {
-                            if (!schedPickerVal) return;
-                            const schedDate = new Date(schedPickerVal);
-                            await supabase.from("email_campaigns").update({ status:"scheduled", scheduled_at:schedDate.toISOString() }).eq("id", cam.id);
-                            setCampaigns(p => p.map(c => c.id===cam.id ? {...c, status:"scheduled", scheduled_at:schedDate.toISOString()} : c));
-                            setSchedPickerCam(null); setSchedPickerVal("");
-                            fire(`✅ Scheduled for ${schedDate.toLocaleDateString("en-AU",{day:"numeric",month:"short"})} at ${schedDate.toLocaleTimeString("en-AU",{hour:"2-digit",minute:"2-digit"})}`);
-                          }} style={{ fontSize:11, padding:"4px 10px", borderRadius:5, border:"none", background:C.blue, color:"#fff", cursor:"pointer", fontWeight:600 }}>Set</button>
-                          <button onClick={() => { setSchedPickerCam(null); setSchedPickerVal(""); }} style={{ fontSize:11, padding:"4px 7px", borderRadius:5, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>✕</button>
-                        </div>
-                      ) : (
-                        <button onClick={() => {
-                          const defaultVal = new Date(Date.now() + 86400000).toISOString().slice(0,16);
-                          setSchedPickerCam(cam); setSchedPickerVal(defaultVal);
-                        }} style={{ display:"flex", alignItems:"center", gap:5, fontSize:12, padding:"6px 12px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, cursor:"pointer" }}>
-                          ⏰ Schedule
-                        </button>
-                      )
-                    )}
-                  </>
-                )}
-                {cam.status === "draft" && !cam.html_content && (
-                  <span style={{ fontSize: 11, color: C.muted, fontStyle: "italic" }}>Generate email first in eDM Builder</span>
-                )}
-                {cam.status === "scheduled" && (
-                  <button onClick={async () => {
-                    await supabase.from("email_campaigns").update({ status: "draft", scheduled_at: null }).eq("id", cam.id);
-                    setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "draft", scheduled_at: null } : c));
-                    fire("Campaign unscheduled — moved back to draft");
-                  }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.amber}40`, background: "transparent", color: C.amber, cursor: "pointer" }}>
-                    ✕ Unschedule
-                  </button>
-                )}
-                {(cam.status === "draft" || cam.status === "scheduled") && (
-                  <button onClick={async () => {
-                    // confirmed
-                    const now = new Date().toISOString();
-                    await supabase.from("email_campaigns").update({ status: "sent", sent_at: now, total_sent: contactCount || 1 }).eq("id", cam.id);
-                    setCampaigns(p => p.map(c => c.id === cam.id ? { ...c, status: "sent", sent_at: now, total_sent: contactCount || 1 } : c));
-                    fire("✅ Marked as sent manually");
-                  }} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}
-                    title="Mark as sent if you sent this email through another tool">
-                    ✓ Mark sent
-                  </button>
-                )}
-                {cam.status === "sent" && cam.total_sent > 0 && cam.html_content && (
-                  <button onClick={async () => {
-                    const unopenedCount = (cam.total_sent||0) - (cam.total_opened||0);
-                    if (unopenedCount <= 0) { fire("No unopened contacts — great open rate!"); return; }
-
-                    // Step 1: AI generates a new subject line
-                    fire("🧠 AI is writing a new subject line…");
-                    let newSubject = "Following up: " + cam.subject;
-                    try {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      const aiRes = await fetch(`${SUPABASE_URL}/functions/v1/ai-proxy`, {
-                        method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session?.access_token}`},
-                        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:100,
-                          messages:[{ role:"user", content:`Write ONE alternative email subject line for a follow-up to contacts who didn't open this email. Original subject: "${cam.subject}". Event: ${activeEvent?.name}. Return ONLY the subject line, no quotes, no explanation.` }]
-                        })
-                      });
-                      const aiData = await aiRes.json();
-                      newSubject = aiData.content?.[0]?.text?.trim() || newSubject;
-                    } catch(e) { /* use fallback */ }
-
-                    // Step 2: Confirm with user
-                    const confirmed = window.confirm(
-                      `Resend to ${unopenedCount} unopened contact${unopenedCount===1?"":"s"}?\n\nNew AI subject line:\n"${newSubject}"\n\nClick OK to send, Cancel to abort.`
-                    );
-                    if (!confirmed) { fire("Resend cancelled"); return; }
-
-                    // Step 3: Send
-                    fire(`📧 Sending to ${unopenedCount} contacts…`);
-                    const { data: { session } } = await supabase.auth.getSession();
-                    const { data: ecs } = await supabase.from("event_contacts")
-                      .select("contacts(email,first_name,last_name)").eq("event_id", activeEvent?.id);
-                    const { data: opens } = await supabase.from("email_sends")
-                      .select("email").eq("campaign_id", cam.id).not("opened_at","is",null);
-                    const openedEmails = new Set((opens||[]).map(o => o.email));
-                    const unopened = (ecs||[]).map(ec => ec.contacts).filter(c => c?.email && !openedEmails.has(c.email));
-                    if (!unopened.length) { fire("No unopened contacts found"); return; }
-                    const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-                      method:"POST", headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
-                      body: JSON.stringify({ contacts:unopened, subject:newSubject, htmlContent:cam.html_content, plainText:cam.plain_text, ...getSender(profile) })
-                    }).then(r=>r.json()).catch(e=>({error:e.message}));
-                    res.success ? fire(`✅ Resent to ${res.sent} contacts with new subject`) : fire(res.error||"Send failed","err");
-                  }} style={{ fontSize:12, padding:"5px 10px", borderRadius:6, border:`1px solid ${C.amber}40`, background:C.amber+"10", color:C.amber, cursor:"pointer", fontWeight:500 }}>
-                    🧠 Resend to unopened ({Math.max(0,(cam.total_sent||0)-(cam.total_opened||0))})
-                  </button>
-                )}
-                {cam.status !== "sent" && (
-                  <>
-                    <button onClick={async () => {
-                      const { data } = await supabase.from("email_campaigns").insert({
-                        event_id: cam.event_id, company_id: cam.company_id,
-                        name: `${cam.name} (copy)`, email_type: cam.email_type,
-                        subject: cam.subject ? `${cam.subject} (copy)` : null,
-                        html_content: cam.html_content, plain_text: cam.plain_text,
-                        status: "draft", segment: cam.segment || "all",
-                      }).select().single();
-                      if (data) { setCampaigns(p => [...p, data]); fire("✅ Campaign duplicated"); }
-                    }} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 5, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer", marginRight: 4 }}>
-                      ⧉ Dupe
-                    </button>
-                    <button onClick={async () => {
-                      // confirmed
-                      await supabase.from("email_campaigns").delete().eq("id", cam.id);
-                      setCampaigns(p => p.filter(c => c.id !== cam.id));
-                      fire("Campaign deleted");
-                    }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-                      Delete
-                    </button>
-                    <button onClick={async () => {
-                      const {name, email_type, template_style, subject, html_content, plain_text, segment} = cam;
-                      const { data } = await supabase.from("email_campaigns").insert({
-                        event_id: activeEvent.id, company_id: profile.company_id,
-                        name: name + " (copy)", email_type, template_style, subject, html_content, plain_text,
-                        status: "draft", segment: segment || "all", total_sent: 0, total_opened: 0, total_clicked: 0
-                      }).select().single();
-                      if (data) { setCampaigns(p => [data, ...p]); fire("📋 Campaign duplicated"); }
-                    }} style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: `1px solid ${C.border}`, background: "transparent", color: C.muted, cursor: "pointer" }}>
-                      📋 Duplicate
-                    </button>
-                  </>
-                )}
+            </div>
+          ) : (
+            <div>
+              <input value={poolSearch} onChange={e => setPoolSearch(e.target.value)} placeholder="Search contacts…"
+                style={{ width:"100%", marginBottom:8, background:C.bg, border:`1px solid ${C.border}`, borderRadius:7, color:C.text, padding:"7px 10px", fontSize:12, outline:"none", boxSizing:"border-box" }} />
+              <div style={{ maxHeight:200, overflowY:"auto", border:`1px solid ${C.border}`, borderRadius:8 }}>
+                {poolLoading ? <div style={{ padding:16, color:C.muted, fontSize:12 }}>Loading…</div> :
+                  contactPool.filter(c => !poolSearch || `${c.first_name} ${c.last_name} ${c.email}`.toLowerCase().includes(poolSearch.toLowerCase())).map(c => (
+                    <div key={c.id} style={{ display:"flex", alignItems:"center", padding:"7px 12px", borderBottom:`1px solid ${C.border}`, fontSize:12 }}>
+                      <span style={{ flex:1, color:C.text }}>{c.first_name} {c.last_name} <span style={{ color:C.muted }}>· {c.email}</span></span>
+                      <button onClick={() => addFromPool([c.id])} disabled={addingFromPool}
+                        style={{ padding:"3px 10px", borderRadius:5, border:`1px solid ${C.blue}40`, background:`${C.blue}10`, color:C.blue, fontSize:11, cursor:"pointer" }}>Add</button>
+                    </div>
+                  ))
+                }
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {/* ← NEW: EMAIL PREVIEW MODAL */}
+      {/* ── EMAIL CARDS ── */}
+      <div style={{ fontSize:11, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:"0.8px", marginBottom:10 }}>
+        Your emails — {campaigns.filter(c=>c.html_content).length} ready
+      </div>
+      {campaigns.length === 0 && <EmptySchedule onGoToEdm={() => setView("edm")} onGoToCampaign={() => setView("campaign")} />}
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {[...campaigns].filter(c=>c.html_content).sort((a,b) => {
+          const ORDER = ["save_the_date","invitation","reminder","byo","day_of_details","confirmation","thank_you"];
+          return (ORDER.indexOf(a.email_type)-ORDER.indexOf(b.email_type)) || (new Date(a.scheduled_at||"9")-new Date(b.scheduled_at||"9"));
+        }).map(cam => {
+          const icon = {save_the_date:"📅",invitation:"✉️",reminder:"⏰",day_of_details:"📍",thank_you:"🙏",confirmation:"✅",byo:"🎒"}[cam.email_type]||"📧";
+          const statusColor = cam.status==="sent"?C.green:cam.status==="scheduled"?C.blue:cam.status==="approved"?C.teal:C.muted;
+          const sendDate = cam.scheduled_at||cam.send_at;
+          return (
+            <div key={cam.id} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"14px 16px" }}>
+              {/* Top row */}
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10 }}>
+                <span style={{ fontSize:20 }}>{icon}</span>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{TYPE_LABEL[cam.email_type]||cam.email_type?.replace(/_/g," ")}</div>
+                  <div style={{ fontSize:11, color:C.muted, marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{cam.subject}</div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:6, padding:"3px 10px", background:statusColor+"15", border:`1px solid ${statusColor}40`, borderRadius:6, fontSize:11, fontWeight:600, color:statusColor, flexShrink:0 }}>
+                  {cam.status}
+                </div>
+              </div>
+              {/* Schedule date row */}
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10 }}>
+                <span style={{ fontSize:11, color:C.muted, whiteSpace:"nowrap" }}>📅 Send date:</span>
+                {schedPickerCam?.id === cam.id ? (
+                  <div style={{ display:"flex", gap:6, flex:1 }}>
+                    <input type="datetime-local" value={schedPickerVal} onChange={e => setSchedPickerVal(e.target.value)}
+                      style={{ flex:1, background:C.bg, border:`1px solid ${C.blue}`, borderRadius:6, color:C.text, padding:"4px 8px", fontSize:11.5, outline:"none" }} />
+                    <button onClick={async () => {
+                      if (!schedPickerVal) return;
+                      await supabase.from("email_campaigns").update({ scheduled_at: new Date(schedPickerVal).toISOString(), send_at: new Date(schedPickerVal).toISOString(), status:"scheduled" }).eq("id", cam.id);
+                      setCampaigns(p => p.map(c => c.id===cam.id ? {...c, scheduled_at:new Date(schedPickerVal).toISOString(), send_at:new Date(schedPickerVal).toISOString(), status:"scheduled"} : c));
+                      setSchedPickerCam(null); fire("✅ Scheduled!");
+                    }} style={{ padding:"4px 12px", borderRadius:6, border:"none", background:C.blue, color:"#fff", fontSize:11, fontWeight:600, cursor:"pointer" }}>Save</button>
+                    <button onClick={() => setSchedPickerCam(null)} style={{ padding:"4px 8px", borderRadius:6, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:11, cursor:"pointer" }}>✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setSchedPickerCam(cam); setSchedPickerVal(sendDate ? new Date(sendDate).toISOString().slice(0,16) : ""); }}
+                    style={{ fontSize:11.5, color:sendDate?C.text:C.blue, background:"none", border:`1px dashed ${sendDate?C.border:C.blue}`, borderRadius:6, padding:"3px 10px", cursor:"pointer" }}>
+                    {sendDate ? new Date(sendDate).toLocaleString("en-AU",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "Set date →"}
+                  </button>
+                )}
+              </div>
+              {/* Segment row */}
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:12 }}>
+                <span style={{ fontSize:11, color:C.muted }}>👥 Send to:</span>
+                <select value={cam.segment||"all"} onChange={async e => {
+                  const seg = e.target.value;
+                  await supabase.from("email_campaigns").update({ segment:seg }).eq("id", cam.id);
+                  setCampaigns(p => p.map(c => c.id===cam.id ? {...c, segment:seg} : c));
+                }} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"3px 8px", fontSize:11.5, outline:"none", cursor:"pointer" }}>
+                  {["all","confirmed","pending","attended"].map(s => (
+                    <option key={s} value={s}>{s==="all"?"Everyone":s.charAt(0).toUpperCase()+s.slice(1)} ({segmentCounts[s]||0})</option>
+                  ))}
+                </select>
+              </div>
+              {/* Action buttons */}
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={() => setPreviewCam(cam)} style={{ padding:"6px 14px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:12, cursor:"pointer" }}>👁 Preview</button>
+                {cam.status !== "sent" && (
+                  <button onClick={() => openSendModal(cam)} disabled={!hasContacts}
+                    style={{ padding:"6px 14px", borderRadius:7, border:"none", background:hasContacts?C.green:C.border, color:hasContacts?"#fff":C.muted, fontSize:12, fontWeight:600, cursor:hasContacts?"pointer":"not-allowed" }}>
+                    {hasContacts ? "Send Now" : `Send (add contacts first)`}
+                  </button>
+                )}
+                {cam.status === "sent" && <span style={{ fontSize:12, color:C.green, padding:"6px 0" }}>✅ Sent · {cam.total_sent||0} recipients</span>}
+                <button onClick={async () => { if (!window.confirm("Delete this email?")) return; await supabase.from("email_campaigns").delete().eq("id",cam.id); setCampaigns(p=>p.filter(c=>c.id!==cam.id)); }}
+                  style={{ marginLeft:"auto", padding:"6px 10px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:12, cursor:"pointer" }}>🗑</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {previewCam && (() => {
         const [prevMode, setPrevMode] = React.useState("desktop");
         return (
