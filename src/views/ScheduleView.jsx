@@ -253,9 +253,9 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
         setSegmentCounts(counts);
       });
     supabase.from("landing_pages").select("is_published,slug").eq("event_id", activeEvent.id).eq("page_type","event").maybeSingle()
-      .then(({ data }) => { setLpPublished(!!data?.is_published); if (data?.slug && data?.is_published) setLpUrl(`${window.location.origin}/page/${data.slug}`); });
+      .then(({ data }) => { setLpPublished(!!data?.is_published); if (data?.slug && data?.is_published) setLpUrl(`https://evara-tau.vercel.app/page/${data.slug}`); });
     supabase.from("forms").select("is_active,share_token").eq("event_id", activeEvent.id).eq("is_active", true).limit(1).maybeSingle()
-      .then(({ data }) => { setFormActive(!!data); if (data?.share_token) setFormUrl(`${window.location.origin}/form/${data.share_token}`); });
+      .then(({ data }) => { setFormActive(!!data); if (data?.share_token) setFormUrl(`https://evara-tau.vercel.app/form/${data.share_token}`); });
   }, [activeEvent, profile]);
 
   const openSendModal = async (cam) => {
@@ -498,7 +498,15 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
                     {hasContacts ? "Send Now" : `Send (add contacts first)`}
                   </button>
                 )}
-                {cam.status === "sent" && <span style={{ fontSize:12, color:C.green, padding:"6px 0" }}>✅ Sent · {cam.total_sent||0} recipients</span>}
+                {cam.status === "sent" && (
+                  <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <span style={{ fontSize:12, color:C.green }}>✅ Sent · {cam.total_sent||0} recipients</span>
+                    <button onClick={() => openSendModal(cam)}
+                      style={{ fontSize:11, padding:"4px 12px", borderRadius:6, border:`1px solid ${C.blue}40`, background:`${C.blue}10`, color:C.blue, cursor:"pointer" }}>
+                      ↩ Resend
+                    </button>
+                  </div>
+                )}
                 <button onClick={async () => { if (!window.confirm("Delete this email?")) return; await supabase.from("email_campaigns").delete().eq("id",cam.id); setCampaigns(p=>p.filter(c=>c.id!==cam.id)); }}
                   style={{ marginLeft:"auto", padding:"6px 10px", borderRadius:7, border:`1px solid ${C.border}`, background:"transparent", color:C.muted, fontSize:12, cursor:"pointer" }}>🗑</button>
               </div>
