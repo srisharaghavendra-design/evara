@@ -1183,7 +1183,7 @@ function MainApp({ session }) {
         {/* ── JOURNEY PROGRESS STRIP — 3-step guided flow ── */}
         {activeEvent && (() => {
           // Step completion logic — driven by real data
-          const step1Done = campaigns.length > 0 && campaigns.every(c => c.status === "approved" || c.status === "sent");
+          const step1Done = campaigns.length > 0 && campaigns.filter(c => c.html_content).every(c => c.status === "approved" || c.status === "scheduled" || c.status === "sent");
           const step2Done = lpPublished;
           const step3Done = campaigns.some(c => c.status === "sent");
           const stepDone = [step1Done, step2Done, step3Done];
