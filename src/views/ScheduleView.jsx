@@ -38,6 +38,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
   const [followUpGenerating, setFollowUpGenerating] = useState(false);
   const [schedPickerCam, setSchedPickerCam] = useState(null); // cam being scheduled via picker
   const [schedPickerVal, setSchedPickerVal] = useState("");
+  const [prevMode, setPrevMode] = useState("desktop"); // email preview mode
   const [editingSubjectId, setEditingSubjectId] = useState(null); // cam id being edited inline
   const [editingSubjectVal, setEditingSubjectVal] = useState("");
   const [aiSubjectLoading, setAiSubjectLoading] = useState(null); // cam id loading AI subjects
@@ -126,8 +127,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
     setContactCount(count || 0);
     setInlineImporting(false);
     setInlineImportText("");
-    setShowInlineContacts(false);
-    fire(`✅ ${added} contacts imported`);
+    fire(`✅ ${added} contacts imported — ready to send!`);
     loadEventContacts(); // refresh list
   };
 
@@ -365,7 +365,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
       {(!hasContacts || showInlineContacts) && (
         <div style={{ marginBottom:20, background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:"16px 18px" }}>
           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
-            <div style={{ fontSize:14, fontWeight:600, color:C.text }}>👥 {hasContacts ? `${contactCount} contacts · manage list` : "Add contacts to send emails"}</div>
+            <div style={{ fontSize:14, fontWeight:600, color:C.text }}>👥 {hasContacts ? `${contactCount} contacts added to Webexone` : "Add contacts to send emails"}</div>
+          <div style={{ fontSize:11, color:C.muted, marginTop:3 }}>Contacts are shared across all emails for this event</div>
             {hasContacts && showInlineContacts && <button onClick={() => setShowInlineContacts(false)} style={{ fontSize:11, color:C.muted, background:"none", border:"none", cursor:"pointer" }}>✕ Close</button>}
           </div>
           {/* Tabs */}
@@ -480,8 +481,11 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
                   await supabase.from("email_campaigns").update({ segment:seg }).eq("id", cam.id);
                   setCampaigns(p => p.map(c => c.id===cam.id ? {...c, segment:seg} : c));
                 }} style={{ background:C.bg, border:`1px solid ${C.border}`, borderRadius:6, color:C.text, padding:"3px 8px", fontSize:11.5, outline:"none", cursor:"pointer" }}>
-                  {["all","confirmed","pending","attended"].map(s => (
-                    <option key={s} value={s}>{s==="all"?"Everyone":s.charAt(0).toUpperCase()+s.slice(1)} ({segmentCounts[s]||0})</option>
+                  {(["save_the_date","invitation","reminder","byo","day_of_details"].includes(cam.email_type)
+                    ? [["all","All contacts"]]
+                    : [["all","All contacts"],["confirmed","Confirmed"],["attended","Attended"]]
+                  ).map(([val,label]) => (
+                    <option key={val} value={val}>{label} ({segmentCounts[val==="all"?"all":val]||0})</option>
                   ))}
                 </select>
               </div>
@@ -503,9 +507,8 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
         })}
       </div>
 
-      {previewCam && (() => {
-        const [prevMode, setPrevMode] = React.useState("desktop");
-        return (
+      {previewCam && (
+        <>
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 99, padding: 16 }}>
           <div style={{ background: C.card, borderRadius: 14, border: `1px solid ${C.border}`, width: "100%", maxWidth: prevMode === "mobile" ? 420 : 700, height: "90vh", display: "flex", flexDirection: "column", animation: "fadeUp .2s ease" }}>
             {/* Modal header */}
@@ -551,8 +554,7 @@ function ScheduleView({ supabase, profile, activeEvent, fire, addNotif, setView 
             </div>
           </div>
         </div>
-        );
-      })()}
+      </>)}
 
       {/* SEND NOW MODAL */}
       {sendModal && (
