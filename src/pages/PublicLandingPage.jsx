@@ -153,7 +153,7 @@ function PublicLandingPage({ slug }) {
             <div style={{ maxWidth:640, margin:"0 auto" }}>
               <h2 style={{ fontSize:22, fontWeight:700, color:textCol, marginBottom:8 }}>Reserve your spot</h2>
               <p style={{ fontSize:14, color:subCol, marginBottom:24 }}>Fill in your details below to register for this event.</p>
-              <iframe src={regUrl} style={{ width:"100%", minHeight:500, border:"none", borderRadius:14, background:"#fff", boxShadow:"0 4px 24px rgba(0,0,0,0.15)" }} title="Registration Form" />
+              {regUrl && <iframe src={regUrl} style={{ width:"100%", minHeight:500, border:"none", borderRadius:14, background:"#fff", boxShadow:"0 4px 24px rgba(0,0,0,0.15)" }} title="Registration Form" />}
             </div>
           ) : (
             <div>
@@ -170,7 +170,7 @@ function PublicLandingPage({ slug }) {
       {/* Footer */}
       <div style={{ borderTop:`1px solid ${borderCol}`, padding:"18px 32px", display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:12 }}>
         <div style={{ display:"flex", gap:14 }}>
-          <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener" style={{ fontSize:12, color:subCol, padding:"5px 12px", borderRadius:20, border:`1px solid ${borderCol}` }}>📤 Share on LinkedIn</a>
+          <a href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`} target="_blank" rel="noopener" style={{ fontSize:12, color:subCol, padding:"5px 12px", borderRadius:20, border:`1px solid ${borderCol}` }}>📤 Share on LinkedIn</a>
           <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent((page.headline||event?.name||"")+' — register now!')}`} target="_blank" rel="noopener" style={{ fontSize:12, color:subCol, padding:"5px 12px", borderRadius:20, border:`1px solid ${borderCol}` }}>🐦 Share on X</a>
         </div>
         <span style={{ fontSize:11, color: isLight?"#bbb":"rgba(255,255,255,0.25)" }}>Powered by evara · evarahq.com</span>
