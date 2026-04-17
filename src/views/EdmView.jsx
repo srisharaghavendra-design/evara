@@ -1040,11 +1040,11 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
                     {(previewTab || "html") === "html" ? (
                       <iframe srcDoc={(() => {
                           const html = (preview.html || '').replace(/\{\{REGISTRATION_URL\}\}/g, landingUrl || formLink || '#').replace(/\{\{UNSUBSCRIBE_URL\}\}/g, '#');
-                          const script = `<script>window.addEventListener('load',function(){var els=document.querySelectorAll('table,div,td');var maxBottom=0;for(var i=0;i<els.length;i++){var r=els[i].getBoundingClientRect();if(r.bottom>maxBottom)maxBottom=r.bottom;}parent.postMessage({iframeHeight:Math.ceil(maxBottom)+8},'*');});<\/script>`;
+                          const script = `<script>function sendH(){var h=document.body.offsetHeight||document.documentElement.offsetHeight||document.documentElement.scrollHeight;parent.postMessage({iframeHeight:h},'*');}window.addEventListener('load',sendH);setTimeout(sendH,200);setTimeout(sendH,600);<\/script>`;
                           return html.replace('</body>', script + '</body>') || html + script;
                         })()}
-                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "750px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
-                        onLoad={e => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.documentElement?.scrollHeight || d?.body?.scrollHeight; if (h && h > 100) e.target.style.height = h + "px"; } catch(_){} }}
+                        style={{ width: previewWidth || "100%", maxWidth: previewWidth === "375px" ? "375px" : "100%", border: "none", height: previewWidth === "375px" ? "600px" : "1px", transition: "width .3s ease", display: "block", borderRadius: previewWidth === "375px" ? 14 : 0, boxShadow: previewWidth === "375px" ? "0 0 0 8px #1a1a1f, 0 0 0 10px #2a2a2f" : "none" }}
+                        onLoad={e => { try { const d = e.target.contentDocument || e.target.contentWindow?.document; const h = d?.body?.offsetHeight || d?.documentElement?.offsetHeight || d?.body?.scrollHeight; if (h && h > 50) { e.target.style.height = h + "px"; } setTimeout(() => { try { const h2 = d?.body?.offsetHeight || d?.body?.scrollHeight; if (h2 && h2 > 50) e.target.style.height = h2 + "px"; } catch(_){} }, 400); } catch(_){} }}
                         title="Email Preview" sandbox="allow-same-origin" />
                     ) : previewTab === "edit" ? (
                       <div style={{ width: "100%", background: "#fff", padding: "24px" }}>

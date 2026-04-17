@@ -1503,20 +1503,44 @@ function MainApp({ session }) {
                 </div>
               </div>
 
+              {/* Email type picker */}
+              <div style={{ marginBottom:14 }}>
+                <div style={{ fontSize:10, fontWeight:700, color:C.muted, letterSpacing:"1px", marginBottom:8 }}>WHICH EMAILS DO YOU NEED?</div>
+                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                  {[
+                    { id:"save_the_date", label:"Save the Date", emoji:"📅" },
+                    { id:"invite",        label:"Invite",         emoji:"✉️" },
+                    { id:"reminder",      label:"Reminder",       emoji:"⏰" },
+                    { id:"confirmation",  label:"Confirmation",   emoji:"✅" },
+                    { id:"byo",           label:"BYO / Details",  emoji:"📋" },
+                    { id:"thank_you",     label:"Thank You",      emoji:"🙏" },
+                  ].map(et => {
+                    const sel = selectedEmailTypes.includes(et.id);
+                    return (
+                      <button key={et.id} onClick={() => setSelectedEmailTypes(prev => sel ? prev.filter(x=>x!==et.id) : [...prev, et.id])}
+                        style={{ fontSize:11, padding:"5px 10px", borderRadius:20, border:`1.5px solid ${sel ? C.blue : C.border}`, background: sel ? `${C.blue}15` : "transparent", color: sel ? C.blue : C.muted, cursor:"pointer", display:"flex", alignItems:"center", gap:4, transition:"all .15s" }}>
+                        <span style={{fontSize:12}}>{et.emoji}</span>{et.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedEmailTypes.length === 0 && <p style={{ fontSize:11, color:C.red, marginTop:6 }}>Select at least one email type</p>}
+              </div>
+
               <div style={{ background:`${C.blue}08`, border:`1px solid ${C.blue}20`, borderRadius:9, padding:"10px 14px", marginBottom:18, display:"flex", alignItems:"center", gap:10 }}>
                 <Sparkles size={14} color={C.blue} />
-                <span style={{ fontSize:12, color:C.blue, lineHeight:1.5 }}><strong>AI will auto-draft</strong> 5 emails, a landing page and a registration form using this brief. Ready in seconds.</span>
+                <span style={{ fontSize:12, color:C.blue, lineHeight:1.5 }}><strong>AI will auto-draft</strong> {selectedEmailTypes.length} email{selectedEmailTypes.length!==1?"s":""}, a landing page and a registration form using this brief. Ready in seconds.</span>
               </div>
 
               <div style={{ display:"flex", gap:10 }}>
                 <button onClick={() => setBriefParsed(null)} style={{ flex:1, padding:12, background:C.raised, border:`1px solid ${C.border}`, borderRadius:9, color:C.muted, fontSize:13, fontWeight:500, cursor:"pointer" }}>← Re-brief</button>
-                <button onClick={async () => {
-                  if (!profile) return;
+                <button disabled={selectedEmailTypes.length === 0} onClick={async () => {
+                  if (!profile || selectedEmailTypes.length === 0) return;
                   setNewEventName(briefParsed.name||"");
-                  setNewEventExtra({ event_date:briefParsed.event_date||"", event_time:briefParsed.event_time||"", location:briefParsed.location||"", event_type:briefParsed.event_type||"", description:briefParsed.description||"", event_format:"" });
+                  setNewEventExtra({ event_date:briefParsed.event_date||"", event_time:briefParsed.event_time||"", location:briefParsed.location||"", event_type:briefParsed.event_type||"", description:briefParsed.description||"", event_format:"", selectedEmailTypes });
                   closeModal();
-                  await createEvent(briefParsed.name, { event_date:briefParsed.event_date||"", event_time:briefParsed.event_time||"", location:briefParsed.location||"", event_type:briefParsed.event_type||"", description:briefParsed.description||"", event_format:"" });
-                }} style={{ flex:2, padding:13, background:C.blue, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow:`0 6px 24px ${C.blue}50`, transition:"all .15s" }}>
+                  await createEvent(briefParsed.name, { event_date:briefParsed.event_date||"", event_time:briefParsed.event_time||"", location:briefParsed.location||"", event_type:briefParsed.event_type||"", description:briefParsed.description||"", event_format:"", selectedEmailTypes });
+                }} style={{ flex:2, padding:13, background: selectedEmailTypes.length === 0 ? C.border : C.blue, border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:700, cursor: selectedEmailTypes.length === 0 ? "not-allowed" : "pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:8, boxShadow: selectedEmailTypes.length === 0 ? "none" : `0 6px 24px ${C.blue}50`, transition:"all .15s" }}>
                   <Sparkles size={14} />✨ Create Event + AI Draft →
                 </button>
               </div>
