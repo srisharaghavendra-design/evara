@@ -122,7 +122,7 @@ export const EMAIL_TYPES = [
   {id:"reminder",     label:"Reminder"},
   {id:"confirmation", label:"Confirmation"},
   {id:"byo",          label:"BYO / Details"},
-  {id:"day_of",       label:"Day-of Details"},
+  {id:"day_of_details", label:"Day-of Details"},
   {id:"thank_you",    label:"Thank You"},
 ];
 
