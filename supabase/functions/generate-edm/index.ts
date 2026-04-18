@@ -40,13 +40,47 @@ serve(async (req) => {
     }
 
     const EMAIL_TYPE_PROMPTS: Record<string, string> = {
-      save_the_date: "Save the Date announcement — exciting, brief, builds anticipation. Include the date prominently. CTA: 'Save the Date'",
-      invitation: "Formal invitation — compelling, creates FOMO, emphasises exclusivity and value. CTA: 'Register Now' or 'Accept Invitation'",
-      reminder: "Friendly reminder — warm, helpful, includes all event logistics. CTA: 'View Details' or 'Confirm Attendance'",
-      confirmation: "RSVP confirmation — warm confirmation of attendance, provide practical details. CTA: 'Add to Calendar'",
-      byo: "What to Bring / Day-of logistics — practical, friendly, answers key questions about the event day. CTA: 'View Agenda'",
-      day_of: "Day-of excitement email — sent morning of, high energy, final logistics. CTA: 'Get Directions'",
-      thank_you: "Warm thank you email — genuine appreciation, highlights key moments, next steps. CTA: 'Share Feedback'",
+      save_the_date:
+        "SAVE THE DATE teaser — this is NOT an invitation. The ONLY goal is to make the recipient block the date in their calendar. " +
+        "MUST include: event name, date, city. " +
+        "MUST NOT include: full venue address, agenda, speakers, time-of-day details, bullet points, 'register now', 'RSVP', 'secure your seat', 'limited spots'. " +
+        "Keep paragraphs VERY short (max 2 paragraphs, each 1-2 sentences). " +
+        "Tone: intriguing, anticipatory. CTA text MUST be 'Add to Calendar' or 'Save the Date' (never a registration CTA). " +
+        "Return an EMPTY bullet_points array. Subject line MUST start with 'Save the Date' or equivalent (never 'You're Invited').",
+      invitation:
+        "FORMAL INVITATION — this is the full pitch. Goal: get recipient to register/RSVP. " +
+        "MUST include: full event details, date, time, venue, compelling reason to attend, clear registration CTA. " +
+        "MUST NOT start subject with 'Save the Date' (this is a different email type). " +
+        "Tone: compelling, creates FOMO, emphasises exclusivity and value. CTA: 'Register Now', 'RSVP', or 'Accept Invitation'. " +
+        "Use 2-4 bullet points for key agenda items or benefits.",
+      reminder:
+        "REMINDER — sent to people who were invited but haven't responded yet. Goal: nudge them to register. " +
+        "MUST include: reminder that time is running out, key event details, clear CTA. " +
+        "MUST NOT be generic — reference that they haven't responded yet. " +
+        "Tone: warm, helpful, slightly urgent but not pushy. CTA: 'Confirm Attendance' or 'Register Now'. " +
+        "Subject MUST reference timing urgency (e.g. 'X days to go', 'Last chance', 'Don't miss').",
+      confirmation:
+        "RSVP CONFIRMATION — sent AFTER a person has registered. Goal: confirm their spot and set expectations. " +
+        "MUST include: warm thank-you for registering, clear confirmation their spot is secured, practical details (date, time, venue, parking if relevant), 'Add to Calendar' CTA. " +
+        "MUST NOT include: 'register now', 'RSVP', 'limited spots' (they already registered). " +
+        "Tone: warm, welcoming, reassuring. CTA MUST be 'Add to Calendar' or 'View Event Details'. " +
+        "Subject MUST start with 'Confirmed:' or 'You're in:' or similar.",
+      byo:
+        "KNOW BEFORE YOU GO — practical pre-event logistics email, sent 1-3 days before event to CONFIRMED attendees. " +
+        "MUST include: what to wear (dress code), what to bring, how to get there (parking/transit), arrival time, contact for day-of issues. " +
+        "MUST NOT include: 'register now', registration CTA, general event pitch (they're already attending). " +
+        "Use 4-6 bullet points for the practical logistics. Tone: helpful, concise, friendly. CTA: 'View Agenda' or 'Get Directions'.",
+      day_of:
+        "DAY-OF email — sent the morning of the event to confirmed attendees. High energy, final logistics, looking forward to seeing them. " +
+        "MUST include: enthusiasm about today, arrival time, venue/room, parking or transit reminder, contact for last-minute issues. " +
+        "MUST NOT include: general event pitch, registration CTA. " +
+        "Tone: excited, warm. CTA: 'Get Directions' or 'View Agenda'. Keep short — people are busy on event day.",
+      thank_you:
+        "THANK YOU email — sent AFTER the event to attendees. Goal: genuine appreciation + a soft next step. " +
+        "MUST include: warm thanks for attending, 1-2 highlights from the event, an invitation to share feedback or stay in touch. " +
+        "MUST NOT include: registration CTA (event is over), 'limited spots'. " +
+        "Tone: appreciative, reflective, warm. CTA: 'Share Feedback' or 'Stay Connected'. " +
+        "Subject MUST start with 'Thank you' or similar post-event framing.",
     };
 
     const COLORS: Record<string, { primary: string; accent: string; bg: string; headerBg: string; text: string }> = {
@@ -74,20 +108,26 @@ ${brandVoice?.preferred_cta ? `Preferred CTA style: ${brandVoice.preferred_cta}`
 ${brandVoice?.email_sign_off ? `Sign off: ${brandVoice.email_sign_off}` : ""}
 ${brandVoice?.extra_context ? `Brand context: ${brandVoice.extra_context}` : ""}
 
-Return ONLY valid JSON (no markdown):
+Return ONLY valid JSON (no markdown). CRITICAL: The Type rules above are MANDATORY — follow them exactly, including all MUST NOT constraints. If the Type rules say to exclude something, exclude it even if the schema below seems to suggest including it.
 {
-  "subject": "compelling email subject (max 60 chars)",
+  "subject": "compelling email subject (max 60 chars) — follow the Type rules above for required opening words",
   "preview_text": "preview text shown in inbox (max 90 chars)",
   "headline": "main email headline (max 60 chars)",
-  "subheadline": "supporting line under headline (max 80 chars, optional)",
+  "subheadline": "supporting line under headline (max 80 chars, optional, use empty string if not needed)",
   "greeting": "personalised greeting line e.g. 'Dear [First Name],'",
-  "paragraphs": ["paragraph 1", "paragraph 2", "paragraph 3"],
-  "bullet_points": ["key point 1", "key point 2", "key point 3"],
-  "cta_text": "button text (max 30 chars)",
+  "paragraphs": ["paragraph 1", "paragraph 2"],
+  "bullet_points": ["key point 1", "key point 2"],
+  "cta_text": "button text (max 30 chars) — follow the Type rules above for required wording",
   "cta_url": "${registrationUrl || "#"}",
   "sign_off": "sign off line e.g. 'Best regards,'",
   "plain_text": "full plain text version of email"
-}`;
+}
+
+Rules:
+- paragraphs: use 1-2 short paragraphs for save_the_date and day_of; 2-3 for others.
+- bullet_points: return an EMPTY ARRAY [] when the Type rules say not to use bullets (save_the_date especially).
+- cta_text: MUST match the Type rules above exactly (e.g. 'Add to Calendar' for save_the_date, never 'Register Now' or 'Save Your Spot').
+- subject: must reflect the specific email type — never reuse 'You're Invited' across different types.`;
 
     const aiRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
