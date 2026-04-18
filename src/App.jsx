@@ -832,7 +832,11 @@ function MainApp({ session }) {
       fetch(`${SUPABASE_URL}/functions/v1/auto-draft-lifecycle`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess?.access_token}` },
-        body: JSON.stringify({ eventId: data.id, companyId: profile.company_id })
+        body: JSON.stringify({
+          eventId: data.id,
+          companyId: profile.company_id,
+          selectedEmailTypes: eventExtra?.selectedEmailTypes || null,
+        })
       }).then(r => r.json()).then(res => {
         if (res.success && res.drafts_created > 0) {
           const parts = [`🤖 ${res.drafts_created} emails`];
