@@ -739,7 +739,13 @@ function MainApp({ session }) {
 
   const fire = (msg, type = "ok") => { setToast({ msg, type }); setTimeout(() => setToast(null), 4500); };
 
+  // Track whether we've already done the initial navigation so that
+  // subsequent session changes (e.g. token refresh, storage auth calls)
+  // don't yank the user back to the dashboard mid-task.
+  const didInitialNavRef = useRef(false);
+  const lastUserIdRef = useRef(null);
   useEffect(() => {
+    if (!session?.user?.id) return;
     const load = async () => {
       let { data: prof } = await supabase.from("profiles").select("*,companies(*)").eq("id", session.user.id).single();
       
@@ -775,8 +781,15 @@ function MainApp({ session }) {
       setEvents(evts || []);
       setActiveEvent(prev => prev || evts?.[0] || null);
 
-      // Always land on dashboard — let user navigate from there
-      setView("dashboard");
+      // Only navigate to dashboard on the very first load for this user.
+      // Token refreshes keep the same user.id but produce a new session object,
+      // which previously caused unwanted navigation mid-task.
+      const userChanged = lastUserIdRef.current !== session.user.id;
+      if (!didInitialNavRef.current || userChanged) {
+        setView("dashboard");
+        didInitialNavRef.current = true;
+        lastUserIdRef.current = session.user.id;
+      }
     };
     load();
   }, [session]);
