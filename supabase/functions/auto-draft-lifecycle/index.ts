@@ -11,39 +11,95 @@ const EMAIL_SEQUENCE = [
     type: "save_the_date",
     label: "Save the Date",
     timing: "Send 6–8 weeks before",
-    prompt_role: "Create a Save the Date email. Keep it brief and exciting. The goal is to secure the date in the reader's calendar. Include event name, date, location and a short teaser. CTA should be 'Save Your Spot'.",
+    prompt_role:
+      "Write a SAVE THE DATE teaser. This is NOT an invitation. The ONLY goal is to make the reader block the date in their calendar. " +
+      "MUST include: event name, date, city. " +
+      "MUST NOT include: full venue address, agenda, speakers, 'register now', 'RSVP', 'secure your seat', 'limited spots'. " +
+      "Keep to 1–2 very short paragraphs. Tone: intriguing, anticipatory. CTA text MUST be 'Add to Calendar' or 'Save the Date' (never a registration CTA). " +
+      "Subject MUST start with 'Save the Date' (never 'You're Invited').",
   },
   {
     type: "invitation",
     label: "Invitation",
     timing: "Send 3–4 weeks before",
-    prompt_role: "Write a full event invitation email. This is the main invite — make it compelling. Include event highlights, who should attend, what they'll gain. CTA should be 'Register Now'.",
+    prompt_role:
+      "Write a FORMAL INVITATION — the full pitch. Goal: get the reader to register/RSVP. " +
+      "MUST include: full event details, date, time, venue, compelling reason to attend, clear registration CTA. " +
+      "MUST NOT start subject with 'Save the Date'. " +
+      "Tone: compelling, creates FOMO, emphasises exclusivity. CTA: 'Register Now', 'RSVP', or 'Accept Invitation'.",
   },
   {
     type: "reminder",
     label: "1-Week Reminder",
     timing: "Send 7 days before",
-    prompt_role: "Write a reminder email for people who haven't registered yet. Create urgency — limited spots, deadline approaching. Reference the event value briefly. CTA should be 'Secure Your Place'.",
+    prompt_role:
+      "Write a REMINDER email for people who were invited but haven't responded yet. Goal: nudge them to register. " +
+      "MUST include: gentle reminder that time is running out, key event details, clear CTA. " +
+      "Tone: warm, helpful, slightly urgent but not pushy. CTA: 'Confirm Attendance' or 'Register Now'. " +
+      "Subject MUST reference timing urgency (e.g. 'X days to go', 'Last chance', 'Don't miss').",
+  },
+  {
+    type: "confirmation",
+    label: "Confirmation",
+    timing: "Send immediately after RSVP",
+    prompt_role:
+      "Write an RSVP CONFIRMATION email — sent AFTER a person has registered. Goal: confirm their spot and set expectations. " +
+      "MUST include: warm thank-you for registering, clear confirmation their spot is secured, practical details (date, time, venue), 'Add to Calendar' CTA. " +
+      "MUST NOT include: 'register now', 'RSVP', 'limited spots' (they already registered). " +
+      "Tone: warm, welcoming, reassuring. CTA MUST be 'Add to Calendar' or 'View Event Details'. " +
+      "Subject MUST start with 'Confirmed:' or 'You're in:'.",
+  },
+  {
+    type: "byo",
+    label: "Know Before You Go",
+    timing: "Send 2–3 days before",
+    prompt_role:
+      "Write a KNOW BEFORE YOU GO email — practical pre-event logistics, sent 1–3 days before to CONFIRMED attendees. " +
+      "MUST include: what to wear (dress code), what to bring, how to get there (parking/transit), arrival time, contact for day-of issues. " +
+      "MUST NOT include: 'register now', registration CTA, general event pitch (they're already attending). " +
+      "Use 4–6 bullet points for the practical logistics. Tone: helpful, concise, friendly. CTA: 'View Agenda' or 'Get Directions'.",
   },
   {
     type: "day_of_details",
     label: "Day-of Details",
-    timing: "Send 1 day before",
-    prompt_role: "Write a day-before email with practical details. Include venue address, time, dress code if applicable, parking/transport tips, what to bring. Tone should be warm and helpful. CTA should be 'Add to Calendar'.",
+    timing: "Send day of event",
+    prompt_role:
+      "Write a DAY-OF email — sent the morning of the event to confirmed attendees. High energy, final logistics. " +
+      "MUST include: enthusiasm about today, arrival time, venue/room, parking or transit reminder, contact for last-minute issues. " +
+      "MUST NOT include: general event pitch, registration CTA. " +
+      "Tone: excited, warm. CTA: 'Get Directions' or 'View Agenda'. Keep short — people are busy on event day.",
   },
   {
     type: "thank_you",
     label: "Thank You",
     timing: "Send 1 day after",
-    prompt_role: "Write a post-event thank you email. Express genuine gratitude, highlight key moments, tease what's coming next. CTA should be 'Share Your Feedback'.",
+    prompt_role:
+      "Write a THANK YOU email sent AFTER the event to attendees. Goal: genuine appreciation + a soft next step. " +
+      "MUST include: warm thanks for attending, 1–2 highlights from the event, an invitation to share feedback or stay in touch. " +
+      "MUST NOT include: registration CTA (event is over), 'limited spots'. " +
+      "Tone: appreciative, reflective, warm. CTA: 'Share Feedback' or 'Stay Connected'. " +
+      "Subject MUST start with 'Thank you' or similar post-event framing.",
   },
 ];
+
+// Map frontend type IDs (from event brief modal) to internal sequence IDs
+const FRONTEND_TO_INTERNAL_TYPE: Record<string, string> = {
+  save_the_date: "save_the_date",
+  invite: "invitation",
+  invitation: "invitation",
+  reminder: "reminder",
+  confirmation: "confirmation",
+  byo: "byo",
+  day_of_details: "day_of_details",
+  day_of: "day_of_details",
+  thank_you: "thank_you",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { eventId, companyId, userId } = await req.json();
+    const { eventId, companyId, userId, selectedEmailTypes } = await req.json();
 
     if (!eventId || !companyId) throw new Error("eventId and companyId required");
 
@@ -83,12 +139,25 @@ ${bv?.tone_adjectives?.length ? `Tone: ${bv.tone_adjectives.join(", ")}` : ""}
 ${bv?.audience ? `Audience: ${bv.audience}` : ""}
 `.trim();
 
-    console.log(`Auto-drafting for event: ${event.name}`);
-
     // ── 1. EMAIL SEQUENCE ────────────────────────────────────────────
     const drafts = [];
 
-    for (const emailType of EMAIL_SEQUENCE) {
+    // Filter the sequence to only what the user selected in the event brief.
+    // If no selection is passed (e.g. legacy callers), default to all types.
+    const normalizedSelected = Array.isArray(selectedEmailTypes) && selectedEmailTypes.length > 0
+      ? new Set(
+          selectedEmailTypes
+            .map((t: string) => FRONTEND_TO_INTERNAL_TYPE[t] || t)
+            .filter(Boolean)
+        )
+      : null;
+    const typesToGenerate = normalizedSelected
+      ? EMAIL_SEQUENCE.filter(e => normalizedSelected.has(e.type))
+      : EMAIL_SEQUENCE;
+
+    console.log(`Auto-drafting ${typesToGenerate.length} emails for event: ${event.name}`, [...typesToGenerate.map(t => t.type)]);
+
+    for (const emailType of typesToGenerate) {
       try {
         const prompt = `You are an expert B2B event marketing copywriter.
 
@@ -148,8 +217,6 @@ Respond ONLY with a JSON object (no markdown, no explanation):
           d.setDate(d.getDate() + offsetDays);
           sendAt = d.toISOString();
         }
-        const isScheduled = sendAt && new Date(sendAt) > new Date();
-
         const { data: saved } = await supabase.from("email_campaigns").insert({
           event_id: eventId,
           company_id: companyId,
@@ -158,9 +225,13 @@ Respond ONLY with a JSON object (no markdown, no explanation):
           subject: content.subject,
           html_content: htmlBody,
           plain_text: plainText,
+          // Keep suggested send_at so the Schedule step can pre-fill it,
+          // but every auto-generated item starts as a draft. Status only
+          // becomes 'scheduled' after the user approves and schedules via
+          // the Schedule & Send step.
           send_at: sendAt,
-          scheduled_at: sendAt,
-          status: isScheduled ? "scheduled" : "draft",
+          scheduled_at: null,
+          status: "draft",
           segment: "all",
         }).select("id").single();
 
