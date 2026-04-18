@@ -710,6 +710,7 @@ function MainApp({ session }) {
   const [briefText, setBriefText] = useState("");
   const [briefParsing, setBriefParsing] = useState(false);
   const [briefParsed, setBriefParsed] = useState(null);
+  const [selectedEmailTypes, setSelectedEmailTypes] = useState(["save_the_date","invite","reminder","confirmation","thank_you"]);
   const [showArchived, setShowArchived] = useState(false);
   const [newEventName, setNewEventName] = useState("");
   const [newEventDate, setNewEventDate] = useState("");
@@ -774,23 +775,8 @@ function MainApp({ session }) {
       setEvents(evts || []);
       setActiveEvent(prev => prev || evts?.[0] || null);
 
-      // Smart default view — pick up where user left off
-      if (evts?.[0]?.id) {
-        const { data: cams } = await supabase.from("email_campaigns").select("id,status,html_content").eq("event_id", evts[0].id);
-        const { data: lp } = await supabase.from("landing_pages").select("id,is_published").eq("event_id", evts[0].id).limit(1).maybeSingle();
-        const hasCampaigns = (cams || []).some(c => c.html_content);
-        const allApproved = hasCampaigns && (cams || []).filter(c => c.html_content).every(c => c.status === "approved" || c.status === "scheduled" || c.status === "sent");
-        const lpPublishedNow = lp?.is_published;
-        if (!hasCampaigns) {
-          setView("edm");
-        } else if (hasCampaigns && !allApproved) {
-          setView("edm");
-        } else if (allApproved && !lpPublishedNow) {
-          setView("landing");
-        } else if (allApproved && lpPublishedNow) {
-          setView("schedule"); // Both steps done — go straight to Step 3
-        }
-      }
+      // Always land on dashboard — let user navigate from there
+      setView("dashboard");
     };
     load();
   }, [session]);
@@ -1384,7 +1370,7 @@ function MainApp({ session }) {
 
       {/* NEW EVENT MODAL */}
       {showNewEvent && (() => {
-        const closeModal = () => { setShowNewEvent(false); setBriefText(""); setBriefParsed(null); setBriefMode(true); setNewEventName(""); setNewEventExtra({ event_date:"", event_time:"", location:"" }); };
+        const closeModal = () => { setShowNewEvent(false); setBriefText(""); setBriefParsed(null); setBriefMode(true); setNewEventName(""); setNewEventExtra({ event_date:"", event_time:"", location:"" }); setSelectedEmailTypes(["save_the_date","invite","reminder","confirmation","thank_you"]); };
         const parseBrief = async () => {
           if (briefText.trim().length < 10 || briefParsing) return;
           setBriefParsing(true);
