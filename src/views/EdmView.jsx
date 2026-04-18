@@ -453,13 +453,29 @@ function EdmView({ supabase, profile, activeEvent, fire, setView }) {
       })()}
       {/* ── EMAIL TYPE TABS — primary navigation ── */}
       {(() => {
-        const EMAIL_TABS = [
-          { type: "save_the_date", label: "Save the Date", icon: "📅" },
-          { type: "invitation",    label: "Invite",         icon: "✉️" },
-          { type: "reminder",      label: "Reminder",       icon: "⏰" },
-          { type: "day_of_details",label: "Day-of Details", icon: "🌅" },
-          { type: "thank_you",     label: "Thank You",      icon: "🙏" },
-        ];
+        // Canonical order + display metadata for every supported email type.
+        // Tabs are derived from actual campaigns so the UI always matches the DB.
+        const TAB_META = {
+          save_the_date:  { label: "Save the Date",  icon: "📅" },
+          invitation:     { label: "Invite",         icon: "✉️" },
+          reminder:       { label: "Reminder",       icon: "⏰" },
+          reminder_week:  { label: "Reminder (wk)",  icon: "⏰" },
+          reminder_day:   { label: "Reminder (day)", icon: "⏰" },
+          confirmation:   { label: "Confirmation",   icon: "✅" },
+          byo:            { label: "BYO / Details",  icon: "🎒" },
+          day_of_details: { label: "Day-of Details", icon: "🌅" },
+          thank_you:      { label: "Thank You",      icon: "🙏" },
+        };
+        const CANONICAL_ORDER = ["save_the_date","invitation","reminder","reminder_week","reminder_day","confirmation","byo","day_of_details","thank_you"];
+        // Unique email types that actually exist for this event, in canonical order.
+        const presentTypes = Array.from(new Set(campaigns.map(c => c.email_type).filter(Boolean)));
+        const orderedTypes = CANONICAL_ORDER.filter(t => presentTypes.includes(t))
+          .concat(presentTypes.filter(t => !CANONICAL_ORDER.includes(t)));
+        const EMAIL_TABS = orderedTypes.map(type => ({
+          type,
+          label: TAB_META[type]?.label || type,
+          icon:  TAB_META[type]?.icon  || "📧",
+        }));
         const isGenerating = aiBuilding || (campaigns.length === 0 && activeEvent);
         return (
           <div style={{ marginBottom: 0 }}>
